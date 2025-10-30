@@ -1,0 +1,41 @@
+# For direnv
+.env*
+
+# AI tools
+.codex
+
+# Others
+*.kate-swp
+tmp
+.tmp/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.uv_cache/
+.uvcache/
+
+# Go build outputs
+bin/
+*.exe
+*.test
+*.out
+vendor/
+.gocache/
+.gomodcache/
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
