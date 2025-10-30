@@ -31,7 +31,11 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- Confirm the feature adheres to the monorepo layout and keeps every touched module independently buildable, testable, and deployable (Principle IV).
+- Identify required documentation updates: public docstrings, module docs, MkDocs entries, and ADRs for significant design shifts (Principle II).
+- Define the pytest strategy up front, covering contract, integration, unit, and performance smoke tests to satisfy coverage gates (Principle III).
+- Capture observability impacts: health/readiness probes, structured logging, metrics, and trace propagation changes (Principle V).
+- Call out automation and dependency actions, including uv lockfile updates, CI guardrails, and release/versioning implications (Principle IV).
 
 ## Project Structure
 

@@ -1,50 +1,71 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+Version change: N/A -> 0.0.1
+Modified principles: None (initial ratification)
+Added sections: Core Principles; Automation & Tooling Requirements; Development Workflow & Quality Gates; Governance
+Removed sections: None
+Templates requiring updates:
+- updated .specify/templates/plan-template.md (constitution gates aligned)
+- updated .specify/templates/tasks-template.md (tests mandate enforced)
+Follow-up TODOs: None
+-->
+# Linux RAG T2 Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Standards & Typing Discipline (NON-NEGOTIABLE)
+- All Python code MUST comply with PEP-8 and PEP-257; Ruff is the single formatter, linter, and import sorter.
+- Public modules, classes, functions, and CLI entry points MUST provide complete type hints; mypy runs in strict mode on every PR.
+- Imports MUST stay safe: avoid network I/O and raise precise domain exceptions that map to safe client responses.
+Rationale: Uniform style and strict typing produce predictable, debuggable modules with minimal runtime surprises.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Documentation as Contract
+- Apply Google-style docstrings consistently; every public surface documents purpose, arguments, returns, and examples where useful.
+- Each module maintains docs under `docs/`; services publish OpenAPI references there so the MkDocs site remains authoritative.
+- Significant architectural or process changes MUST include an ADR under `docs/adr/` before implementation closes.
+Rationale: Documentation-first delivery keeps knowledge discoverable and guards against implicit tribal memory.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Test-First Quality Gates
+- Every change MUST land with pytest coverage; new public APIs include contract tests derived from their OpenAPI definitions.
+- Libraries maintain >=90% coverage and services >=80%; coverage gates fail the build if violated.
+- Tests remain hermetic: mock external I/O, seed RNGs, and include performance smoke checks for hot paths.
+Rationale: Enforced testing discipline prevents regressions and validates behaviour before code reaches users.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Modular Monorepo Delivery
+- The repository layout MUST follow the monorepo structure so each app, service, and package is independently buildable, testable, versioned, and container-deployable.
+- Use uv for environment management and locking; track hashes in VCS and support the latest two CPython minor versions in CI.
+- Automation guardrails (Ruff, mypy, pytest with coverage, pip-audit, Trivy for services, secret scanning, docs and OpenAPI builds) MUST run on every PR; `main` also emits SBOMs, release artifacts, provenance attestations, and deploys docs.
+- Modules follow SemVer; breaking changes require a major bump plus migration notes and changelog updates.
+Rationale: Modular delivery with automated guardrails ensures repeatable builds and trustworthy releases.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Observability & Security Readiness
+- Services MUST expose health and readiness probes plus structured JSON logs carrying request IDs and W3C trace IDs without PII.
+- Metrics MUST record latency, error rate, throughput, and resource usage; tracing propagates context across upstream and downstream calls.
+- Auth is required by default with least-privilege scopes and strict server-side validation; local testing relaxations follow the dependency policy constraints.
+Rationale: Strong observability and security guarantees keep the platform operable, diagnosable, and safe to promote.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Automation & Tooling Requirements
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- Pre-commit enforces Ruff, mypy, and detect-secrets hooks before any commit lands.
+- uv lockfiles, dependency hashes, and environment definitions MUST stay current and validated across the supported Python versions.
+- GitHub Actions pipelines implement the guardrails defined in the Core Principles, including vulnerability scanning and documentation builds.
+- Container images and Python artifacts MUST be signed and stored with provenance before promotion beyond staging.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Development Workflow & Quality Gates
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- Feature work begins with `/speckit.spec`, `/speckit.plan`, and `/speckit.tasks`; these documents MUST enumerate documentation, testing, observability, and release impacts explicitly.
+- Code reviews verify adherence to this constitution, enforce coverage and lint gates, and ensure documentation, including OpenAPI exports, is updated alongside code.
+- Constitution checks occur at plan approval and before merge; violations require documented justification in the Complexity Tracking table and CODEOWNERS sign-off.
+- Release candidates MUST satisfy observability readiness probes and have validated health checks before staging or production promotion.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes prior guidance for the Linux RAG T2 repository. Amendments require a pull request that:
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+1. Proposes the wording change with accompanying rationale and migration guidance if behaviour shifts.
+2. Updates all dependent templates and documentation impacted by the change.
+3. Receives approval from the CODEOWNERS set and passes all automation guardrails.
+
+Version numbers follow SemVer semantics: MAJOR for breaking governance changes, MINOR for new or materially expanded principles or sections, and PATCH for clarifications. Compliance reviews take place at least quarterly and during every release retrospective; gaps trigger follow-up tasks tracked to closure. Non-compliant changes MUST be remediated before promotion beyond staging unless an explicit, time-bound waiver is documented and approved by CODEOWNERS.
+
+**Version**: 0.0.1 | **Ratified**: 2025-10-30 | **Last Amended**: 2025-10-30
