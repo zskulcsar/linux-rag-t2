@@ -1,12 +1,12 @@
 <!--
 Sync Impact Report
-Version change: N/A -> 0.0.1
-Modified principles: None (initial ratification)
-Added sections: Core Principles; Automation & Tooling Requirements; Development Workflow & Quality Gates; Governance
+Version change: 0.2.0 -> 0.3.0
+Modified principles: Development Workflow & Quality Gates -> Development Workflow & Quality Gates
+Added sections: VII. Simplicity First (KISS)
 Removed sections: None
 Templates requiring updates:
-- updated .specify/templates/plan-template.md (constitution gates aligned)
-- updated .specify/templates/tasks-template.md (tests mandate enforced)
+- updated .specify/templates/plan-template.md (constitution gates cover hex architecture, maintainability, and KISS simplicity)
+- updated .specify/templates/tasks-template.md (tasks highlight hex architecture, maintainability, and simplicity guardrails)
 Follow-up TODOs: None
 -->
 # Linux RAG T2 Constitution
@@ -31,18 +31,32 @@ Rationale: Documentation-first delivery keeps knowledge discoverable and guards 
 - Tests remain hermetic: mock external I/O, seed RNGs, and include performance smoke checks for hot paths.
 Rationale: Enforced testing discipline prevents regressions and validates behaviour before code reaches users.
 
-### IV. Modular Monorepo Delivery
+### IV. Modular Monorepo & Hexagonal Architecture
 - The repository layout MUST follow the monorepo structure so each app, service, and package is independently buildable, testable, versioned, and container-deployable.
+- All services and CLIs MUST follow hexagonal architecture: domain logic stays in framework-agnostic core modules; entry points interact through well-defined ports; adapters isolate infrastructure concerns (storage, vector databases, LLM backends, CLI IO).
+- New features MUST document and implement port interfaces before wiring adapters; cross-module calls interact via ports rather than direct adapter access.
 - Use uv for environment management and locking; track hashes in VCS and support the latest two CPython minor versions in CI.
 - Automation guardrails (Ruff, mypy, pytest with coverage, pip-audit, Trivy for services, secret scanning, docs and OpenAPI builds) MUST run on every PR; `main` also emits SBOMs, release artifacts, provenance attestations, and deploys docs.
 - Modules follow SemVer; breaking changes require a major bump plus migration notes and changelog updates.
-Rationale: Modular delivery with automated guardrails ensures repeatable builds and trustworthy releases.
+Rationale: Modular delivery with automated guardrails ensures repeatable builds and trustworthy releases while hexagonal boundaries keep domain logic isolated and testable.
 
 ### V. Observability & Security Readiness
 - Services MUST expose health and readiness probes plus structured JSON logs carrying request IDs and W3C trace IDs without PII.
 - Metrics MUST record latency, error rate, throughput, and resource usage; tracing propagates context across upstream and downstream calls.
 - Auth is required by default with least-privilege scopes and strict server-side validation; local testing relaxations follow the dependency policy constraints.
 Rationale: Strong observability and security guarantees keep the platform operable, diagnosable, and safe to promote.
+
+### VI. Maintainable Code Structure
+- Keep source files small enough to remain easy to understand; split responsibilities rather than ballooning single modules.
+- Define each class in its own file unless a helper value object is tightly coupled and deliberately scoped.
+- Preserve the hexagonal separation of domain services, ports, and adapters by refactoring once files exceed agreed complexity thresholds.
+Rationale: Focused files improve reviewability, reduce merge conflicts, and keep architectural boundaries enforceable over time.
+
+### VII. Simplicity First (KISS)
+- Design features with the simplest viable architecture; avoid speculative abstractions, premature generalisation, or unnecessary layers.
+- Prefer straightforward adapters and domain services; justify any added indirection, configuration, or polymorphism within the plan before implementation.
+- Break complex flows into incremental steps that can be independently delivered and observed; remove dead code and unused integrations promptly.
+Rationale: Keeping implementations simple reduces onboarding friction, lowers maintenance cost, and keeps failure modes obvious.
 
 ## Automation & Tooling Requirements
 
@@ -54,6 +68,9 @@ Rationale: Strong observability and security guarantees keep the platform operab
 ## Development Workflow & Quality Gates
 
 - Feature work begins with `/speckit.spec`, `/speckit.plan`, and `/speckit.tasks`; these documents MUST enumerate documentation, testing, observability, and release impacts explicitly.
+- Plans MUST include an architecture slice showing affected ports, adapters, and domain services to keep hexagonal boundaries explicit before implementation.
+- Plans and code reviews MUST highlight any large-file refactors required to maintain small, focused modules and track follow-up tasks when files approach complexity limits.
+- Plans MUST call out simplifications taken compared to alternative designs to enforce the KISS principle and avoid over-engineering.
 - Code reviews verify adherence to this constitution, enforce coverage and lint gates, and ensure documentation, including OpenAPI exports, is updated alongside code.
 - Constitution checks occur at plan approval and before merge; violations require documented justification in the Complexity Tracking table and CODEOWNERS sign-off.
 - Release candidates MUST satisfy observability readiness probes and have validated health checks before staging or production promotion.
@@ -68,4 +85,4 @@ This constitution supersedes prior guidance for the Linux RAG T2 repository. Ame
 
 Version numbers follow SemVer semantics: MAJOR for breaking governance changes, MINOR for new or materially expanded principles or sections, and PATCH for clarifications. Compliance reviews take place at least quarterly and during every release retrospective; gaps trigger follow-up tasks tracked to closure. Non-compliant changes MUST be remediated before promotion beyond staging unless an explicit, time-bound waiver is documented and approved by CODEOWNERS.
 
-**Version**: 0.0.1 | **Ratified**: 2025-10-30 | **Last Amended**: 2025-10-30
+**Version**: 0.3.0 | **Ratified**: 2025-10-30 | **Last Amended**: 2025-10-30
