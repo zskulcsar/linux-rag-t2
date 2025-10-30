@@ -1,12 +1,12 @@
 <!--
 Sync Impact Report
-Version change: 0.2.0 -> 0.3.0
-Modified principles: Development Workflow & Quality Gates -> Development Workflow & Quality Gates
-Added sections: VII. Simplicity First (KISS)
+Version change: 0.4.0 -> 0.5.0
+Modified principles: V. Observability & Security Readiness -> V. Observability & Diagnostics Logging; Development Workflow & Quality Gates -> Development Workflow & Quality Gates
+Added sections: None
 Removed sections: None
 Templates requiring updates:
-- updated .specify/templates/plan-template.md (constitution gates cover hex architecture, maintainability, and KISS simplicity)
-- updated .specify/templates/tasks-template.md (tasks highlight hex architecture, maintainability, and simplicity guardrails)
+- updated .specify/templates/plan-template.md (constitution gates cover hex architecture, maintainability, simplicity, and logging standards)
+- updated .specify/templates/tasks-template.md (tasks highlight hex architecture, maintainability, simplicity, and logging guardrails)
 Follow-up TODOs: None
 -->
 # Linux RAG T2 Constitution
@@ -40,11 +40,11 @@ Rationale: Enforced testing discipline prevents regressions and validates behavi
 - Modules follow SemVer; breaking changes require a major bump plus migration notes and changelog updates.
 Rationale: Modular delivery with automated guardrails ensures repeatable builds and trustworthy releases while hexagonal boundaries keep domain logic isolated and testable.
 
-### V. Observability & Security Readiness
-- Services MUST expose health and readiness probes plus structured JSON logs carrying request IDs and W3C trace IDs without PII.
-- Metrics MUST record latency, error rate, throughput, and resource usage; tracing propagates context across upstream and downstream calls.
-- Auth is required by default with least-privilege scopes and strict server-side validation; local testing relaxations follow the dependency policy constraints.
-Rationale: Strong observability and security guarantees keep the platform operable, diagnosable, and safe to promote.
+### V. Observability & Diagnostics Logging
+- Services MUST expose health and readiness probes plus structured JSON logs carrying request IDs and W3C trace IDs without leaking sensitive data.
+- Metrics MUST record latency, error rate, throughput, and resource usage; tracing propagates context across upstream and downstream calls for local troubleshooting.
+- Every function or method MUST emit a log entry on entry and key decision points using the format `ClassName.method_name(param_names) :: <step description>`; high-level steps log at INFO and detailed flow diagnostics at DEBUG with relevant parameter values.
+Rationale: Rich observability and consistent diagnostics keep the locally hosted system debuggable without imposing unnecessary multi-user security controls.
 
 ### VI. Maintainable Code Structure
 - Keep source files small enough to remain easy to understand; split responsibilities rather than ballooning single modules.
@@ -71,6 +71,7 @@ Rationale: Keeping implementations simple reduces onboarding friction, lowers ma
 - Plans MUST include an architecture slice showing affected ports, adapters, and domain services to keep hexagonal boundaries explicit before implementation.
 - Plans and code reviews MUST highlight any large-file refactors required to maintain small, focused modules and track follow-up tasks when files approach complexity limits.
 - Plans MUST call out simplifications taken compared to alternative designs to enforce the KISS principle and avoid over-engineering.
+- Plans MUST describe the logging strategy for impacted code, confirming INFO coverage of primary steps and DEBUG coverage of detailed flows with the mandated message format.
 - Code reviews verify adherence to this constitution, enforce coverage and lint gates, and ensure documentation, including OpenAPI exports, is updated alongside code.
 - Constitution checks occur at plan approval and before merge; violations require documented justification in the Complexity Tracking table and CODEOWNERS sign-off.
 - Release candidates MUST satisfy observability readiness probes and have validated health checks before staging or production promotion.
@@ -85,4 +86,4 @@ This constitution supersedes prior guidance for the Linux RAG T2 repository. Ame
 
 Version numbers follow SemVer semantics: MAJOR for breaking governance changes, MINOR for new or materially expanded principles or sections, and PATCH for clarifications. Compliance reviews take place at least quarterly and during every release retrospective; gaps trigger follow-up tasks tracked to closure. Non-compliant changes MUST be remediated before promotion beyond staging unless an explicit, time-bound waiver is documented and approved by CODEOWNERS.
 
-**Version**: 0.3.0 | **Ratified**: 2025-10-30 | **Last Amended**: 2025-10-30
+**Version**: 0.5.0 | **Ratified**: 2025-10-30 | **Last Amended**: 2025-10-30
