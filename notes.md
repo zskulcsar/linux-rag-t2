@@ -114,3 +114,20 @@ Result:
 
   All follow-up actions complete.
 ```
+
+## /tasks Use TDD approach, ... the rest went AWOL, but it was "tests are not optional"
+
+As codex created a milestones.md file , the `check-prerequisites.sh` and `common.sh` files were modified to include this file. Some modifications were made to take the defined milestones into account, but ultimately the first attempt was a fail. Updated the prompt with extra wording around hwo to use the milestones which resulted in the current `tasks.md` under `001-rag-cli`. Clearly this is a better way: use the milestones as guides as per:
+```text
+5. **From Milestones (milestones.md)**
+   - The milestones defined should be treated as the high level plan of implementation.
+   - Try to follow it as much as possible, but if there is a more optimal way of planing the tasks you can deviate.
+   - Include the milestone in the task list immediately after the task fulfilling all the milestone's requirements.
+```
+*Note: the original `speckit.tasks.md` file didn't have references to the `constitution.md` file. I believe this is a mistake: although the effects of the constitution should be baked into the specs, previous test indicated that it is not the case, especially when a new session is established.*
+
+### /analyze
+
+### /tools
+
+This is a new command not currently present in the spec-kit repo. Previous test indicated that codex will try to attemp to use tools in the sandbox with ot without success. The prupose of the command is to validate what tools will be used and their existence on the system.
