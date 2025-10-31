@@ -14,6 +14,9 @@
 - Q: What user model does the RAG system support? → A: Single user with admin-preconfigured backend service.
 - Q: What language should knowledge sources and responses prioritize? → A: English as the primary and only guaranteed language.
 
+### Session 2025-10-31
+- Q: During `ragadmin init`, which external prerequisites must be verified beyond filesystem setup? → A: Confirm Weaviate readiness and Ollama availability with the default model downloaded.
+
 ## User Scenarios & Testing *(mandatory)*
 
 <!--
@@ -89,7 +92,7 @@ An operator prepares a fresh machine by initializing the RAG environment, ensuri
 - **FR-002**: Responses from `ragman` MUST include at least one cited source identifier (e.g., man page section, article title) and a confidence indicator, with all answer text delivered in English.
 - **FR-003**: System MUST provide a `ragadmin` CLI with commands to list, add, update, and remove English knowledge sources for man pages, kiwix archives, and info pages using human-readable aliases derived from source filenames for targeting sources.
 - **FR-004**: `ragadmin` MUST trigger and monitor index rebuilds, providing progress feedback and explicit success/failure exit codes.
-- **FR-005**: System MUST support initial bootstrap via `ragadmin init`, which verifies prerequisites, configures directories, and seeds default source entries.
+- **FR-005**: System MUST support initial bootstrap via `ragadmin init`, which verifies prerequisites (Weaviate readiness plus local Ollama availability with the configured default model downloaded), configures directories, and seeds default source entries.
 - **FR-006**: System MUST maintain a local catalog of sources with metadata (type, location, alias, last updated, size) accessible via `ragadmin sources list`, assigning aliases automatically from source filenames and resolving collisions by appending incremental numeric suffixes.
 - **FR-007**: System MUST prevent query execution when the index is outdated or corrupt, instead instructing the user to reindex via `ragadmin`.
 - **FR-008**: System MUST log administrative actions (add/remove source, reindex, init) to an audit file to support troubleshooting.
