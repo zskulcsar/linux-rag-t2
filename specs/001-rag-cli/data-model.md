@@ -19,7 +19,7 @@
 - **State Transitions**: `building` → `ready` on success; `building` → `failed` on error; `ready` → `stale` once `freshness_expires_at` passed or a source changed.
 
 ## QuerySession
-- **Fields**: `session_id` (UUID), `question` (string), `answer` (string), `confidence` (float 0-1), `citations` (list of `{alias, document_ref}`), `latency_ms` (int), `retrieval_latency_ms` (int), `llm_latency_ms` (int), `timestamp` (datetime), `trace_id` (string), `feedback` (optional string).
+- **Fields**: `session_id` (UUID), `question` (string), `answer` (string), `confidence` (float 0-1), `citations` (list of `{alias, document_ref}`), `latency_ms` (int), `retrieval_latency_ms` (int), `llm_latency_ms` (int), `timestamp` (datetime), `trace_id` (string).
 - **Relationships**: Optionally associates with `ContentIndexVersion` used; logged to Phoenix for observability.
 - **Validation**: `citations` non-empty unless `no_answer` flag raised; `confidence` between 0 and 1; `answer` may be empty when `no_answer` flagged.
 - **State Transitions**: Stateless per request; archived for observability only.
@@ -32,17 +32,12 @@
 
 ## HealthCheckResult
 - **Fields**: `check_id` (UUID), `timestamp` (datetime), `component` (enum: `index_freshness`, `source_access`, `disk_capacity`, `ollama`, `weaviate`), `status` (enum: `pass`, `warn`, `fail`), `message` (string), `remediation` (string), `metrics` (JSON object for numeric values).
-- **Relationships**: `HealthCheckSummary` aggregates multiple results per `ragadmin health` invocation.
+- **Relationships**: Grouped per `ragadmin health` invocation for response payloads; overall status computed on the fly (any `fail` → `fail`, else `warn` if any `warn`).
 - **Validation**: `status` derived from thresholds (e.g., disk < 10% free → `fail`); `component` enumerated.
 - **State Transitions**: None; results are immutable snapshots.
 
-## HealthCheckSummary
-- **Fields**: `summary_id` (UUID), `timestamp` (datetime), `overall_status` (enum: `pass`, `warn`, `fail`), `results` (list of `HealthCheckResult` IDs), `trace_id` (string).
-- **Relationships**: Aggregates per command invocation; logged via Phoenix and stored for CLI display.
-- **Validation**: `overall_status` computed from component results (any `fail` → `fail`, else if any `warn` → `warn`).
-
 ## SourceCatalog
-- **Fields**: `catalog_id` (UUID), `version` (int), `entries` (list of `KnowledgeSource` snapshots), `updated_at` (datetime).
-- **Relationships**: Single active catalog referenced by backend; version increments on change.
-- **Validation**: `version` monotonic; entries sorted by alias.
-- **State Transitions**: On add/update/remove source, create new catalog version, mark previous as superseded.
+- **Fields**: `updated_at` (datetime), `entries` (list of current `KnowledgeSource` snapshots).
+- **Relationships**: Single persisted record representing the active catalog consumed by backend and CLIs.
+- **Validation**: Entries sorted by alias; aliases remain unique.
+- **State Transitions**: Snapshot overwritten in place when sources are added, updated, or removed.

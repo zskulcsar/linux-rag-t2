@@ -23,8 +23,7 @@
 
 ## Milestone 5 – Shared Go IPC client (Plan step 5)
 - [ ] Implement request builders and response decoders shared by CLIs.
-- [ ] Add retry/backoff logic for transient Unix socket failures.
-- [ ] Cover with Go unit tests mirroring backend contract validation.
+- [ ] Cover with Go unit tests mirroring backend contract validation; evaluate need for retry/backoff after baseline flows are validated.
 
 ## Milestone 6 – `ragadmin` CLI (Plan step 6)
 - [ ] Scaffold Cobra root and subcommands (init, sources, reindex, health).
