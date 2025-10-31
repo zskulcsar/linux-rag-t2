@@ -123,3 +123,8 @@ An operator prepares a fresh machine by initializing the RAG environment, ensuri
 - **SC-001**: Operators receive a contextually accurate answer (validated against ground truth questions) for 90% of test queries within 5 seconds at the CLI.
 - **SC-002**: Administrative reindex operations complete with a pass/fail status message and exit code, and finish within 10 minutes for a 5 GB content set.
 - **SC-003**: Health checks detect and report 100% of simulated failure modes (missing source, low disk space, stale index) during acceptance testing.
+
+### Validation Approach
+
+- Automated latency and reindex performance suites (tasks T042, T054, T073) confirm compliance with SC-001 and SC-002.
+- Offline compliance tests (tasks T027–T031, T072) verify FR-010 and ensure CLI/back-end operations remain network-isolated during acceptance.
