@@ -5,6 +5,7 @@ trust_level = "trusted"
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
+startup_timeout_sec=30
 
 # Limited network
 [sandbox_workspace_write]
