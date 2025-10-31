@@ -105,13 +105,37 @@ docs/
 ## Core Implementation Plan
 
 1. **Define IPC transport and contract scaffolding** – Stand up the Unix socket server/client framing, request/response models, and validation helpers using the schema in `specs/001-rag-cli/contracts/backend-openapi.yaml` and transport guidance in `specs/001-rag-cli/research.md` (see “IPC Protocol & Transport”). Deliver framing tests before wiring business logic.
+   • Owner: Backend engineer (platform)
+   • Effort: 3 engineering days (includes contract test harness)
+   • Inputs: Spec FR-001/FR-005, `contracts/backend-openapi.yaml`, `research.md` (IPC)
 2. **Model domain services and ports** – Implement core use cases (query orchestration, catalog management, health checks) in `services/rag_backend/domain/` with interfaces under `services/rag_backend/ports/`, aligning entities and state transitions with `specs/001-rag-cli/data-model.md`.
+   • Owner: Backend engineer (domain)
+   • Effort: 4 engineering days
+   • Inputs: `data-model.md`, Spec Functional Requirements FR-001–FR-011
 3. **Wire infrastructure adapters** – Build Weaviate, Ollama, storage, and observability adapters per decisions in `specs/001-rag-cli/research.md` (“Backend Data & Retrieval Flow”, “Observability & Logging”). Ensure Phoenix instrumentation emits trace/log signals that satisfy Constitution V.
+   • Owner: Backend engineer (infrastructure)
+   • Effort: 5 engineering days
+   • Inputs: `research.md` (Backend Data, Observability, Automation), Weaviate/Ollama configs from `quickstart.md`
 4. **Expose backend transport API** – Implement the Unix socket adapter in `services/rag_backend/adapters/transport/` so each port maps to the endpoints defined in `contracts/backend-openapi.yaml`, including error semantics for stale indexes (FR-007) and init verification (FR-005).
+   • Owner: Backend engineer (platform)
+   • Effort: 3 engineering days
+   • Inputs: `contracts/backend-openapi.yaml`, Spec Edge Cases, `research.md` (External Dependency Verification)
 5. **Build shared Go IPC client** – Create reusable socket client utilities in `cli/shared/ipc/` that marshal requests/responses against the same contract, adding unit tests that mirror backend validation.
+   • Owner: Go engineer (shared tooling)
+   • Effort: 2 engineering days
+   • Inputs: `contracts/backend-openapi.yaml`, `research.md` (IPC), Constitution V logging rules
 6. **Implement `ragadmin` commands** – Populate `cli/ragadmin/cmd/` and supporting `internal/app/` use cases to cover init, source CRUD, reindex, and health workflows, referencing functional requirements FR-003 through FR-009 and leveraging catalog fields from `data-model.md`.
+   • Owner: Go engineer (admin CLI)
+   • Effort: 4 engineering days
+   • Inputs: Spec FR-003–FR-011, `data-model.md`, `quickstart.md` (Admin Bootstrap)
 7. **Implement `ragman` query flow** – Add query execution, answer rendering, and citation handling in `cli/ragman/`, ensuring confidence and citation outputs respect FR-001/FR-002 and latency metrics defined in `specs/001-rag-cli/research.md` (“Performance & Resource Targets”).
+   • Owner: Go engineer (query CLI)
+   • Effort: 3 engineering days
+   • Inputs: Spec FR-001/FR-002, `research.md` (Performance), `contracts/backend-openapi.yaml`
 8. **Contract and integration testing** – Expand `tests/go/contract/` and `tests/python/contract/` to exercise end-to-end CLI↔backend flows, and add observability checks (Phoenix traces, structured logs) to verify compliance with the Constitution and Quickstart expectations in `specs/001-rag-cli/quickstart.md`.
+   • Owner: QA engineer (or shared)
+   • Effort: 4 engineering days
+   • Inputs: `contracts/backend-openapi.yaml`, `quickstart.md`, Constitution III & V mandates
 
 ## Verification & Handover Checklist
 
