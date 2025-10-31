@@ -148,15 +148,7 @@ docs/
 - **Testing gates** – Execute `uv run pytest --cov=services/rag_backend` and `go test ./...` with coverage thresholds ≥80% (service) and ≥90% (libraries) per Constitution III, ensuring contract tests cover `contracts/backend-openapi.yaml`.
 - **Performance validation** – Run latency and reindex performance suites (tasks T042, T054, T073) to confirm SC-001 and SC-002 thresholds.
 - **Documentation updates** – Regenerate Cobra help/manpages, update MkDocs pages under `docs/guides/cli/`, and log the socket protocol ADR (`docs/adr/0001-unix-socket-ipc.md`) before handover (Constitution II).
-- **Offline guarantee** – Run `ragadmin init` and `ragadmin health` offline and execute the offline validation suite (tasks T027–T031, T072) to verify FR-005/FR-010 readiness; confirm error paths mirror spec edge cases and log outcomes to the audit ledger.
-- **Automation alignment** – Ensure CI workflows include Ruff, mypy, pytest, golangci-lint, and Phoenix instrumentation smoke tests, with uv lockfile and Go module updates committed (Constitution IV).
-- **Release artefacts** – Provide handover notes covering socket endpoints, data model revisions, and test coverage summary so infra/ops can integrate with existing pipelines.
-
-- **Hexagonal boundaries** – Confirm all transport, storage, and LLM interactions occur via `services/rag_backend/ports/` and adapters; review unit tests for each port to ensure framework-free domain logic (Constitution IV).
-- **Observability readiness** – Validate Phoenix tracing/logging by running `uv run pytest tests/python/integration/test_observability.py` (to be authored) and checking structured JSON logs from both CLIs and backend, matching the mandated format (Constitution V). Cross-reference instrumentation decisions in `specs/001-rag-cli/research.md`.
-- **Testing gates** – Execute `uv run pytest --cov=services/rag_backend` and `go test ./...` with coverage thresholds ≥80% (service) and ≥90% (libraries) per Constitution III, ensuring contract tests cover `contracts/backend-openapi.yaml`.
-- **Documentation updates** – Regenerate Cobra help/manpages, update MkDocs pages under `docs/guides/cli/`, and log the socket protocol ADR (`docs/adr/0001-unix-socket-ipc.md`) before handover (Constitution II).
-- **Offline guarantee** – Run `ragadmin init` and `ragadmin health` offline to verify FR-005/FR-010 readiness; confirm error paths mirror spec edge cases and log outcomes to the audit ledger.
+- **Offline guarantee** – Run `ragadmin init` and `ragadmin health` offline and execute the offline validation suite (tasks T028–T031, T073) to verify FR-005/FR-010 readiness; confirm error paths mirror spec edge cases and log outcomes to the audit ledger.
 - **Automation alignment** – Ensure CI workflows include Ruff, mypy, pytest, golangci-lint, and Phoenix instrumentation smoke tests, with uv lockfile and Go module updates committed (Constitution IV).
 - **Release artefacts** – Provide handover notes covering socket endpoints, data model revisions, and test coverage summary so infra/ops can integrate with existing pipelines.
 

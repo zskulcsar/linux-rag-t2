@@ -126,8 +126,23 @@ As codex created a milestones.md file , the `check-prerequisites.sh` and `common
 ```
 *Note: the original `speckit.tasks.md` file didn't have references to the `constitution.md` file. I believe this is a mistake: although the effects of the constitution should be baked into the specs, previous test indicated that it is not the case, especially when a new session is established.*
 
-### /analyze
-
 ### /tools
 
 This is a new command not currently present in the spec-kit repo. Previous test indicated that codex will try to attemp to use tools in the sandbox with ot without success. The prupose of the command is to validate what tools will be used and their existence on the system.
+
+### /analyze
+
+The output as follows:
+
+## Specification Analysis Report                                                                                                                                                                                       
+                                                                                                                                                                                                                         
+| ID | Category | Severity | Location(s) | Summary | Recommendation |                                                                                                                                                  
+|----|----------|----------|-------------|---------|----------------|                                                                                                                                                  
+| CG1 | Coverage Gap | CRITICAL | spec.md:112-126 (FR-010), plan.md:128-135, tasks.md:17-144 | Offline-only operation (FR-010) is a MUST yet no task or test validates absence of external network calls; plan expects offline verification but backlog lacks implementation/validation steps. | Add dedicated TDD tasks (tests + implementation) to simulate/query for network activity during queries/admin flows and assert offline compliance; update plan/tasks accordingly. |
+| CG2 | Coverage Gap | HIGH | spec.md:139-151 (SC-001/SC-002), tasks.md:72-140 | Success criteria for query latency (SC-001) and reindex duration (SC-002) lack any measurement or acceptance tasks, leaving performance goals untested. | Introduce performance test tasks (e.g., timed pytest/go benchmarks) and instrumentation to validate the stated thresholds before completion. |
+| CG3 | Coverage Gap | HIGH | spec.md:100-111 (FR-003), tasks.md:90-110 | FR-003 requires list/add/update/remove source commands, but tasks only mention generic “sources commands”; no specific work/tests cover update/remove paths. | Split T039 (and tests T036/T037) into explicit add/list/update/remove tasks with corresponding contract tests to ensure full CRUD coverage. |
+| UE1 | Underspecification | HIGH | spec.md:80-88 (Edge Cases), tasks.md:34-144 | Edge cases (power-loss during reindex, missing/corrupt sources, low disk space, context limit) have no mapped tests or recovery tasks, risking unhandled failure modes. | Add negative-path tests and implementation tasks per edge case (e.g., resumable jobs, quarantine flows, disk checks, truncation messaging). |
+| CG4 | Coverage Gap | MEDIUM | spec.md:119-123 (FR-007), tasks.md:58-70 | FR-007 requires blocking queries when index stale/corrupt; only transport wiring tasks reference it, with no dedicated tests verifying rejection behavior. | Extend T023/T030 with stale-index scenarios and add implementation tasks ensuring domain enforces this guard before command wiring. |
+| IN1 | Inconsistency | MEDIUM | plan.md:122-136, tasks.md:135-144 | Plan’s verification checklist mandates offline validation and observability checks; while observability tasks exist (T050), no task addresses offline validation noted in the plan. | Align final-phase tasks by adding explicit offline validation steps (e.g., manual automated runs without network) to satisfy the plan’s handover criteria. |
+
+Codex was requested to create a patch, apply via `patch p1 < ./tmp/001-rag-cli-remediation.patch`
