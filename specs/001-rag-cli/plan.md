@@ -132,7 +132,7 @@ docs/
    • Owner: Go engineer (admin CLI)
    • Effort: 4 engineering days
    • Inputs: Spec FR-003–FR-011, `data-model.md`, `quickstart.md` (Admin Bootstrap)
-8. **Implement `ragman` query flow** – Add query execution, answer rendering, latency instrumentation, and citation handling in `cli/ragman/`, ensuring confidence outputs respect FR-001/FR-002 and performance metrics defined in `specs/001-rag-cli/research.md`.
+8. **Implement `ragman` query flow** – Add query execution, answer rendering, latency instrumentation, and citation handling in `cli/ragman/`, ensuring outputs render the Summary/Steps/References layout with inline aliases, enforce the 0.35 confidence threshold fallback, propagate correlation IDs, and meet performance metrics defined in `specs/001-rag-cli/research.md`.
    • Owner: Go engineer (query CLI)
    • Effort: 3 engineering days
    • Inputs: Spec FR-001/FR-002, `research.md` (Performance), `contracts/backend-openapi.yaml`
