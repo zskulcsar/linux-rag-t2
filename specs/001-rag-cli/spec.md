@@ -89,7 +89,7 @@ An operator prepares a fresh machine by initializing the RAG environment, ensuri
 ### Functional Requirements
 
 - **FR-001**: System MUST provide a `ragman` CLI that accepts English natural-language questions and returns concise English answers synthesized from indexed sources within 5 seconds on a typical workstation.
-- **FR-002**: Responses from `ragman` MUST include at least one cited source identifier (e.g., man page section, article title) and a confidence indicator, with all answer text delivered in English. Answers MUST be formatted with Summary, Steps, and References sections, use inline source aliases alongside numbered citations, and fall back to the standard guidance when the backend confidence score is below 0.35.
+- **FR-002**: Responses from `ragman` MUST include at least one cited source identifier (e.g., man page section, article title) and a confidence indicator, with all answer text delivered in English. Answers MUST be formatted with Summary, Steps, and References sections, use inline source aliases alongside numbered citations, and fall back to the standard guidance when the backend confidence score is below 0.35. A `--plain` CLI flag MUST emit the same sections without markdown styling while preserving inline aliases and numbered references.
 - **FR-003**: System MUST provide a `ragadmin` CLI with commands to list, add, update, and remove English knowledge sources for man pages, kiwix archives, and info pages using human-readable aliases derived from source filenames for targeting sources.
 - **FR-004**: `ragadmin` MUST trigger and monitor index rebuilds, providing progress feedback and explicit success/failure exit codes.
 - **FR-005**: System MUST support initial bootstrap via `ragadmin init`, which verifies prerequisites (Weaviate readiness plus local Ollama availability with the configured default model downloaded), configures directories, and seeds default source entries.
@@ -99,6 +99,7 @@ An operator prepares a fresh machine by initializing the RAG environment, ensuri
 - **FR-009**: System MUST provide `ragadmin health` command that checks index freshness, source accessibility, disk capacity thresholds, and reports pass/fail status.
 - **FR-010**: System MUST operate entirely offline once sources are downloaded, ensuring no external network calls during query or admin operations.
 - **FR-011**: System MUST validate the declared language of each knowledge source, warning administrators when content is not English and recording language metadata in the catalog.
+- **FR-012**: System MUST allow operators to override the minimum confidence threshold via `${XDG_CONFIG_HOME}/ragcli/config.yaml`, defaulting to 0.35 seeded by `ragadmin init` when the file is absent.
 
 ### Key Entities *(include if feature involves data)*
 

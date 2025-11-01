@@ -93,17 +93,17 @@
 
 ### Tests for User Story 1 (MANDATORY) ⚠️
 
-- [ ] T041 [P] [US1] Add failing `ragman` CLI contract tests for success and no-answer paths in `tests/go/contract/ragman_query_test.go`. Extend cases to cover the 0.35 confidence threshold, stale-index fallbacks, and correlation ID propagation in logs.
+- [ ] T041 [P] [US1] Add failing `ragman` CLI contract tests for success and no-answer paths in `tests/go/contract/ragman_query_test.go`. Extend cases to cover the 0.35 confidence threshold, stale-index fallbacks, and correlation ID propagation in logs. Include assertions for `--plain` mode to ensure sections and inline citations mirror the markdown output.
 - [ ] T042 [P] [US1] Add failing backend integration test asserting citation and confidence fields in `tests/python/integration/test_query_flow.py`.
 - [ ] T043 [P] [US1] Add failing latency benchmark tests for SC-001 in `tests/python/performance/test_query_latency.py`.
 - [ ] T044 [P] [US1] Add failing context-limit truncation tests in `tests/python/integration/test_context_limits.py`.
 
 ### Implementation for User Story 1
 
-- [ ] T045 [US1] Implement query application orchestrator with telemetry in `services/rag_backend/application/query_runner.py`.
+- [ ] T045 [US1] Implement query application orchestrator with telemetry in `services/rag_backend/application/query_runner.py`. Load the minimum confidence from presentation config and pass the effective threshold into responses.
 - [ ] T046 [US1] Instrument latency metrics and thresholds in `services/rag_backend/application/query_metrics.py`.
-- [ ] T047 [US1] Implement `ragman` root and query spf13/cobra commands in `cli/ragman/cmd/root.go` and `cli/ragman/cmd/query.go`. Commands must emit correlation IDs and request the structured answer format over the IPC client.
-- [ ] T048 [US1] Implement terminal/JSON renderers with citation, confidence, and truncation messaging in `cli/ragman/internal/io/renderer.go`. Render Summary, Steps, and References sections with inline aliases and fall back to the standard “No answer found” block when confidence < 0.35.
+- [ ] T047 [US1] Implement `ragman` root and query spf13/cobra commands in `cli/ragman/cmd/root.go` and `cli/ragman/cmd/query.go`. Commands must emit correlation IDs and request the structured answer format over the IPC client. Expose a `--plain` flag to select the alternate presenter.
+- [ ] T048 [US1] Implement terminal/JSON renderers with citation, confidence, and truncation messaging in `cli/ragman/internal/io/renderer.go`. Render Summary, Steps, and References sections with inline aliases and fall back to the standard “No answer found” block when confidence < 0.35. Provide markdown and plain presenters via templates that display confidence as a percentage header.
 - [ ] T049 [US1] Record Milestone 7 completion in `specs/001-rag-cli/milestones.md` after CLI and backend tests pass.
 
 ---
@@ -149,7 +149,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T066 [US3] Implement init orchestration verifying Ollama/Weaviate readiness and seeding sources in `services/rag_backend/application/init_service.py`.
+- [ ] T066 [US3] Implement init orchestration verifying Ollama/Weaviate readiness and seeding sources in `services/rag_backend/application/init_service.py`. Seed the presentation config file with the default minimum confidence when it is missing.
 - [ ] T067 [US3] Implement health evaluation aggregator producing remediation guidance and disk checks in `services/rag_backend/application/health_service.py`.
 - [ ] T068 [US3] Implement `ragadmin init` and `ragadmin health` spf13/cobra commands with structured logging in `cli/ragadmin/cmd/init.go` and `cli/ragadmin/cmd/health.go`.
 - [ ] T069 [US3] Persist init and health audit entries with trace IDs in `services/rag_backend/adapters/storage/audit_log.py`.
