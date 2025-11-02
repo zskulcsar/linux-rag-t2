@@ -1,9 +1,9 @@
 # Tasks: Local Linux RAG CLI
 
 ## Milestone 1 – IPC transport scaffold (Plan step 1)
-- [ ] Implement backend Unix socket server skeleton (`services/rag_backend/adapters/transport/server.py`) using contract schema.
-- [ ] Implement Go IPC client framing utilities (`cli/shared/ipc/client.go`).
-- [ ] Add request/response validation tests referencing `contracts/backend-openapi.yaml`.
+- [X] Implement backend Unix socket server skeleton (`services/rag_backend/adapters/transport/server.py`) using contract schema.
+- [X] Implement Go IPC client framing utilities (`cli/shared/ipc/client.go`).
+- [X] Add request/response validation tests referencing `contracts/backend-openapi.yaml`.
 
 ## Milestone 2 – Domain services & ports (Plan step 2)
 - [ ] Define query, ingestion, health ports in `services/rag_backend/ports/`.
