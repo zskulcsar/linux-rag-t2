@@ -132,11 +132,11 @@ docs/
    • Owner: Go engineer (admin CLI)
    • Effort: 4 engineering days
    • Inputs: Spec FR-003–FR-011, `data-model.md`, `quickstart.md` (Admin Bootstrap)
-8. **Implement `ragman` query flow** – Add query execution, answer rendering, latency instrumentation, and citation handling in `cli/ragman/`, ensuring outputs render the Summary/Steps/References layout with inline aliases, enforce the 0.35 confidence threshold fallback string, load overrides from presentation config, support markdown/plain/JSON presenters, provide `--context-tokens` and `--conversation` flags, propagate correlation IDs, and meet performance metrics defined in `specs/001-rag-cli/research.md`.
+8. **Implement `ragman` query flow** – Add query execution, answer rendering, latency instrumentation, and citation handling in `cli/ragman/`, ensuring outputs render the Summary/Steps/References layout with inline aliases, enforce the 0.35 confidence threshold fallback string, populate reference entries (label with optional URL/notes), load overrides from presentation config, support markdown/plain/JSON presenters, provide `--context-tokens` and `--conversation` flags, propagate correlation IDs, and meet performance metrics defined in `specs/001-rag-cli/research.md`.
    • Owner: Go engineer (query CLI)
    • Effort: 3 engineering days
    • Inputs: Spec FR-001/FR-002, `research.md` (Performance), `contracts/backend-openapi.yaml`
-9. **Contract, performance, and integration testing** – Expand Go/Python contract suites, run offline and performance validation harnesses, and add observability checks (Phoenix traces, structured logs) to verify compliance with the Constitution and Quickstart expectations. Include semantic chunking verification, config override tests, and audit log serialization coverage.
+9. **Contract, performance, accuracy, and integration testing** – Expand Go/Python contract suites, run offline and performance validation harnesses, add an accuracy evaluation harness that scores responses against a labeled query corpus to satisfy SC-001, and include observability checks (Phoenix traces, structured logs). Include semantic chunking verification, config override tests, and audit log serialization coverage.
    • Owner: QA engineer (or shared)
    • Effort: 4 engineering days
    • Inputs: `contracts/backend-openapi.yaml`, `quickstart.md`, Constitution III & V mandates, performance targets
@@ -150,6 +150,8 @@ docs/
 - **Hexagonal boundaries** – Confirm all transport, storage, and LLM interactions occur via `services/rag_backend/ports/` and adapters; review unit tests for each port to ensure framework-free domain logic (Constitution IV).
 - **Observability readiness** – Validate Phoenix tracing/logging by running `uv run pytest tests/python/integration/test_observability.py` (to be authored) and checking structured JSON logs from both CLIs and backend, matching the mandated format (Constitution V). Cross-reference instrumentation decisions in `specs/001-rag-cli/research.md`.
 - **Configuration defaults** – Verify `${XDG_CONFIG_HOME}/ragcli/config.yaml` is generated with the agreed schema and overrides presenter and confidence defaults.
+- **Reference formatting** – Ensure backend responses populate `references` with the required `label` and optional `url`/`notes`, and confirm CLI renderers surface labels (with hyperlinks when URLs exist).
+- **Accuracy validation** – Execute the accuracy harness and confirm responses meet or exceed the ≥90 % threshold defined by SC-001.
 - **Testing gates** – Execute `uv run pytest --cov=services/rag_backend` and `go test ./...` with coverage thresholds ≥80% (service) and ≥90% (libraries) per Constitution III, ensuring contract tests cover `contracts/backend-openapi.yaml`.
 - **Semantic chunking** – Confirm chunk size ≤2 000 tokens, SHA256 checksums, and `embeddinggemma:latest`/`gemma3:1b` usage via ingestion and adapter tests.
 - **Health thresholds** – Validate disk/index/service thresholds and exponential backoff logic through unit tests of the dedicated helper utilities.

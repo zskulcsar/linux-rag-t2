@@ -16,7 +16,7 @@
 - Alternatives considered: gRPC over Unix sockets (adds protobuf/toolchain overhead), HTTP over Unix sockets (heavier framing, unnecessary for CLI round-trips), and custom binary formats (harder to debug and extend).
 
 ## Backend Data & Retrieval Flow
-- Decision: Use the Weaviate Python client’s dynamic batching (`with client.batch as batch: ...`) for ingestion, store content classes partitioned by source type, and derive embeddings via Ollama’s `embeddings` API before pushing vectors to Weaviate.
+- Decision: Use the Weaviate Python client’s dynamic batching (`with client.batch as batch: ...`) for ingestion, store content classes partitioned by source type, and derive embeddings via Ollama’s `embeddinggemma:latest` API before pushing vectors to Weaviate; answer generation runs through `gemma3:1b`.
 - Rationale: Dynamic batching (per Context7 docs) auto-tunes batch size/concurrency, preventing silent failures and respecting local resource limits; segregating classes by source keeps hybrid search filters simple, and Ollama embeddings keep all inference local.
 - Alternatives considered: Fixed-size batching (risk of misconfigured batch sizes) and delegating vectorization to Weaviate modules (would require managing Weaviate plugins beyond current scope).
 

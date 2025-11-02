@@ -19,9 +19,9 @@
 - **State Transitions**: `building` → `ready` on success; `building` → `failed` on error; `ready` → `stale` once `freshness_expires_at` passed or a source changed.
 
 ## QuerySession
-- **Fields**: `session_id` (UUID), `question` (string), `answer` (string), `confidence` (float 0-1), `citations` (list of `{alias, document_ref}`), `latency_ms` (int), `retrieval_latency_ms` (int), `llm_latency_ms` (int), `timestamp` (datetime), `trace_id` (string).
+- **Fields**: `session_id` (UUID), `question` (string), `summary` (string), `steps` (list of strings), `references` (list of `{label, url, notes}`), `confidence` (float 0-1), `citations` (list of `{alias, document_ref}`), `no_answer` (boolean), `latency_ms` (int), `retrieval_latency_ms` (int), `llm_latency_ms` (int), `timestamp` (datetime), `trace_id` (string).
 - **Relationships**: Optionally associates with `ContentIndexVersion` used; logged to Phoenix for observability.
-- **Validation**: `citations` non-empty unless `no_answer` flag raised; `confidence` between 0 and 1; `answer` may be empty when `no_answer` flagged.
+- **Validation**: `citations` MUST contain at least one entry unless `no_answer` is true; `confidence` between 0 and 1; `summary` may contain the fallback guidance when `no_answer` is true.
 - **State Transitions**: Stateless per request; archived for observability only.
 
 ## AuditLogEntry

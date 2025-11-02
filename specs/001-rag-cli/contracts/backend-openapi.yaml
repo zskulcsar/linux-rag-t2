@@ -161,7 +161,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IndexStatus'
-  /v1/init:
+  /v1/admin/init:
     post:
       tags: [Admin]
       summary: Initialize directories, catalog, and default sources.
@@ -173,7 +173,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InitResponse'
-  /v1/health:
+  /v1/admin/health:
     get:
       tags: [Admin]
       summary: Run health diagnostics for dependencies and storage.

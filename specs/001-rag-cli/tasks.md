@@ -171,6 +171,7 @@
 - [ ] T078 Document Quickstart validation results and troubleshooting notes in `specs/001-rag-cli/quickstart.md`.
 - [ ] T079 Add failing Go unit tests for audit log JSON writer and config loader helpers in `tests/go/unit/system_defaults_test.go`.
 - [ ] T080 Add failing Go unit tests for health retry/backoff utilities in `tests/go/unit/health_retry_test.go`.
+- [ ] T081 [P] Add failing accuracy evaluation harness covering SC-001 in `tests/system/test_accuracy_eval.py`. Define a labeled corpus of representative queries with expected summaries, invoke `ragman query` through the CLI contract harness, compare structured responses against the ground truth, and assert the run achieves ≥90 % accuracy while capturing detailed mismatch diagnostics for remediation.
 
 ---
 

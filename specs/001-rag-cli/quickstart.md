@@ -47,11 +47,11 @@
    ```bash
    go run ./cli/ragadmin health
    ```
-   Health output lists each component (disk, index freshness, source access, Ollama, Weaviate) with pass/warn/fail status and concise remediation hints. Disk warnings appear when free space drops below 10 % and failures below 8 %; index builds older than 30 days warn until a reindex completes.
-3. Add new sources (examples):
+   Health output lists each component (disk, index freshness, source access, Ollama, Weaviate) with pass/warn/fail status and concise remediation hints. Disk warnings appear when free space drops below 10% and failures when it falls to 8% or lower; FAIL takes precedence if both thresholds apply. Index builds older than 30 days warn until a reindex completes.
+3. Review seeded sources and register additional content:
    ```bash
+   go run ./cli/ragadmin sources list
    go run ./cli/ragadmin sources add --type kiwix --path /data/linuxwiki_en.zim
-   go run ./cli/ragadmin sources add --type man --path /usr/share/man
    ```
 4. Trigger ingestion (if not automatic):
    ```bash
@@ -67,7 +67,7 @@
 ## Query Workflow
 1. Ask a question:
    ```bash
-   go run ./cli/ragman "How do I change file permissions?"
+   go run ./cli/ragman query "How do I change file permissions?"
    ```
 2. Inspect citations and confidence in the CLI output; rerun with `--plain` for unformatted text or `--json` for the raw backend payload.
 3. Override context size or provide a conversation token when needed:
