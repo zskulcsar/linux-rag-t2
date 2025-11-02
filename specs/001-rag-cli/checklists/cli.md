@@ -17,7 +17,7 @@
 
 - [x] CHK005 Is the confidence fallback message specified with exact text and threshold linkage between FR-002 and FR-012? [Clarity, Spec §FR-002; Spec §FR-012]
 - [x] CHK006 Are alias generation and immutability rules (auto-derivation, collision suffixing, no overrides) precise enough to prevent conflicting admin expectations? [Clarity, Spec §Clarifications 2025-10-30; Spec §FR-006]
-- [ ] CHK007 Do requirements spell out which source attributes `ragadmin sources update` may modify versus remain read-only? [Clarity, Gap]
+- [x] CHK007 Do requirements spell out which source attributes `ragadmin sources update` may modify versus remain read-only? [Clarity, Gap]
 - [x] CHK008 Is the English-only scope for queries and sources documented so CLI behaviour on other languages is unambiguous? [Clarity, Spec §Clarifications 2025-10-30; Spec §Assumptions]
 
 ## Requirement Consistency
@@ -49,4 +49,4 @@
 
 ## Ambiguities & Conflicts
 
-- [ ] CHK021 Is there guidance clarifying how multiple citations per alias should be rendered or deduplicated in CLI outputs, or is this a documented gap? [Ambiguity, Gap]
+- [x] CHK021 Is there guidance clarifying how multiple citations per alias should be rendered or deduplicated in CLI outputs, or is this a documented gap? [Ambiguity, Gap]
