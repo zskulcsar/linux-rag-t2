@@ -34,8 +34,8 @@
 
 ### Milestone 1 – IPC transport scaffold
 
-- [ ] T008 [P] Author failing transport handshake contract tests in `tests/python/contract/test_transport_server.py`.
-- [ ] T009 [P] Author failing Go IPC framing tests for `/v1/query` in `tests/go/contract/transport_client_test.go`.
+- [X] T008 [P] Author failing transport handshake contract tests in `tests/python/contract/test_transport_server.py`.
+- [X] T009 [P] Author failing Go IPC framing tests for `/v1/query` in `tests/go/contract/transport_client_test.go`.
 - [ ] T010 Implement newline-delimited JSON Unix socket server skeleton with correlation IDs in `services/rag_backend/adapters/transport/server.py`.
 - [ ] T011 Implement Go IPC client framing with validation and logging hooks in `cli/shared/ipc/client.go`.
 - [ ] T012 Record Milestone 1 completion in `specs/001-rag-cli/milestones.md` once handshake tests pass.
