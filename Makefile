@@ -8,6 +8,8 @@ PYTEST_INTEGRATION_DIR := tests/python/integration
 PYTEST_CONTRACT_DIR := tests/python/contract
 MKDOCS_CONFIG := mkdocs.yml
 MKDOCS_SITE_DIR := docs/site
+UV_ENV := PYTHONPATH=$(CURDIR) UV_CACHE_DIR=$(CURDIR)/.uv_cache
+UV_PYTEST := $(UV_ENV) uv run --project services/rag_backend pytest
 
 GOFMT_PATHS := $(shell find cli tests -type f -name '*.go' -not -path '*/vendor/*' 2>/dev/null)
 
@@ -57,21 +59,33 @@ test-python: test-python-unit test-python-integration test-python-contract ## Ru
 
 test-python-unit: ## Run Python unit tests.
 	@if [ -d "$(PYTEST_UNIT_DIR)" ]; then \
-		uv run pytest $(PYTEST_UNIT_DIR); \
+		if ! $(UV_PYTEST) $(PYTEST_UNIT_DIR); then \
+			status=$$?; \
+			if [ $$status -ne 5 ]; then exit $$status; fi; \
+			echo "pytest reported no tests in $(PYTEST_UNIT_DIR); continuing."; \
+		fi; \
 	else \
 		echo "Skipping $(PYTEST_UNIT_DIR); directory missing."; \
 	fi
 
 test-python-integration: ## Run Python integration tests.
 	@if [ -d "$(PYTEST_INTEGRATION_DIR)" ]; then \
-		uv run pytest $(PYTEST_INTEGRATION_DIR); \
+		if ! $(UV_PYTEST) $(PYTEST_INTEGRATION_DIR); then \
+			status=$$?; \
+			if [ $$status -ne 5 ]; then exit $$status; fi; \
+			echo "pytest reported no tests in $(PYTEST_INTEGRATION_DIR); continuing."; \
+		fi; \
 	else \
 		echo "Skipping $(PYTEST_INTEGRATION_DIR); directory missing."; \
 	fi
 
 test-python-contract: ## Run Python contract tests.
 	@if [ -d "$(PYTEST_CONTRACT_DIR)" ]; then \
-		uv run pytest $(PYTEST_CONTRACT_DIR); \
+		if ! $(UV_PYTEST) $(PYTEST_CONTRACT_DIR); then \
+			status=$$?; \
+			if [ $$status -ne 5 ]; then exit $$status; fi; \
+			echo "pytest reported no tests in $(PYTEST_CONTRACT_DIR); continuing."; \
+		fi; \
 	else \
 		echo "Skipping $(PYTEST_CONTRACT_DIR); directory missing."; \
 	fi
