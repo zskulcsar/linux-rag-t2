@@ -18,13 +18,13 @@
 
 **Purpose**: Initialize repository structure, toolchains, and package scaffolding needed before any feature work.
 
-- [ ] T001 Scaffold feature directories under `cli/ragman/`, `cli/ragadmin/`, `cli/shared/`, and `services/rag_backend/` per the approved project structure.
-- [ ] T002 Initialize the Go workspace, linking CLI modules in `go.work` with relative paths to `cli/ragman`, `cli/ragadmin`, and `cli/shared`.
-- [ ] T003 Create Go module metadata for `ragman` in `cli/ragman/go.mod` pinned to Go 1.23 with `github.com/spf13/cobra/v1` dependency.
-- [ ] T004 Create Go module metadata for `ragadmin` in `cli/ragadmin/go.mod` pinned to Go 1.23 with `github.com/spf13/cobra/v1` dependency.
-- [ ] T005 Create shared Go module metadata for IPC utilities in `cli/shared/go.mod` with replace directives for local CLI modules.
-- [ ] T006 Bootstrap the Python backend package by adding `services/rag_backend/pyproject.toml` (uv managed) and `services/rag_backend/__init__.py`.
-- [ ] T007 Create language-specific test scaffolding under `tests/go/{unit,contract}/` and `tests/python/{unit,integration,contract,performance}/`.
+- [X] T001 Scaffold feature directories under `cli/ragman/`, `cli/ragadmin/`, `cli/shared/`, and `services/rag_backend/` per the approved project structure.
+- [X] T002 Initialize the Go workspace, linking CLI modules in `go.work` with relative paths to `cli/ragman`, `cli/ragadmin`, and `cli/shared`.
+- [X] T003 Create Go module metadata for `ragman` in `cli/ragman/go.mod` pinned to Go 1.23 with `github.com/spf13/cobra/v1` dependency.
+- [X] T004 Create Go module metadata for `ragadmin` in `cli/ragadmin/go.mod` pinned to Go 1.23 with `github.com/spf13/cobra/v1` dependency.
+- [X] T005 Create shared Go module metadata for IPC utilities in `cli/shared/go.mod` with replace directives for local CLI modules.
+- [X] T006 Bootstrap the Python backend package by adding `services/rag_backend/pyproject.toml` (uv managed) and `services/rag_backend/__init__.py`.
+- [X] T007 Create language-specific test scaffolding under `tests/go/{unit,contract}/` and `tests/python/{unit,integration,contract,performance}/`.
 
 ---
 
