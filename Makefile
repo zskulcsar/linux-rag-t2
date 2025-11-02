@@ -10,6 +10,8 @@ MKDOCS_CONFIG := mkdocs.yml
 MKDOCS_SITE_DIR := docs/site
 UV_ENV := PYTHONPATH=$(CURDIR) UV_CACHE_DIR=$(CURDIR)/.uv_cache
 UV_PYTEST := $(UV_ENV) uv run --project services/rag_backend pytest
+GO_ENV := GOCACHE=$(CURDIR)/.gocache
+GO_TEST := $(GO_ENV) go test
 
 GOFMT_PATHS := $(shell find cli tests -type f -name '*.go' -not -path '*/vendor/*' 2>/dev/null)
 
@@ -50,10 +52,10 @@ test: test-go test-python ## Run all test suites.
 test-go: test-go-unit test-go-contract ## Run all Go tests.
 
 test-go-unit: ## Execute Go unit tests for CLI modules.
-	go test ./cli/...
+	$(GO_TEST) ./cli/...
 
 test-go-contract: ## Execute Go contract tests.
-	go test ./tests/go/...
+	$(GO_TEST) ./tests/go/contract/...
 
 test-python: test-python-unit test-python-integration test-python-contract ## Run all Python tests.
 
