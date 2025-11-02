@@ -128,11 +128,11 @@ docs/
    • Owner: Go engineer (shared tooling)
    • Effort: 2 engineering days
    • Inputs: `contracts/backend-openapi.yaml`, `research.md` (IPC), Constitution V logging rules
-7. **Implement `ragadmin` commands** – Populate `cli/ragadmin/cmd/` and supporting `internal/app/` use cases to cover source CRUD, reindex progress metrics, init, and health workflows, referencing functional requirements FR-003 through FR-011 and leveraging catalog fields from `data-model.md`. Ensure `ragadmin init` seeds the default `man-pages`/`info-pages` sources, writes the config schema, and emits JSON-line audit entries.
+7. **Implement `ragadmin` commands** – Populate `cli/ragadmin/cmd/` and supporting `internal/app/` use cases to cover source CRUD, reindex progress metrics, init, and health workflows, referencing functional requirements FR-003 through FR-011 and leveraging catalog fields from `data-model.md`. Ensure `ragadmin sources update` enforces full-replacement semantics (mutating all metadata except alias, with revalidation) while rejecting alias changes, and ensure `ragadmin init` seeds the default `man-pages`/`info-pages` sources, writes the config schema, and emits JSON-line audit entries.
    • Owner: Go engineer (admin CLI)
    • Effort: 4 engineering days
    • Inputs: Spec FR-003–FR-011, `data-model.md`, `quickstart.md` (Admin Bootstrap)
-8. **Implement `ragman` query flow** – Add query execution, answer rendering, latency instrumentation, and citation handling in `cli/ragman/`, ensuring outputs render the Summary/Steps/References layout with inline aliases, enforce the 0.35 confidence threshold fallback string, populate reference entries (label with optional URL/notes), load overrides from presentation config, support markdown/plain/JSON presenters, provide `--context-tokens` and `--conversation` flags, propagate correlation IDs, and meet performance metrics defined in `specs/001-rag-cli/research.md`.
+8. **Implement `ragman` query flow** – Add query execution, answer rendering, latency instrumentation, and citation handling in `cli/ragman/`, ensuring outputs render the Summary/Steps/References layout with inline aliases, enforce the 0.35 confidence threshold fallback string, populate reference entries (label with optional URL/notes), deduplicate citation markers by `{alias, document_ref}` and reuse numbering across sections, load overrides from presentation config, support markdown/plain/JSON presenters, provide `--context-tokens` and `--conversation` flags, propagate correlation IDs, and meet performance metrics defined in `specs/001-rag-cli/research.md`.
    • Owner: Go engineer (query CLI)
    • Effort: 3 engineering days
    • Inputs: Spec FR-001/FR-002, `research.md` (Performance), `contracts/backend-openapi.yaml`

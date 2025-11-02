@@ -93,7 +93,7 @@
 
 ### Tests for User Story 1 (MANDATORY) ⚠️
 
-- [ ] T041 [P] [US1] Add failing `ragman` CLI contract tests for success and no-answer paths in `tests/go/contract/ragman_query_test.go`. Extend cases to cover the 0.35 confidence threshold, stale-index fallbacks, structured `summary`/`steps`/`references` fields, raw JSON output (`--json`), and correlation ID propagation in logs. Include assertions for `--plain` mode to ensure sections and inline citations mirror the markdown output.
+- [ ] T041 [P] [US1] Add failing `ragman` CLI contract tests for success and no-answer paths in `tests/go/contract/ragman_query_test.go`. Extend cases to cover the 0.35 confidence threshold, stale-index fallbacks, structured `summary`/`steps`/`references` fields, raw JSON output (`--json`), citation marker reuse for repeated `{alias, document_ref}` pairs, and correlation ID propagation in logs. Include assertions for `--plain` mode to ensure sections and inline citations mirror the markdown output (FR-002).
 - [ ] T042 [P] [US1] Add failing backend integration test asserting `summary`, ordered `steps`, `references`, semantic chunk counts (≤2 000 tokens), citation and confidence fields in `tests/python/integration/test_query_flow.py`.
 - [ ] T043 [P] [US1] Add failing latency benchmark tests for SC-001 in `tests/python/performance/test_query_latency.py`.
 - [ ] T044 [P] [US1] Add failing context-limit truncation tests in `tests/python/integration/test_context_limits.py`.
@@ -117,7 +117,7 @@
 ### Tests for User Story 2 (MANDATORY) ⚠️
 
 - [ ] T050 [P] [US2] Add failing `ragadmin` contract tests for listing and adding sources in `tests/go/contract/ragadmin_sources_list_add_test.go`.
-- [ ] T051 [P] [US2] Add failing `ragadmin` contract tests for updating source metadata in `tests/go/contract/ragadmin_sources_update_test.go`.
+- [ ] T051 [P] [US2] Add failing `ragadmin` contract tests for updating source metadata in `tests/go/contract/ragadmin_sources_update_test.go`, verifying that updates can mutate metadata fields aside from alias and that alias changes require remove-and-add flows (FR-003, FR-006).
 - [ ] T052 [P] [US2] Add failing `ragadmin` contract tests for removing sources and verifying quarantine in `tests/go/contract/ragadmin_sources_remove_test.go`.
 - [ ] T053 [P] [US2] Add failing backend integration tests for catalog lifecycle, SHA256 checksum persistence, deterministic `<alias>:<checksum>:<chunk_id>` document IDs, and alias collision handling in `tests/python/integration/test_source_catalog.py`.
 - [ ] T054 [P] [US2] Add failing reindex performance tests for SC-002 in `tests/python/performance/test_reindex_duration.py`.
