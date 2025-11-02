@@ -89,7 +89,7 @@ An operator prepares a fresh machine by initializing the RAG environment, ensuri
 ### Functional Requirements
 
 - **FR-001**: System MUST provide a `ragman` CLI that accepts English natural-language questions and returns concise English answers synthesized from indexed sources within 5 seconds on a typical workstation.
-- **FR-002**: Responses from `ragman` MUST include at least one cited source identifier (e.g., man page section, article title) and a confidence indicator, with all answer text delivered in English. Answers MUST be formatted with Summary, Steps, and References sections, use inline source aliases alongside numbered citations, and fall back to the standard guidance when the backend confidence score is below 0.35. A `--plain` CLI flag MUST emit the same sections without markdown styling while preserving inline aliases and numbered references.
+- **FR-002**: Responses from `ragman` MUST include at least one cited source identifier (e.g., man page section, article title) and a confidence indicator, with all answer text delivered in English. Answers MUST be formatted with Summary, Steps, and References sections, use inline source aliases alongside numbered citations, and fall back to the standard guidance when the backend confidence score is below 0.35. Backend responses MUST expose discrete `summary`, ordered `steps`, and `references` fields alongside citation metadata so the CLI can render all sections without inferring structure, and MUST surface the fixed low-confidence guidance string “Answer is below the confidence threshold. Please rephrase your query.” when `confidence` falls below the effective threshold (see FR-012). A `--plain` CLI flag MUST emit the same sections without markdown styling while preserving inline aliases and numbered references.
 - **FR-003**: System MUST provide a `ragadmin` CLI with commands to list, add, update, and remove English knowledge sources for man pages, kiwix archives, and info pages using human-readable aliases derived from source filenames for targeting sources.
 - **FR-004**: `ragadmin` MUST trigger and monitor index rebuilds, providing progress feedback and explicit success/failure exit codes.
 - **FR-005**: System MUST support initial bootstrap via `ragadmin init`, which verifies prerequisites (Weaviate readiness plus local Ollama availability with the configured default model downloaded), configures directories, and seeds default source entries.
@@ -99,7 +99,18 @@ An operator prepares a fresh machine by initializing the RAG environment, ensuri
 - **FR-009**: System MUST provide `ragadmin health` command that checks index freshness, source accessibility, disk capacity thresholds, and reports pass/fail status.
 - **FR-010**: System MUST operate entirely offline once sources are downloaded, ensuring no external network calls during query or admin operations.
 - **FR-011**: System MUST validate the declared language of each knowledge source, warning administrators when content is not English and recording language metadata in the catalog.
-- **FR-012**: System MUST allow operators to override the minimum confidence threshold via `${XDG_CONFIG_HOME}/ragcli/config.yaml`, defaulting to 0.35 seeded by `ragadmin init` when the file is absent.
+- **FR-012**: System MUST allow operators to override the minimum confidence threshold via `${XDG_CONFIG_HOME}/ragcli/config.yaml`, defaulting to 0.35 seeded by `ragadmin init` when the file is absent. Defaults live under `${XDG_CONFIG_HOME}/ragcli/config.yaml` in the following schema:
+
+  ```yaml
+  ragman:
+    confidence_threshold: 0.35
+    presenter_default: markdown
+  ragadmin:
+    output_default: table
+  ```
+
+  `ragadmin init` MUST create the file when absent and the CLIs MUST honour overrides while retaining offline behaviour.
+- **FR-013**: The Weaviate adapter MUST persist each document in a single `Document` class carrying `source_alias`, `source_type`, and `language` metadata with deterministic identifiers so queries can filter by those fields and re-ingestion replaces stale vectors without manual cleanup.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -116,6 +127,15 @@ An operator prepares a fresh machine by initializing the RAG environment, ensuri
 - Default manual and info paths follow standard Linux filesystem locations; deviations can be configured via `ragadmin`.
 - User base expects English-language responses; multilingual support is out of scope for this release.
 - The RAG system serves a single local user; administrators pre-configure the backend service but no multi-user features are required.
+
+## Operational Details
+
+- `ragadmin init` seeds two default sources: `man-pages` (`man`, `/usr/share/man`) and `info-pages` (`info`, `/usr/share/info`) and ensures `${XDG_DATA_HOME}/ragcli/kiwix/` exists without registering a kiwix source.
+- All ingestion pipelines MUST perform semantic chunking up to 2 000 tokens per chunk with deterministic IDs `<alias>:<checksum>:<chunk_id>` using SHA256 checksums for content versioning. `embeddinggemma:latest` supplies embeddings and `gemma3:1b` generates answers.
+- Reindex progress responses MUST expose the current stage label and, when calculable, a `percent_complete` value. CLI output includes both; when percentage is absent the stage still surfaces.
+- `ragman` presents results via markdown (default), plain text (`--plain`), or raw JSON (`--json`). Flags `--context-tokens` (default 4096) and `--conversation` forward values to the backend.
+- Disk health WARNs when free space ≤10 % and FAILs when space falls to ≤8 %. Index freshness WARNs when the active build is ≥30 days old. Source accessibility plus Ollama/Weaviate probes honour five exponential retries (0.5 s, 1 s, 2 s, 4 s, 8 s) with 3 s service timeouts and emit concise remediation hints.
+- Audit logging writes newline-delimited JSON entries containing `timestamp`, `action`, `target`, `status`, `trace_id`, and optional `message`/`error_code`; rotation remains an operational concern outside the application.
 
 ## Success Criteria *(mandatory)*
 

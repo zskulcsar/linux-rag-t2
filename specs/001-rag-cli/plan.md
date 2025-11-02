@@ -112,7 +112,7 @@ docs/
    • Owner: Backend engineer (domain)
    • Effort: 4 engineering days
    • Inputs: `data-model.md`, Spec Functional Requirements FR-001–FR-011
-3. **Wire infrastructure adapters and resilience** – Build Weaviate, Ollama, storage, and observability adapters per decisions in `specs/001-rag-cli/research.md`, adding ingestion recovery, corrupt source quarantine, and audit durability to satisfy Edge Cases and FR-003/FR-008/FR-010.
+3. **Wire infrastructure adapters and resilience** – Build Weaviate, Ollama, storage, and observability adapters per decisions in `specs/001-rag-cli/research.md`, adding ingestion recovery, corrupt source quarantine, and audit durability to satisfy Edge Cases and FR-003/FR-008/FR-010. The Weaviate adapter must use a single `Document` class with alias/type/language metadata, deterministic IDs for re-ingestion, and structured logs/metrics covering ingestion and query latency.
    • Owner: Backend engineer (infrastructure)
    • Effort: 5 engineering days
    • Inputs: `research.md` (Backend Data, Observability, Automation), `quickstart.md`, Edge Cases, `data-model.md`
@@ -120,7 +120,7 @@ docs/
    • Owner: Backend + Go engineers (shared)
    • Effort: 2 engineering days
    • Inputs: Spec FR-010, Constitution V, `research.md` (Filesystems & Deployment Layout)
-5. **Expose backend transport API** – Implement the Unix socket adapter in `services/rag_backend/adapters/transport/` so each port maps to the endpoints defined in `contracts/backend-openapi.yaml`, including error semantics for stale indexes (FR-007) and init verification (FR-005).
+5. **Expose backend transport API** – Implement the Unix socket adapter in `services/rag_backend/adapters/transport/` so each port maps to the endpoints defined in `contracts/backend-openapi.yaml`, including error semantics for stale indexes (FR-007), structured `summary`/`steps`/`references` payloads, the fixed low-confidence guidance, and init verification (FR-005).
    • Owner: Backend engineer (platform)
    • Effort: 3 engineering days
    • Inputs: `contracts/backend-openapi.yaml`, Spec Edge Cases, `research.md` (External Dependency Verification)
@@ -128,24 +128,31 @@ docs/
    • Owner: Go engineer (shared tooling)
    • Effort: 2 engineering days
    • Inputs: `contracts/backend-openapi.yaml`, `research.md` (IPC), Constitution V logging rules
-7. **Implement `ragadmin` commands** – Populate `cli/ragadmin/cmd/` and supporting `internal/app/` use cases to cover source CRUD, reindex progress metrics, init, and health workflows, referencing functional requirements FR-003 through FR-011 and leveraging catalog fields from `data-model.md`. Ensure `ragadmin init` seeds the default presentation config file.
+7. **Implement `ragadmin` commands** – Populate `cli/ragadmin/cmd/` and supporting `internal/app/` use cases to cover source CRUD, reindex progress metrics, init, and health workflows, referencing functional requirements FR-003 through FR-011 and leveraging catalog fields from `data-model.md`. Ensure `ragadmin init` seeds the default `man-pages`/`info-pages` sources, writes the config schema, and emits JSON-line audit entries.
    • Owner: Go engineer (admin CLI)
    • Effort: 4 engineering days
    • Inputs: Spec FR-003–FR-011, `data-model.md`, `quickstart.md` (Admin Bootstrap)
-8. **Implement `ragman` query flow** – Add query execution, answer rendering, latency instrumentation, and citation handling in `cli/ragman/`, ensuring outputs render the Summary/Steps/References layout with inline aliases, enforce the 0.35 confidence threshold fallback, load overrides from presentation config, support the `--plain` presenter, propagate correlation IDs, and meet performance metrics defined in `specs/001-rag-cli/research.md`.
+8. **Implement `ragman` query flow** – Add query execution, answer rendering, latency instrumentation, and citation handling in `cli/ragman/`, ensuring outputs render the Summary/Steps/References layout with inline aliases, enforce the 0.35 confidence threshold fallback string, load overrides from presentation config, support markdown/plain/JSON presenters, provide `--context-tokens` and `--conversation` flags, propagate correlation IDs, and meet performance metrics defined in `specs/001-rag-cli/research.md`.
    • Owner: Go engineer (query CLI)
    • Effort: 3 engineering days
    • Inputs: Spec FR-001/FR-002, `research.md` (Performance), `contracts/backend-openapi.yaml`
-9. **Contract, performance, and integration testing** – Expand Go/Python contract suites, run offline and performance validation harnesses, and add observability checks (Phoenix traces, structured logs) to verify compliance with the Constitution and Quickstart expectations.
+9. **Contract, performance, and integration testing** – Expand Go/Python contract suites, run offline and performance validation harnesses, and add observability checks (Phoenix traces, structured logs) to verify compliance with the Constitution and Quickstart expectations. Include semantic chunking verification, config override tests, and audit log serialization coverage.
    • Owner: QA engineer (or shared)
    • Effort: 4 engineering days
    • Inputs: `contracts/backend-openapi.yaml`, `quickstart.md`, Constitution III & V mandates, performance targets
+10. **Health checker utilities** – Extract disk/index/service threshold evaluation and exponential retry/backoff logic into dedicated Go helpers consumed by `ragadmin health`, keeping commands maintainable.
+   • Owner: Go engineer (shared tooling)
+   • Effort: 2 engineering days
+   • Inputs: Spec FR-005/FR-009, `data-model.md` (HealthCheckResult), new health threshold decisions
 
 ## Verification & Handover Checklist
 
 - **Hexagonal boundaries** – Confirm all transport, storage, and LLM interactions occur via `services/rag_backend/ports/` and adapters; review unit tests for each port to ensure framework-free domain logic (Constitution IV).
 - **Observability readiness** – Validate Phoenix tracing/logging by running `uv run pytest tests/python/integration/test_observability.py` (to be authored) and checking structured JSON logs from both CLIs and backend, matching the mandated format (Constitution V). Cross-reference instrumentation decisions in `specs/001-rag-cli/research.md`.
+- **Configuration defaults** – Verify `${XDG_CONFIG_HOME}/ragcli/config.yaml` is generated with the agreed schema and overrides presenter and confidence defaults.
 - **Testing gates** – Execute `uv run pytest --cov=services/rag_backend` and `go test ./...` with coverage thresholds ≥80% (service) and ≥90% (libraries) per Constitution III, ensuring contract tests cover `contracts/backend-openapi.yaml`.
+- **Semantic chunking** – Confirm chunk size ≤2 000 tokens, SHA256 checksums, and `embeddinggemma:latest`/`gemma3:1b` usage via ingestion and adapter tests.
+- **Health thresholds** – Validate disk/index/service thresholds and exponential backoff logic through unit tests of the dedicated helper utilities.
 - **Performance validation** – Run latency and reindex performance suites (tasks T042, T054, T073) to confirm SC-001 and SC-002 thresholds.
 - **Documentation updates** – Regenerate Cobra help/manpages, update MkDocs pages under `docs/guides/cli/`, and log the socket protocol ADR (`docs/adr/0001-unix-socket-ipc.md`) before handover (Constitution II).
 - **Offline guarantee** – Run `ragadmin init` and `ragadmin health` offline and execute the offline validation suite (tasks T028–T031, T073) to verify FR-005/FR-010 readiness; confirm error paths mirror spec edge cases and log outcomes to the audit ledger.

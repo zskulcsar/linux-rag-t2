@@ -146,3 +146,10 @@ The output as follows:
 | IN1 | Inconsistency | MEDIUM | plan.md:122-136, tasks.md:135-144 | Plan’s verification checklist mandates offline validation and observability checks; while observability tasks exist (T050), no task addresses offline validation noted in the plan. | Align final-phase tasks by adding explicit offline validation steps (e.g., manual automated runs without network) to satisfy the plan’s handover criteria. |
 
 Codex was requested to create a patch, apply via `patch p1 < ./tmp/001-rag-cli-remediation.patch`
+
+## Started to use superpowers ... a subset, that is
+* You can find it here: [obra/superpowers](http://github.com/obra/superpowers)
+
+This seems to be much better at specifying tasks. The first round with spec-kit resulted in nothing as there was not enough specification. However, some adjustments were required to make /brainstorm aware of the specs and to able to update tasks, plan, and spec.
+
+
