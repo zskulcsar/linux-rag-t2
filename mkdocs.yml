@@ -1,0 +1,24 @@
+site_name: Linux RAG T2
+site_description: Documentation for the local Linux RAG CLI and backend service
+site_dir: docs/site
+docs_dir: docs
+
+nav:
+  - Overview: index.md
+  - CLI Guides:
+      - ragman: guides/cli/ragman.md
+      - ragadmin: guides/cli/ragadmin.md
+  - Backend Service:
+      - Overview: guides/backend/overview.md
+
+theme:
+  name: mkdocs
+
+markdown_extensions:
+  - tables
+  - admonition
+  - toc:
+      permalink: true
+
+plugins:
+  - search
