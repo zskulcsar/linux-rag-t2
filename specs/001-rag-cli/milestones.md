@@ -16,6 +16,13 @@
 - [X] Implement catalog storage and audit logging adapters honoring XDG paths.
 - [X] Wire Phoenix instrumentation (`arize-phoenix`) and structured logging.
 
+## Milestone 3A – Offline guarantee (Plan step 4 enforcement)
+- [X] Add backend offline compliance tests (`tests/python/integration/test_offline_guards.py`) covering blocked remote sockets and loopback allowances.
+- [X] Add CLI offline compliance tests (`tests/go/contract/offline_guard_test.go`) asserting outbound HTTP blocking and loopback success.
+- [X] Implement backend offline guard (`services/rag_backend/application/offline_guard.py`) enforcing FR-010.
+- [X] Implement shared Go IPC offline guard (`cli/shared/ipc/client.go`) with structured logging and error propagation.
+- [X] Execute offline guard suites (`uv run pytest tests/python/integration/test_offline_guards.py`, `go test ./tests/go/contract -run OfflineGuard`) confirming all checks pass.
+
 ## Milestone 4 – Transport endpoints (Plan step 4)
 - [ ] Map domain ports to `/v1/*` handlers in transport adapter with error semantics.
 - [ ] Add init verification path covering FR-005 (Weaviate + Ollama checks).

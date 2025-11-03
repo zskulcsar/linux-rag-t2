@@ -67,12 +67,12 @@
 - [X] T029 [P] Add failing CLI offline compliance tests covering `ragman` and `ragadmin` flows in `tests/go/contract/offline_guard_test.go`.
 - [X] T030 Implement backend offline enforcement and safe adapter guards in `services/rag_backend/application/offline_guard.py`.
 - [X] T031 Implement shared Go IPC offline enforcement and structured logging in `cli/shared/ipc/client.go`.
-- [ ] T032 Record offline milestone completion in `specs/001-rag-cli/milestones.md` after offline test pass.
+- [X] T032 Record offline milestone completion in `specs/001-rag-cli/milestones.md` after offline test pass.
 
 ### Milestone 4 – Transport endpoints
 
-- [ ] T033 [P] Add failing transport endpoint tests for `/v1/query`, `/v1/sources`, `/v1/index/reindex`, and `/v1/admin/*` in `tests/python/contract/test_transport_endpoints.py`.
-- [ ] T034 [P] Add failing stale-index rejection tests for `/v1/query` returning 409 in `tests/python/contract/test_transport_stale_index.py`.
+- [X] T033 [P] Add failing transport endpoint tests for `/v1/query`, `/v1/sources`, `/v1/index/reindex`, and `/v1/admin/*` in `tests/python/contract/test_transport_endpoints.py`.
+- [X] T034 [P] Add failing stale-index rejection tests for `/v1/query` returning 409 in `tests/python/contract/test_transport_stale_index.py`.
 - [ ] T035 Map domain ports to socket handlers with standardized errors in `services/rag_backend/adapters/transport/handlers.py`.
 - [ ] T036 Implement `/v1/admin/init` verification and stale-index rejection logic in `services/rag_backend/adapters/transport/handlers.py`.
 - [ ] T037 Record Milestone 4 completion in `specs/001-rag-cli/milestones.md` after endpoint tests pass.
