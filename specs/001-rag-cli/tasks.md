@@ -66,7 +66,7 @@
 - [X] T028 [P] Add failing backend offline compliance tests that block outbound HTTP in `tests/python/integration/test_offline_guards.py`.
 - [X] T029 [P] Add failing CLI offline compliance tests covering `ragman` and `ragadmin` flows in `tests/go/contract/offline_guard_test.go`.
 - [X] T030 Implement backend offline enforcement and safe adapter guards in `services/rag_backend/application/offline_guard.py`.
-- [ ] T031 Implement shared Go IPC offline enforcement and structured logging in `cli/shared/ipc/client.go`.
+- [X] T031 Implement shared Go IPC offline enforcement and structured logging in `cli/shared/ipc/client.go`.
 - [ ] T032 Record offline milestone completion in `specs/001-rag-cli/milestones.md` after offline test pass.
 
 ### Milestone 4 – Transport endpoints

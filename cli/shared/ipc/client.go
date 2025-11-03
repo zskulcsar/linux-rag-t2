@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -49,6 +50,20 @@ type Client struct {
 	clientID          string
 	awaitHandshakeAck bool
 	mu                sync.Mutex
+}
+
+// ErrExternalNetworkBlocked is returned when the offline guard prevents an outbound HTTP call.
+var ErrExternalNetworkBlocked = errors.New("ipc: external network access blocked")
+
+var (
+	offlineGuardMu                sync.Mutex
+	offlineGuardInstallCount      int
+	offlineGuardOriginalTransport http.RoundTripper
+)
+
+type offlineTransport struct {
+	base http.RoundTripper
+	log  *slog.Logger
 }
 
 // QueryRequest mirrors the backend contract for issuing query operations.
@@ -359,3 +374,82 @@ func newCorrelationID() string {
 	}
 	return hex.EncodeToString(buf[:])
 }
+
+// InstallOfflineHTTPGuard wraps the default HTTP transport to block outbound requests to non-loopback hosts.
+// The returned restore function must be invoked to revert to the original transport once offline enforcement is no longer required.
+func InstallOfflineHTTPGuard() func() {
+	offlineGuardMu.Lock()
+	defer offlineGuardMu.Unlock()
+
+	if offlineGuardInstallCount == 0 {
+		offlineGuardOriginalTransport = http.DefaultTransport
+		logger := slog.Default()
+		if logger == nil {
+			logger = slog.New(slogdiscardHandler{})
+		}
+		http.DefaultTransport = &offlineTransport{
+			base: offlineGuardOriginalTransport,
+			log:  logger.With(slog.String("component", "ipc.offline_guard")),
+		}
+	}
+	offlineGuardInstallCount++
+
+	return func() {
+		offlineGuardMu.Lock()
+		defer offlineGuardMu.Unlock()
+
+		if offlineGuardInstallCount == 0 {
+			return
+		}
+		offlineGuardInstallCount--
+		if offlineGuardInstallCount == 0 && offlineGuardOriginalTransport != nil {
+			http.DefaultTransport = offlineGuardOriginalTransport
+			offlineGuardOriginalTransport = nil
+		}
+	}
+}
+
+func (t *offlineTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req == nil || req.URL == nil {
+		return t.base.RoundTrip(req)
+	}
+
+	host := req.URL.Hostname()
+	if isRemoteHost(host) {
+		if t.log != nil {
+			t.log.Warn(
+				"OfflineGuard blocked outbound HTTP request",
+				slog.String("method", req.Method),
+				slog.String("url", req.URL.Redacted()),
+			)
+		}
+		return nil, ErrExternalNetworkBlocked
+	}
+
+	return t.base.RoundTrip(req)
+}
+
+func isRemoteHost(host string) bool {
+	if host == "" {
+		return false
+	}
+
+	lowered := strings.ToLower(host)
+	if lowered == "localhost" {
+		return false
+	}
+
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return true
+	}
+
+	return !ip.IsLoopback()
+}
+
+type slogdiscardHandler struct{}
+
+func (slogdiscardHandler) Enabled(context.Context, slog.Level) bool  { return false }
+func (slogdiscardHandler) Handle(context.Context, slog.Record) error { return nil }
+func (slogdiscardHandler) WithAttrs([]slog.Attr) slog.Handler        { return slogdiscardHandler{} }
+func (slogdiscardHandler) WithGroup(string) slog.Handler             { return slogdiscardHandler{} }
