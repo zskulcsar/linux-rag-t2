@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict
 import datetime as dt
 from pathlib import Path
@@ -156,15 +157,16 @@ class CatalogStorage:
         >>> storage.save(SourceCatalog(version=1, updated_at=dt.datetime.now(dt.timezone.utc)))
     """
 
-    def __init__(self, *, base_dir: Path, filename: str = "catalog.json") -> None:
+    def __init__(self, *, base_dir: Path | None = None, filename: str = "catalog.json") -> None:
         """Create a new storage helper.
 
         Args:
-            base_dir: Directory where catalog artifacts are stored.
+            base_dir: Directory where catalog artifacts are stored. When ``None``,
+                defaults to ``$XDG_DATA_HOME/ragcli`` with sensible fallbacks.
             filename: File name to persist catalog JSON under.
         """
 
-        self._base_dir = Path(base_dir)
+        self._base_dir = base_dir or _default_data_dir()
         self._filename = filename
         self._path = self._base_dir / self._filename
 
@@ -208,3 +210,16 @@ class CatalogStorage:
 
 
 __all__ = ["CatalogStorage"]
+
+
+def _default_data_dir() -> Path:
+    """Return the default XDG data directory for ragcli.
+
+    Returns:
+        Path inside ``$XDG_DATA_HOME`` (or a fallback) dedicated to ragcli data.
+    """
+
+    data_home = os.environ.get("XDG_DATA_HOME")
+    if not data_home:
+        data_home = Path.home() / ".local" / "share"
+    return Path(data_home) / "ragcli"

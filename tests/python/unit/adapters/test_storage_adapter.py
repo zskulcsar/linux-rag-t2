@@ -6,6 +6,8 @@ import datetime as dt
 import json
 from pathlib import Path
 
+import pytest
+
 from services.rag_backend.adapters.storage.audit_log import AuditLogger
 from services.rag_backend.adapters.storage.catalog import CatalogStorage
 from services.rag_backend.ports.ingestion import (
@@ -53,10 +55,13 @@ def _sample_catalog() -> SourceCatalog:
     return SourceCatalog(version=3, updated_at=_utc(2025, 1, 2, 10, 0, 0), sources=sources, snapshots=snapshots)
 
 
-def test_catalog_storage_round_trip(tmp_path: Path) -> None:
+def test_catalog_storage_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure catalog save/load preserves metadata without mutation."""
 
-    storage = CatalogStorage(base_dir=tmp_path)
+    data_dir = tmp_path / "xdg-data" / "ragcli"
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
+
+    storage = CatalogStorage()
     catalog = _sample_catalog()
 
     storage.save(catalog)
@@ -66,26 +71,31 @@ def test_catalog_storage_round_trip(tmp_path: Path) -> None:
     assert loaded.updated_at == catalog.updated_at
     assert loaded.snapshots == catalog.snapshots
     assert loaded.sources == catalog.sources
+    assert (data_dir / "catalog.json").exists()
 
 
-def test_catalog_storage_uses_atomic_write(tmp_path: Path) -> None:
+def test_catalog_storage_uses_atomic_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify save writes via temporary file and cleans up after renaming."""
 
-    storage = CatalogStorage(base_dir=tmp_path)
+    data_dir = tmp_path / "xdg-data" / "ragcli"
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
+
+    storage = CatalogStorage()
     catalog = _sample_catalog()
 
     storage.save(catalog)
 
-    files = {path.name for path in tmp_path.iterdir()}
+    files = {path.name for path in data_dir.iterdir()}
     assert "catalog.json" in files
     assert not any(name.startswith(".catalog.json") for name in files), "temporary file should be cleaned up"
 
 
-def test_audit_logger_appends_json_lines(tmp_path: Path) -> None:
+def test_audit_logger_appends_json_lines(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure audit logger writes newline-delimited JSON entries."""
 
-    log_path = tmp_path / "audit.log"
-    logger = AuditLogger(log_path=log_path)
+    data_dir = tmp_path / "xdg-data" / "ragcli"
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
+    logger = AuditLogger()
 
     entry = {
         "timestamp": "2025-01-02T10:00:00Z",
@@ -98,6 +108,7 @@ def test_audit_logger_appends_json_lines(tmp_path: Path) -> None:
     logger.append(entry)
     logger.append({**entry, "trace_id": "trace-456"})
 
+    log_path = data_dir / "audit.log"
     contents = log_path.read_text(encoding="utf-8").strip().splitlines()
     assert len(contents) == 2
     for line in contents:

@@ -58,10 +58,11 @@ def _catalog(updated_at: dt.datetime) -> SourceCatalog:
     return SourceCatalog(version=5, updated_at=updated_at, sources=sources, snapshots=[])
 
 
-def test_quarantine_manager_updates_catalog_and_audit_log(tmp_path: Path) -> None:
+def test_quarantine_manager_updates_catalog_and_audit_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure manager marks the source as quarantined and records audit metadata."""
 
-    storage = CatalogStorage(base_dir=tmp_path)
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
+    storage = CatalogStorage()
     catalog = _catalog(updated_at=_utc(2025, 1, 2, 9, 0))
     storage.save(catalog)
 
@@ -91,10 +92,11 @@ def test_quarantine_manager_updates_catalog_and_audit_log(tmp_path: Path) -> Non
     assert audit_entry["target"] == "info-pages"
 
 
-def test_quarantine_manager_rejects_unknown_alias(tmp_path: Path) -> None:
+def test_quarantine_manager_rejects_unknown_alias(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure attempting to quarantine a missing alias raises a ValueError."""
 
-    storage = CatalogStorage(base_dir=tmp_path)
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
+    storage = CatalogStorage()
     storage.save(_catalog(updated_at=_utc(2025, 1, 2, 9, 0)))
 
     manager = SourceQuarantineManager(

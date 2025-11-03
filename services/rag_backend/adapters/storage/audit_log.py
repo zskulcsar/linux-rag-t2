@@ -7,25 +7,27 @@ from pathlib import Path
 from typing import Any
 
 from services.rag_backend.telemetry import trace_call
+from .catalog import _default_data_dir
 
 
 class AuditLogger:
     """Append-only log writer emitting newline-delimited JSON entries.
 
     Example:
-        >>> logger = AuditLogger(log_path=Path('/tmp/audit.log'))
+        >>> logger = AuditLogger()
         >>> logger.append({'action': 'source_add', 'status': 'success'})
     """
 
     @trace_call
-    def __init__(self, *, log_path: Path) -> None:
+    def __init__(self, *, log_path: Path | None = None) -> None:
         """Create a logger bound to the given path.
 
         Args:
-            log_path: File path used for audit log writes.
+            log_path: File path used for audit log writes. When ``None``, defaults
+                to ``$XDG_DATA_HOME/ragcli/audit.log``.
         """
 
-        self._log_path = log_path
+        self._log_path = log_path or _default_data_dir() / "audit.log"
 
     @trace_call
     def append(self, entry: dict[str, Any]) -> None:
