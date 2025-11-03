@@ -57,7 +57,7 @@
 - [X] T022 Implement Weaviate and Ollama adapters with latency metrics in `services/rag_backend/adapters/weaviate/client.py` and `services/rag_backend/adapters/ollama/client.py`. Implement the Weaviate adapter around a single `Document` class with deterministic IDs (`<alias>:<checksum>:<chunk_id>`), required alias/type/language filters, and structured logs/metrics for per-alias ingestion and query latency.
 - [X] T023 Implement catalog storage and audit logging adapters honoring XDG paths in `services/rag_backend/adapters/storage/catalog.py` and `services/rag_backend/adapters/storage/audit_log.py`.
 - [X] T024 Implement Phoenix/structlog instrumentation helpers in `services/rag_backend/adapters/observability/telemetry.py`.
-- [ ] T025 Implement resumable ingestion recovery for interrupted jobs in `services/rag_backend/domain/job_recovery.py`.
+- [X] T025 Implement resumable ingestion recovery for interrupted jobs in `services/rag_backend/domain/job_recovery.py`.
 - [ ] T026 Implement corrupt source quarantine workflow updates in `services/rag_backend/domain/source_service.py`.
 - [ ] T027 Record Milestone 3 completion in `specs/001-rag-cli/milestones.md` after adapter and resilience tests pass.
 

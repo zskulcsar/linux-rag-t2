@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable, Iterable, Sequence
 
 from services.rag_backend.domain import models
@@ -183,6 +183,76 @@ class JobRecoveryService:
             )
             section.debug("plan_created", resume_stage=resume_stage, remaining_count=len(remaining))
             return plan
+
+    @trace_call
+    def resume(
+        self,
+        *,
+        job: models.IngestionJob,
+        document_ids: Sequence[str],
+        checkpoint: Checkpoint | None,
+    ) -> tuple[models.IngestionJob, ResumePlan]:
+        """Prepare a job to resume ingestion after an interruption.
+
+        Args:
+            job: Original ingestion job requiring recovery.
+            document_ids: Ordered identifiers for the full ingestion workload.
+            checkpoint: Previously recorded checkpoint, if available.
+
+        Returns:
+            Updated :class:`IngestionJob` ready to resume and the computed
+            :class:`ResumePlan` describing the outstanding work.
+
+        Raises:
+            ValueError: If ``document_ids`` is empty or the job status cannot be
+            resumed from the provided state.
+        """
+
+        if not document_ids:
+            raise ValueError("document_ids must contain at least one entry")
+
+        plan = (
+            self.plan_resume(job=job, checkpoint=checkpoint, document_ids=document_ids)
+            if checkpoint is not None
+            else ResumePlan(
+                remaining_document_ids=tuple(document_ids),
+                percent_complete=0.0,
+                resume_stage=f"resuming_{job.stage or 'ingestion'}",
+                recovery_started_at=self._clock(),
+            )
+        )
+
+        remaining = plan.remaining_document_ids
+        if not remaining:
+            completed_job = replace(
+                job,
+                status=models.IngestionStatus.SUCCEEDED,
+                completed_at=self._clock(),
+                documents_processed=len(document_ids),
+                stage="completed",
+                percent_complete=100.0,
+                error_message=None,
+            )
+            return completed_job, plan
+
+        resume_started_at = job.started_at or plan.recovery_started_at
+        updated_job = replace(
+            job,
+            status=models.IngestionStatus.RUNNING,
+            stage=plan.resume_stage,
+            started_at=resume_started_at,
+            completed_at=None,
+            percent_complete=plan.percent_complete,
+            error_message=None,
+        )
+
+        if checkpoint:
+            updated_job = replace(
+                updated_job,
+                documents_processed=len(checkpoint.processed_document_ids),
+            )
+
+        return updated_job, plan
 
 
 __all__ = ["Checkpoint", "JobRecoveryService", "ResumePlan"]
