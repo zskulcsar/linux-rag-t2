@@ -20,7 +20,7 @@ Follow-up TODOs: None
 Rationale: Uniform style and strict typing produce predictable, debuggable modules with minimal runtime surprises.
 
 ### II. Documentation as Contract
-- Apply Google-style docstrings consistently; every public surface documents purpose, arguments, returns, and examples where useful.
+- Apply Google-style docstrings consistently; every public surface documents purpose, arguments, returns, and examples are useful.
 - Each module maintains docs under `docs/`; services publish OpenAPI references there so the MkDocs site remains authoritative.
 - Significant architectural or process changes MUST include an ADR under `docs/adr/` before implementation closes.
 Rationale: Documentation-first delivery keeps knowledge discoverable and guards against implicit tribal memory.
@@ -43,7 +43,12 @@ Rationale: Modular delivery with automated guardrails ensures repeatable builds 
 ### V. Observability & Diagnostics Logging
 - Services MUST expose health and readiness probes plus structured JSON logs carrying request IDs and W3C trace IDs without leaking sensitive data.
 - Metrics MUST record latency, error rate, throughput, and resource usage; tracing propagates context across upstream and downstream calls for local troubleshooting.
-- Every function or method MUST emit a log entry on entry and key decision points using the format `ClassName.method_name(param_names) :: <step description>`; high-level steps log at INFO and detailed flow diagnostics at DEBUG with relevant parameter values.
+- Public-facing APIs MUST be instrumented with the approved call-tracing decorator so entry/exit events emit structured JSON logs (correlation IDs, sanitised parameters, and outcomes) without manual boilerplate.
+- Critical multi-step workflows (e.g., ingestion batches, quarantine updates, query orchestration) MUST run inside the approved observability context manager so start/finish, duration, and significant checkpoints are recorded at INFO/DEBUG levels with structured metadata.
+- The platform MUST provide an opt-in deep-tracing facility (e.g., `sys.settrace`/profiler hooks) that captures detailed execution when explicitly enabled; it remains disabled by default, filters sensitive data, and documents activation/deactivation workflow.
+- Structured logs produced by decorators and context managers MUST remain JSON-friendly and include correlation/trace identifiers; additional manual logs MAY supplement these layers when domain-specific breadcrumbs are required.
+- Baseline observability mechanisms MUST remain lightweight during normal operation; optional profiling/tracing modes MAY incur overhead but MUST be clearly documented and isolated behind explicit toggles.
+- Automated tests MUST cover the decorator, context-manager, and tracing facilities to guarantee observability remains available and correctly wired.
 Rationale: Rich observability and consistent diagnostics keep the locally hosted system debuggable without imposing unnecessary multi-user security controls.
 
 ### VI. Maintainable Code Structure
@@ -71,7 +76,7 @@ Rationale: Keeping implementations simple reduces onboarding friction, lowers ma
 - Plans MUST include an architecture slice showing affected ports, adapters, and domain services to keep hexagonal boundaries explicit before implementation.
 - Plans and code reviews MUST highlight any large-file refactors required to maintain small, focused modules and track follow-up tasks when files approach complexity limits.
 - Plans MUST call out simplifications taken compared to alternative designs to enforce the KISS principle and avoid over-engineering.
-- Plans MUST describe the logging strategy for impacted code, confirming INFO coverage of primary steps and DEBUG coverage of detailed flows with the mandated message format.
+- Plans MUST describe how the feature leverages the approved observability layers (decorators for baseline entry/exit traces, context managers for critical sections, tracing hooks for deep diagnostics) and identify any supplemental manual logs.
 - Code reviews verify adherence to this constitution, enforce coverage and lint gates, and ensure documentation, including OpenAPI exports, is updated alongside code.
 - Constitution checks occur at plan approval and before merge; violations require documented justification in the Complexity Tracking table and CODEOWNERS sign-off.
 - Release candidates MUST satisfy observability readiness probes and have validated health checks before staging or production promotion.
