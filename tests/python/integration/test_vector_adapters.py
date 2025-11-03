@@ -36,10 +36,46 @@ class _FakeBatch:
 
 
 @dataclass
+class _FakeWeaviateQueryBuilder:
+    """Simulate the typed get/where/limit chaining API."""
+
+    class_name: str
+    fields: list[str]
+    results: list[dict[str, Any]]
+    where: dict[str, Any] | None = None
+    limit: int | None = None
+
+    def with_where(self, where: dict[str, Any]) -> "_FakeWeaviateQueryBuilder":
+        self.where = where
+        return self
+
+    def with_limit(self, limit: int) -> "_FakeWeaviateQueryBuilder":
+        self.limit = limit
+        return self
+
+    def do(self) -> dict[str, Any]:
+        return {"data": {"Get": {self.class_name: self.results}}}
+
+
+@dataclass
+class _FakeWeaviateQuery:
+    """Stub for the query builder entry point."""
+
+    results: list[dict[str, Any]]
+    last_builder: _FakeWeaviateQueryBuilder | None = None
+
+    def get(self, class_name: str, fields: list[str]) -> _FakeWeaviateQueryBuilder:
+        builder = _FakeWeaviateQueryBuilder(class_name, fields, self.results)
+        self.last_builder = builder
+        return builder
+
+
+@dataclass
 class _FakeWeaviateClient:
-    """Stub exposing only the ``batch`` attribute used by the adapter."""
+    """Stub exposing the interfaces used by the adapter."""
 
     batch: _FakeBatch = field(default_factory=_FakeBatch)
+    query: _FakeWeaviateQuery = field(default_factory=lambda: _FakeWeaviateQuery(results=[]))
 
 
 @dataclass
@@ -48,6 +84,8 @@ class _RecordingMetrics:
 
     ingestions: dict[str, int] = field(default_factory=dict)
     embeddings: dict[str, int] = field(default_factory=dict)
+    queries: dict[str, tuple[float, int]] = field(default_factory=dict)
+    generations: dict[str, tuple[float, int, int]] = field(default_factory=dict)
 
     def record_ingestion(self, alias: str, count: int, latency_ms: float) -> None:
         self.ingestions[alias] = self.ingestions.get(alias, 0) + count
@@ -55,6 +93,20 @@ class _RecordingMetrics:
 
     def record_embedding(self, alias: str, vector_size: int, latency_ms: float) -> None:
         self.embeddings[alias] = self.embeddings.get(alias, 0) + vector_size
+        assert latency_ms >= 0.0
+
+    def record_query(self, alias: str, latency_ms: float, result_count: int) -> None:
+        self.queries[alias] = (latency_ms, result_count)
+        assert latency_ms >= 0.0
+
+    def record_generation(
+        self,
+        alias: str,
+        latency_ms: float,
+        prompt_tokens: int,
+        completion_tokens: int,
+    ) -> None:
+        self.generations[alias] = (latency_ms, prompt_tokens, completion_tokens)
         assert latency_ms >= 0.0
 
 
@@ -110,6 +162,52 @@ def test_weaviate_adapter_batches_documents_and_records_metrics() -> None:
         assert math.isclose(sum(payload["embedding"]), sum(payload["embedding"]))
 
     assert metrics.ingestions == {"man-pages": 2, "info-pages": 1}
+
+
+def test_weaviate_adapter_query_applies_filters_and_records_metrics() -> None:
+    """Ensure query enforces alias/type/language filters and records metrics."""
+
+    query_results = [
+        {
+            "text": "chmod changes file mode.",
+            "checksum": "abc123",
+            "chunk_id": 0,
+            "source_alias": "man-pages",
+            "source_type": "man",
+            "language": "en",
+            "embedding": [0.1, 0.2, 0.3],
+        }
+    ]
+    fake_query = _FakeWeaviateQuery(results=query_results)
+    client = _FakeWeaviateClient(query=fake_query)
+    metrics = _RecordingMetrics()
+    adapter = WeaviateAdapter(
+        client=client,
+        class_name="Document",
+        metrics=metrics,
+        query_metrics=metrics,
+    )
+
+    documents = adapter.query_documents(
+        alias="man-pages", source_type=SourceType.MAN, language="en", limit=5
+    )
+
+    assert len(documents) == 1
+    assert documents[0].alias == "man-pages"
+    assert documents[0].checksum == "abc123"
+
+    builder = fake_query.last_builder
+    assert builder is not None
+    assert builder.limit == 5
+    where = builder.where or {}
+    operands = where.get("operands", [])
+    assert any(op.get("path") == ["source_alias"] and op.get("valueString") == "man-pages" for op in operands)
+    assert any(op.get("path") == ["source_type"] and op.get("valueString") == "man" for op in operands)
+    assert any(op.get("path") == ["language"] and op.get("valueString") == "en" for op in operands)
+
+    assert "man-pages" in metrics.queries
+    _, result_count = metrics.queries["man-pages"]
+    assert result_count == 1
 
 
 @dataclass
@@ -192,3 +290,36 @@ def test_ollama_adapter_returns_embeddings_and_records_metrics() -> None:
 
     assert metrics.embeddings == {"man-pages": 2, "info-pages": 2}
 
+
+def test_ollama_adapter_generate_records_metrics() -> None:
+    """Ensure generation requests call the API and record latency metrics."""
+
+    fake_client = _FakeHttpClient(
+        responses=[
+            _FakeResponse(
+                {
+                    "response": "Answer text",
+                    "prompt_eval_count": 12,
+                    "eval_count": 34,
+                }
+            )
+        ]
+    )
+    metrics = _RecordingMetrics()
+    adapter = OllamaAdapter(
+        http_client=fake_client,
+        base_url="http://localhost:11434",
+        model="gemma3:1b",
+        metrics=metrics,
+        generation_metrics=metrics,
+    )
+
+    result = adapter.generate_completion(prompt="Explain chmod", alias="man-pages")
+
+    assert result["response"] == "Answer text"
+    request = fake_client.posts[0]
+    assert request["url"].endswith("/api/generate")
+    assert request["json"]["model"] == "gemma3:1b"
+    assert request["json"]["prompt"] == "Explain chmod"
+
+    assert "man-pages" in metrics.generations

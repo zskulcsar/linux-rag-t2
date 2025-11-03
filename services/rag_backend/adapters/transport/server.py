@@ -93,10 +93,7 @@ def _handshake_response(
     if version != HANDSHAKE_RESPONSE["version"]:
         raise TransportProtocolError(f"Unsupported protocol version: {version!r}")
 
-    response = dict(HANDSHAKE_RESPONSE)
-    if request_correlation_id:
-        response["correlation_id"] = request_correlation_id
-    return response
+    return dict(HANDSHAKE_RESPONSE)
 
 
 @trace_call

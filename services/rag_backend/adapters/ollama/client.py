@@ -25,6 +25,19 @@ class HttpClient(Protocol):
         ...
 
 
+class GenerationMetrics(Protocol):
+    """Interface for recording completion latency metrics."""
+
+    def record_generation(
+        self,
+        alias: str,
+        latency_ms: float,
+        prompt_tokens: int,
+        completion_tokens: int,
+    ) -> None:  # pragma: no cover - Protocol
+        ...
+
+
 @dataclass(slots=True)
 class EmbeddingResult:
     """Embedding response associated with a document.
@@ -57,6 +70,7 @@ class OllamaAdapter:
         base_url: str,
         model: str,
         metrics: EmbeddingMetrics | None = None,
+        generation_metrics: GenerationMetrics | None = None,
         timeout: float = 30.0,
     ) -> None:
         """Initialize the adapter.
@@ -65,7 +79,8 @@ class OllamaAdapter:
             http_client: HTTP client capable of synchronous POST calls.
             base_url: Base URL for the local Ollama service.
             model: Embedding model identifier to invoke.
-            metrics: Optional metrics recorder for latency tracking.
+            metrics: Optional metrics recorder for embedding latency.
+            generation_metrics: Optional metrics recorder for completion latency.
             timeout: Request timeout in seconds.
 
         Example:
@@ -76,6 +91,7 @@ class OllamaAdapter:
         self._base_url = base_url.rstrip("/")
         self._model = model
         self._metrics = metrics
+        self._generation_metrics = generation_metrics
         self._timeout = timeout
 
     @trace_call
@@ -137,5 +153,54 @@ class OllamaAdapter:
 
         return results
 
+    @trace_call
+    def generate_completion(
+        self,
+        *,
+        prompt: str,
+        alias: str,
+        options: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Generate a completion using the configured Ollama model.
 
-__all__ = ["EmbeddingResult", "EmbeddingMetrics", "HttpClient", "OllamaAdapter"]
+        Args:
+            prompt: Prompt text sent to the Ollama completion endpoint.
+            alias: Source alias associated with the request for metrics tagging.
+            options: Optional dictionary of Ollama generation parameters.
+
+        Returns:
+            The JSON payload returned by the Ollama completion endpoint.
+        """
+
+        payload = {"model": self._model, "prompt": prompt}
+        if options:
+            payload["options"] = options
+
+        start = time.perf_counter()
+        with trace_section(
+            "ollama.generate",
+            metadata={"alias": alias, "model": self._model},
+        ) as section:
+            response = self._http_client.post(
+                f"{self._base_url}/api/generate", json=payload, timeout=self._timeout
+            )
+            body = response.json()
+            elapsed_ms = (time.perf_counter() - start) * 1000.0
+            prompt_tokens = int(body.get("prompt_eval_count", 0))
+            completion_tokens = int(body.get("eval_count", 0))
+            if self._generation_metrics:
+                self._generation_metrics.record_generation(
+                    alias,
+                    elapsed_ms,
+                    prompt_tokens,
+                    completion_tokens,
+                )
+            section.debug(
+                "generation_complete",
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+            )
+            return body
+
+
+__all__ = ["EmbeddingResult", "EmbeddingMetrics", "GenerationMetrics", "HttpClient", "OllamaAdapter"]

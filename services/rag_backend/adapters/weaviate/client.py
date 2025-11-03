@@ -18,6 +18,13 @@ class IngestionMetrics(Protocol):
         ...
 
 
+class QueryMetrics(Protocol):
+    """Interface for recording query latency per alias."""
+
+    def record_query(self, alias: str, latency_ms: float, result_count: int) -> None:  # pragma: no cover - Protocol
+        ...
+
+
 @dataclass(slots=True)
 class Document:
     """Canonical document payload persisted to Weaviate.
@@ -89,6 +96,7 @@ class WeaviateAdapter:
         client: Any,
         class_name: str,
         metrics: IngestionMetrics | None = None,
+        query_metrics: QueryMetrics | None = None,
     ) -> None:
         """Initialize the adapter.
 
@@ -96,11 +104,13 @@ class WeaviateAdapter:
             client: Weaviate client exposing a ``batch`` context manager.
             class_name: Target class name for ingested documents.
             metrics: Optional metrics sink for ingestion counters.
+            query_metrics: Optional metrics sink for query latency recording.
         """
 
         self._client = client
         self._class_name = class_name
         self._metrics = metrics
+        self._query_metrics = query_metrics
 
     @trace_call
     def ingest(self, documents: Iterable[Document]) -> None:
@@ -157,4 +167,93 @@ class WeaviateAdapter:
                     section.debug("metrics_recorded", alias=alias, count=count, latency_ms=elapsed_ms)
 
 
-__all__ = ["Document", "WeaviateAdapter", "IngestionMetrics"]
+    @trace_call
+    def query_documents(
+        self,
+        *,
+        alias: str,
+        source_type: SourceType,
+        language: str,
+        limit: int = 10,
+    ) -> list[Document]:
+        """Query Weaviate for documents matching the required filters.
+
+        Args:
+            alias: Source alias to filter on.
+            source_type: Source type (`man`, `kiwix`, or `info`) to filter on.
+            language: Language filter to apply (e.g., ``"en"``).
+            limit: Maximum number of documents to return. Defaults to ``10``.
+
+        Returns:
+            List of :class:`Document` instances satisfying the filters.
+
+        Raises:
+            ValueError: If the client does not expose the expected query API or
+                the response payload is malformed.
+        """
+
+        if not alias or not language:
+            raise ValueError("alias and language must be provided")
+
+        query_client = getattr(self._client, "query", None)
+        if query_client is None:
+            raise ValueError("Weaviate client does not expose a query interface")
+
+        filters = {
+            "operator": "And",
+            "operands": [
+                {"path": ["source_alias"], "operator": "Equal", "valueString": alias},
+                {
+                    "path": ["source_type"],
+                    "operator": "Equal",
+                    "valueString": source_type.value,
+                },
+                {"path": ["language"], "operator": "Equal", "valueString": language},
+            ],
+        }
+
+        start = time.perf_counter()
+        with trace_section(
+            "weaviate.query",
+            metadata={
+                "alias": alias,
+                "source_type": source_type.value,
+                "language": language,
+                "limit": limit,
+            },
+        ) as section:
+            builder = query_client.get(
+                self._class_name,
+                ["text", "checksum", "chunk_id", "source_alias", "source_type", "language", "embedding"],
+            )
+            response = builder.with_where(filters).with_limit(limit).do()
+            raw_entries = (
+                response.get("data", {})
+                .get("Get", {})
+                .get(self._class_name, [])
+            )
+
+            documents: list[Document] = []
+            for entry in raw_entries:
+                try:
+                    document = Document(
+                        alias=entry["source_alias"],
+                        checksum=entry["checksum"],
+                        chunk_id=int(entry["chunk_id"]),
+                        text=entry["text"],
+                        source_type=SourceType(entry["source_type"]),
+                        language=entry["language"],
+                        embedding=entry.get("embedding"),
+                    )
+                except KeyError as exc:
+                    raise ValueError("query result missing required field") from exc
+                documents.append(document)
+
+            elapsed_ms = (time.perf_counter() - start) * 1000.0
+            if self._query_metrics:
+                self._query_metrics.record_query(alias, elapsed_ms, len(documents))
+            section.debug("query_complete", result_count=len(documents))
+            return documents
+
+
+__all__ = ["Document", "WeaviateAdapter", "IngestionMetrics", "QueryMetrics"]
