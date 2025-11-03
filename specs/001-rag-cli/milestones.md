@@ -11,10 +11,10 @@
 - [X] Author unit tests for domain logic (pytest + mypy strict).
 
 ## Milestone 3 – Infrastructure adapters (Plan step 3)
-- [ ] Create Weaviate adapter (ingest/query) with dynamic batching per `research.md`.
-- [ ] Create Ollama adapter for embedding + generation with latency metrics.
-- [ ] Implement catalog storage and audit logging adapters honoring XDG paths.
-- [ ] Wire Phoenix instrumentation (`arize-phoenix`) and structured logging.
+- [X] Create Weaviate adapter (ingest/query) with dynamic batching per `research.md`.
+- [X] Create Ollama adapter for embedding + generation with latency metrics.
+- [X] Implement catalog storage and audit logging adapters honoring XDG paths.
+- [X] Wire Phoenix instrumentation (`arize-phoenix`) and structured logging.
 
 ## Milestone 4 – Transport endpoints (Plan step 4)
 - [ ] Map domain ports to `/v1/*` handlers in transport adapter with error semantics.

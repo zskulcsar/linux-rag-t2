@@ -59,7 +59,7 @@
 - [X] T024 Implement Phoenix/structlog instrumentation helpers in `services/rag_backend/adapters/observability/telemetry.py`.
 - [X] T025 Implement resumable ingestion recovery for interrupted jobs in `services/rag_backend/domain/job_recovery.py`.
 - [X] T026 Implement corrupt source quarantine workflow updates in `services/rag_backend/domain/source_service.py`.
-- [ ] T027 Record Milestone 3 completion in `specs/001-rag-cli/milestones.md` after adapter and resilience tests pass.
+- [X] T027 Record Milestone 3 completion in `specs/001-rag-cli/milestones.md` after adapter and resilience tests pass.
 
 ### Milestone 3A – Offline guarantee
 
