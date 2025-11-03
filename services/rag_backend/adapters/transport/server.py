@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-import structlog
+from services.rag_backend.telemetry import async_trace_section, trace_call
 
 FRAME_SEPARATOR = b"\n"
 HANDSHAKE_REQUEST_TYPE = "handshake"
@@ -22,13 +22,11 @@ HANDSHAKE_RESPONSE = {
     "server": "rag-backend",
 }
 
-logger = structlog.get_logger("rag_backend.transport.server")
-
-
 class TransportProtocolError(RuntimeError):
     """Raised when a client sends an invalid transport frame."""
 
 
+@trace_call
 def _ensure_socket_directory(socket_path: Path) -> None:
     """Ensure the socket directory exists before binding."""
 
@@ -42,6 +40,7 @@ def _ensure_socket_directory(socket_path: Path) -> None:
             ) from exc
 
 
+@trace_call
 async def _read_frame(reader: asyncio.StreamReader) -> dict[str, Any]:
     """Consume a single length-prefixed JSON frame from the reader."""
 
@@ -65,6 +64,7 @@ async def _read_frame(reader: asyncio.StreamReader) -> dict[str, Any]:
         raise TransportProtocolError("Frame payload is not valid JSON") from exc
 
 
+@trace_call
 async def _write_frame(writer: asyncio.StreamWriter, message: dict[str, Any]) -> None:
     """Serialize a JSON message and write it as a framed payload."""
 
@@ -76,6 +76,7 @@ async def _write_frame(writer: asyncio.StreamWriter, message: dict[str, Any]) ->
     await writer.drain()
 
 
+@trace_call
 def _handshake_response(
     request: dict[str, Any], *, request_correlation_id: str | None
 ) -> dict[str, Any]:
@@ -98,6 +99,7 @@ def _handshake_response(
     return response
 
 
+@trace_call
 async def _handle_connection(
     reader: asyncio.StreamReader, writer: asyncio.StreamWriter
 ) -> None:
@@ -106,32 +108,33 @@ async def _handle_connection(
     peername = writer.get_extra_info("peername")
     sockname = writer.get_extra_info("sockname")
     correlation_id = uuid.uuid4().hex
-    log = logger.bind(peer=peername, socket=sockname, correlation_id=correlation_id)
-    log.info("TransportServer._handle_connection(reader, writer) :: start")
-
-    try:
-        request = await _read_frame(reader)
-        request_correlation_id = request.get("correlation_id")
-        log = log.bind(correlation_id=request_correlation_id or correlation_id)
-        response = _handshake_response(
-            request, request_correlation_id=request_correlation_id
-        )
-        await _write_frame(writer, response)
-        log.info("TransportServer._handle_connection(reader, writer) :: handshake_ack")
-    except TransportProtocolError as exc:
-        log.warning(
-            "TransportServer._handle_connection(reader, writer) :: protocol_error",
-            error=str(exc),
-        )
-    finally:
+    metadata = {
+        "peer": str(peername),
+        "socket": str(sockname),
+        "correlation_id": correlation_id,
+    }
+    async with async_trace_section("transport.connection", metadata=metadata) as section:
         try:
-            writer.close()
-            await writer.wait_closed()
+            request = await _read_frame(reader)
+            request_correlation_id = request.get("correlation_id") or correlation_id
+            section.debug("handshake_request", correlation_id=request_correlation_id)
+            response = _handshake_response(
+                request, request_correlation_id=request_correlation_id
+            )
+            await _write_frame(writer, response)
+            section.debug("handshake_ack_sent", correlation_id=request_correlation_id)
+        except TransportProtocolError as exc:
+            section.debug("protocol_error", error=str(exc))
         finally:
-            log.info("TransportServer._handle_connection(reader, writer) :: end")
+            try:
+                writer.close()
+                await writer.wait_closed()
+            finally:
+                section.debug("connection_closed")
 
 
 @asynccontextmanager
+@trace_call
 async def transport_server(
     *, socket_path: str | Path, backlog: int = 100
 ) -> AsyncIterator[asyncio.AbstractServer]:
@@ -152,21 +155,17 @@ async def transport_server(
     server = await asyncio.start_unix_server(
         _handle_connection, path=str(path), backlog=backlog
     )
-    log = logger.bind(socket=str(path))
-    log.info("TransportServer.transport_server(socket_path) :: start")
-
-    try:
-        yield server
-    finally:
-        server.close()
-        await server.wait_closed()
+    async with async_trace_section(
+        "transport.server", metadata={"socket": str(path), "backlog": backlog}
+    ) as section:
         try:
-            os.unlink(path)
-        except FileNotFoundError:
-            pass
-        except OSError as exc:  # pragma: no cover - defensive guard
-            log.warning(
-                "TransportServer.transport_server(socket_path) :: cleanup_failed",
-                error=str(exc),
-            )
-        log.info("TransportServer.transport_server(socket_path) :: stop")
+            yield server
+        finally:
+            server.close()
+            await server.wait_closed()
+            try:
+                os.unlink(path)
+            except FileNotFoundError:
+                pass
+            except OSError as exc:  # pragma: no cover - defensive guard
+                section.debug("cleanup_failed", error=str(exc))

@@ -32,7 +32,11 @@ class TraceSection(AbstractContextManager["TraceSection"]):
         self._start: float | None = None
 
     def __enter__(self) -> "TraceSection":
-        """Enter the context, emitting a start log."""
+        """Enter the context, emitting a start log.
+
+        Returns:
+            The active :class:`TraceSection` instance.
+        """
 
         self._start = time.perf_counter()
         self._logger.info(
@@ -111,7 +115,11 @@ class AsyncTraceSection(AbstractAsyncContextManager["AsyncTraceSection"]):
         self._sync_delegate = TraceSection(name=name, logger=logger, metadata=metadata)
 
     async def __aenter__(self) -> "AsyncTraceSection":
-        """Enter the async context, emitting the start log."""
+        """Enter the async context, emitting the start log.
+
+        Returns:
+            The active :class:`AsyncTraceSection` wrapper.
+        """
 
         self._sync_delegate.__enter__()
         return self

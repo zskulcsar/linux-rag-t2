@@ -12,6 +12,12 @@ Clock = Callable[[], dt.datetime]
 
 
 def _default_clock() -> dt.datetime:
+    """Return the current UTC timestamp.
+
+    Returns:
+        A timezone-aware datetime representing now in UTC.
+    """
+
     return dt.datetime.now(dt.timezone.utc)
 
 
@@ -26,6 +32,14 @@ class HealthService(HealthPort):
     """
 
     def __init__(self, check_factories: Iterable[CheckFactory], clock: Clock | None = None) -> None:
+        """Instantiate the health service.
+
+        Args:
+            check_factories: Iterable of factories that yield health checks when called.
+            clock: Callable returning the current UTC time. Defaults to
+                :func:`_default_clock` when ``None``.
+        """
+
         self._check_factories: List[CheckFactory] = list(check_factories)
         self._clock = clock or _default_clock
 

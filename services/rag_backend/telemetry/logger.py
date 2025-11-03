@@ -36,31 +36,32 @@ class _FallbackLogger:
         )
         return _FallbackLogger(self._logger.name, merged)
 
-    def _log(self, level: int, msg: str, **kwargs: Any) -> None:
+    def _log(self, level: int, msg: str, *args: Any, **kwargs: Any) -> None:
         payload = {**self._context, **kwargs}
+        formatted = msg % args if args else msg
         if payload:
-            msg = f"{msg} | context={payload}"
-        self._logger.log(level, msg)
+            formatted = f"{formatted} | context={payload}"
+        self._logger.log(level, formatted)
 
-    def info(self, msg: str, **kwargs: Any) -> None:
+    def info(self, msg: str, *args: Any, **kwargs: Any) -> None:
         """Log an INFO level message."""
 
-        self._log(logging.INFO, msg, **kwargs)
+        self._log(logging.INFO, msg, *args, **kwargs)
 
-    def debug(self, msg: str, **kwargs: Any) -> None:
+    def debug(self, msg: str, *args: Any, **kwargs: Any) -> None:
         """Log a DEBUG level message."""
 
-        self._log(logging.DEBUG, msg, **kwargs)
+        self._log(logging.DEBUG, msg, *args, **kwargs)
 
-    def warning(self, msg: str, **kwargs: Any) -> None:
+    def warning(self, msg: str, *args: Any, **kwargs: Any) -> None:
         """Log a WARNING level message."""
 
-        self._log(logging.WARNING, msg, **kwargs)
+        self._log(logging.WARNING, msg, *args, **kwargs)
 
-    def error(self, msg: str, **kwargs: Any) -> None:
+    def error(self, msg: str, *args: Any, **kwargs: Any) -> None:
         """Log an ERROR level message."""
 
-        self._log(logging.ERROR, msg, **kwargs)
+        self._log(logging.ERROR, msg, *args, **kwargs)
 
 
 def get_logger(name: str):

@@ -12,6 +12,12 @@ Clock = Callable[[], dt.datetime]
 
 
 def _default_clock() -> dt.datetime:
+    """Return the current UTC timestamp.
+
+    Returns:
+        A timezone-aware datetime representing now in UTC.
+    """
+
     return dt.datetime.now(dt.timezone.utc)
 
 
@@ -24,6 +30,13 @@ class SourceService:
     """
 
     def __init__(self, clock: Clock | None = None) -> None:
+        """Initialize the service with an optional clock override.
+
+        Args:
+            clock: Callable returning the current UTC time. When ``None``, the
+                service uses :func:`_default_clock`.
+        """
+
         self._clock = clock or _default_clock
 
     def mark_source_validated(

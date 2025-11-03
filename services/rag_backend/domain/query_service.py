@@ -12,6 +12,12 @@ Clock = Callable[[], dt.datetime]
 
 
 def _default_clock() -> dt.datetime:
+    """Return the current UTC timestamp.
+
+    Returns:
+        A timezone-aware datetime representing now in UTC.
+    """
+
     return dt.datetime.now(dt.timezone.utc)
 
 
@@ -26,6 +32,15 @@ class QueryService:
     """
 
     def __init__(self, clock: Clock | None = None, freshness_ttl: dt.timedelta | None = None) -> None:
+        """Create a query service with optional clock and freshness override.
+
+        Args:
+            clock: Callable returning the current UTC time. When ``None``, the
+                service uses :func:`_default_clock`.
+            freshness_ttl: Duration that an index remains fresh. Defaults to a
+                seven-day interval when unspecified.
+        """
+
         self._clock = clock or _default_clock
         self._freshness_ttl = freshness_ttl or dt.timedelta(days=7)
 

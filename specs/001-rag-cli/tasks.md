@@ -50,10 +50,10 @@
 
 ### Milestone 3 – Infrastructure adapters & resilience
 
-- [ ] T018 [P] Add failing integration tests for Weaviate and Ollama adapters with dynamic batching in `tests/python/integration/test_vector_adapters.py`. Verify the fixtures assert alias/type/language metadata round-trips and capture per-alias ingestion metrics.
-- [ ] T019 [P] Add failing storage and audit logging tests safeguarding the `SourceCatalog` persistence in `tests/python/unit/adapters/test_storage_adapter.py`.
-- [ ] T020 [P] Add failing ingestion resume tests simulating mid-run failures in `tests/python/integration/test_ingestion_recovery.py`.
-- [ ] T021 [P] Add failing corrupt source quarantine tests in `tests/python/unit/adapters/test_source_quarantine.py`.
+- [X] T018 [P] Add failing integration tests for Weaviate and Ollama adapters with dynamic batching in `tests/python/integration/test_vector_adapters.py`. Verify the fixtures assert alias/type/language metadata round-trips and capture per-alias ingestion metrics.
+- [X] T019 [P] Add failing storage and audit logging tests safeguarding the `SourceCatalog` persistence in `tests/python/unit/adapters/test_storage_adapter.py`.
+- [X] T020 [P] Add failing ingestion resume tests simulating mid-run failures in `tests/python/integration/test_ingestion_recovery.py`.
+- [X] T021 [P] Add failing corrupt source quarantine tests in `tests/python/unit/adapters/test_source_quarantine.py`.
 - [ ] T022 Implement Weaviate and Ollama adapters with latency metrics in `services/rag_backend/adapters/weaviate/client.py` and `services/rag_backend/adapters/ollama/client.py`. Implement the Weaviate adapter around a single `Document` class with deterministic IDs (`<alias>:<checksum>:<chunk_id>`), required alias/type/language filters, and structured logs/metrics for per-alias ingestion and query latency.
 - [ ] T023 Implement catalog storage and audit logging adapters honoring XDG paths in `services/rag_backend/adapters/storage/catalog.py` and `services/rag_backend/adapters/storage/audit_log.py`.
 - [ ] T024 Implement Phoenix/structlog instrumentation helpers in `services/rag_backend/adapters/observability/telemetry.py`.
