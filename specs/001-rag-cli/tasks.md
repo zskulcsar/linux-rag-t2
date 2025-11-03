@@ -45,7 +45,7 @@
 - [X] T013 [P] Add failing port interface tests for query, ingestion, and health flows in `tests/python/unit/ports/test_port_contracts.py`.
 - [X] T014 [P] Add failing domain service tests covering `KnowledgeSource`, `IngestionJob`, and `ContentIndexVersion` transitions in `tests/python/unit/domain/test_services.py`.
 - [X] T015 Define query, ingestion, and health port protocols in `services/rag_backend/ports/query.py`, `services/rag_backend/ports/ingestion.py`, and `services/rag_backend/ports/health.py`.
-- [ ] T016 Implement domain services covering retrieval, catalog management, and health evaluation in `services/rag_backend/domain/query_service.py`, `services/rag_backend/domain/source_service.py`, and `services/rag_backend/domain/health_service.py`.
+- [X] T016 Implement domain services covering retrieval, catalog management, and health evaluation in `services/rag_backend/domain/query_service.py`, `services/rag_backend/domain/source_service.py`, and `services/rag_backend/domain/health_service.py`.
 - [ ] T017 Record Milestone 2 completion in `specs/001-rag-cli/milestones.md` after port and domain tests succeed.
 
 ### Milestone 3 – Infrastructure adapters & resilience
