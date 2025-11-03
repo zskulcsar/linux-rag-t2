@@ -6,9 +6,9 @@
 - [X] Add request/response validation tests referencing `contracts/backend-openapi.yaml`.
 
 ## Milestone 2 – Domain services & ports (Plan step 2)
-- [ ] Define query, ingestion, health ports in `services/rag_backend/ports/`.
-- [ ] Implement domain services in `services/rag_backend/domain/` covering FR-001–FR-011.
-- [ ] Author unit tests for domain logic (pytest + mypy strict).
+- [X] Define query, ingestion, health ports in `services/rag_backend/ports/`.
+- [X] Implement domain services in `services/rag_backend/domain/` covering FR-001–FR-011.
+- [X] Author unit tests for domain logic (pytest + mypy strict).
 
 ## Milestone 3 – Infrastructure adapters (Plan step 3)
 - [ ] Create Weaviate adapter (ingest/query) with dynamic batching per `research.md`.
