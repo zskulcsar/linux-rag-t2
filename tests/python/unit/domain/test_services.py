@@ -77,6 +77,96 @@ def test_mark_source_quarantined_records_reason_and_timestamp() -> None:
     assert quarantine.updated_at == later
 
 
+def test_mark_source_error_appends_reason_and_timestamp() -> None:
+    """Ensure sources move to error with appended remediation notes."""
+
+    base_time = _utc(dt.datetime(2025, 1, 2, 10, 0, 0))
+    active_source = models.KnowledgeSource(
+        alias="info-pages",
+        type=models.SourceType.INFO,
+        location="/usr/share/info",
+        language="en",
+        size_bytes=2048,
+        last_updated=_utc(dt.datetime(2025, 1, 1, 9, 0, 0)),
+        status=models.KnowledgeSourceStatus.ACTIVE,
+        checksum="xyz789",
+        notes="Initial import succeeded",
+        created_at=_utc(dt.datetime(2024, 10, 1, 0, 0, 0)),
+        updated_at=_utc(dt.datetime(2025, 1, 1, 9, 0, 0)),
+    )
+
+    later = base_time + dt.timedelta(minutes=10)
+    reason = "Ingestion failed due to missing chunks"
+    errored = source_service.SourceService(clock=lambda: later).mark_source_error(
+        source=active_source,
+        reason=reason,
+    )
+
+    assert errored.status is models.KnowledgeSourceStatus.ERROR
+    assert reason in (errored.notes or "")
+    assert errored.updated_at == later
+    assert errored.last_updated == active_source.last_updated
+
+    with pytest.raises(ValueError):
+        source_service.SourceService(clock=lambda: later).mark_source_error(
+            source=errored, reason="second failure"
+        )
+
+
+def test_restore_quarantined_source_promotes_to_active() -> None:
+    """Ensure quarantined sources return to active with updated metadata."""
+
+    base_time = _utc(dt.datetime(2025, 1, 3, 8, 0, 0))
+    quarantined = models.KnowledgeSource(
+        alias="info-pages",
+        type=models.SourceType.INFO,
+        location="/usr/share/info",
+        language="en",
+        size_bytes=1024,
+        last_updated=_utc(dt.datetime(2024, 12, 25, 0, 0, 0)),
+        status=models.KnowledgeSourceStatus.QUARANTINED,
+        checksum="old",
+        notes="Corruption detected",
+        created_at=_utc(dt.datetime(2024, 10, 1, 0, 0, 0)),
+        updated_at=_utc(dt.datetime(2025, 1, 2, 9, 0, 0)),
+    )
+
+    restored = source_service.SourceService(clock=lambda: base_time).restore_quarantined_source(
+        source=quarantined,
+        checksum="new",
+        size_bytes=2048,
+        notes="Remediated and revalidated",
+    )
+
+    assert restored.status is models.KnowledgeSourceStatus.ACTIVE
+    assert restored.checksum == "new"
+    assert restored.size_bytes == 2048
+    assert restored.notes == "Remediated and revalidated"
+    assert restored.last_updated == base_time
+    assert restored.updated_at == base_time
+
+    active_source = models.KnowledgeSource(
+        alias="man-pages",
+        type=models.SourceType.MAN,
+        location="/usr/share/man",
+        language="en",
+        size_bytes=1024,
+        last_updated=_utc(dt.datetime(2025, 1, 1, 0, 0, 0)),
+        status=models.KnowledgeSourceStatus.ACTIVE,
+        checksum="abc",
+        notes=None,
+        created_at=_utc(dt.datetime(2024, 10, 1, 0, 0, 0)),
+        updated_at=_utc(dt.datetime(2025, 1, 1, 0, 0, 0)),
+    )
+
+    with pytest.raises(ValueError):
+        source_service.SourceService(clock=lambda: base_time).restore_quarantined_source(
+            source=active_source,
+            checksum="abc",
+            size_bytes=1024,
+        )
+
+
 def test_ingestion_state_machine_enforces_valid_transitions() -> None:
     """Ensure ingestion jobs progress queued→running→succeeded and reject invalid jumps."""
 

@@ -107,6 +107,78 @@ class SourceService:
             updated_at=now,
         )
 
+    def mark_source_error(
+        self,
+        *,
+        source: models.KnowledgeSource,
+        reason: str,
+    ) -> models.KnowledgeSource:
+        """Mark a source as errored due to ingestion failures.
+
+        Args:
+            source: Source whose ingestion failed.
+            reason: Human-readable explanation appended to the notes field.
+
+        Returns:
+            Updated :class:`KnowledgeSource` in the ``ERROR`` state.
+
+        Raises:
+            ValueError: If the source is already quarantined or errored.
+        """
+
+        if source.status in (
+            models.KnowledgeSourceStatus.QUARANTINED,
+            models.KnowledgeSourceStatus.ERROR,
+        ):
+            raise ValueError("cannot mark an already quarantined or errored source as errored")
+
+        now = self._clock()
+        notes = reason if not source.notes else f"{source.notes}\n{reason}"
+        return replace(
+            source,
+            status=models.KnowledgeSourceStatus.ERROR,
+            notes=notes,
+            updated_at=now,
+        )
+
+    def restore_quarantined_source(
+        self,
+        *,
+        source: models.KnowledgeSource,
+        checksum: str | None,
+        size_bytes: int,
+        notes: str | None = None,
+    ) -> models.KnowledgeSource:
+        """Restore a quarantined source back to the active state.
+
+        Args:
+            source: Source currently in the ``QUARANTINED`` state.
+            checksum: Optional checksum recorded during remediation.
+            size_bytes: Size of the remediated content on disk.
+            notes: Optional replacement notes; when omitted existing notes remain.
+
+        Returns:
+            Updated :class:`KnowledgeSource` in the ``ACTIVE`` state.
+
+        Raises:
+            ValueError: If the source is not quarantined.
+        """
+
+        if source.status is not models.KnowledgeSourceStatus.QUARANTINED:
+            raise ValueError("only quarantined sources can be restored to active")
+
+        now = self._clock()
+        merged_notes = notes if notes is not None else source.notes
+        return replace(
+            source,
+            status=models.KnowledgeSourceStatus.ACTIVE,
+            checksum=checksum if checksum is not None else source.checksum,
+            size_bytes=size_bytes,
+            last_updated=now,
+            updated_at=now,
+            notes=merged_notes,
+        )
+
     def mark_ingestion_running(
         self,
         *,
