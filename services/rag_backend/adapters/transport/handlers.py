@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 import datetime as dt
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any, Callable, Dict
 
 from services.rag_backend.ports import (
     HealthPort,
@@ -20,9 +20,11 @@ from services.rag_backend.ports import (
     Reference,
     SourceCatalog,
     SourceRecord,
+    SourceSnapshot,
 )
 from services.rag_backend.ports.ingestion import IngestionStatus, SourceStatus, SourceType
 from services.rag_backend.ports.query import Citation
+from services.rag_backend.telemetry import trace_call, trace_section
 
 
 class TransportError(RuntimeError):
@@ -195,6 +197,7 @@ class TransportHandlers:
         job = self.ingestion_port.start_reindex(trigger)
         return 202, {"job": _serialize_ingestion_job(job)}
 
+    @trace_call
     def _handle_admin_init(self) -> tuple[int, dict[str, Any]]:
         """Return the initialization status for admin bootstrap workflows.
 
@@ -203,20 +206,98 @@ class TransportHandlers:
         """
 
         catalog = self.ingestion_port.list_sources()
-        seeded_sources = [_serialize_source_record(source) for source in catalog.sources]
-        created_directories = [
-            "~/.config/ragcli",
-            "~/.local/share/ragcli",
-            "~/.local/state/ragcli",
-        ]
-        return (
-            200,
-            {
-                "catalog_version": catalog.version,
-                "created_directories": created_directories,
-                "seeded_sources": seeded_sources,
-            },
+        metadata = {
+            "catalog_version": catalog.version,
+            "source_count": len(catalog.sources),
+            "snapshot_count": len(catalog.snapshots),
+        }
+
+        with trace_section("transport.admin_init.catalog", metadata=metadata):
+            _ensure_index_current(catalog)
+            seeded_sources = [_serialize_source_record(source) for source in catalog.sources]
+            created_directories = [
+                "~/.config/ragcli",
+                "~/.local/share/ragcli",
+                "~/.local/state/ragcli",
+            ]
+            return (
+                200,
+                {
+                    "catalog_version": catalog.version,
+                    "created_directories": created_directories,
+                    "seeded_sources": seeded_sources,
+                },
+            )
+
+
+@trace_call
+def _ensure_index_current(catalog: SourceCatalog) -> None:
+    """Validate that the catalog index snapshots match active source metadata.
+
+    Args:
+        catalog: Catalog snapshot retrieved from the ingestion port.
+
+    Raises:
+        IndexUnavailableError: If the catalog lacks an index or the snapshots are stale.
+    """
+
+    if catalog.version <= 0 or not catalog.snapshots:
+        raise IndexUnavailableError(
+            code="INDEX_MISSING",
+            message="No content index is available for the current catalog.",
+            remediation="Run ragadmin reindex to build the knowledge index before continuing.",
         )
+
+    snapshot_aliases = {snapshot.alias for snapshot in catalog.snapshots}
+    if len(snapshot_aliases) != len(catalog.snapshots):
+        raise IndexUnavailableError(
+            code="INDEX_STALE",
+            message="Duplicate index snapshots detected for the catalog.",
+            remediation="Run ragadmin reindex to rebuild the index with a clean snapshot set.",
+        )
+
+    active_sources = [source for source in catalog.sources if _is_active_source(source)]
+    active_aliases = {source.alias for source in active_sources}
+
+    if snapshot_aliases != active_aliases:
+        raise IndexUnavailableError(
+            code="INDEX_STALE",
+            message="Index snapshots do not align with active catalog sources.",
+            remediation="Run ragadmin reindex to align the index with the current catalog.",
+        )
+
+    snapshot_checksums: Dict[str, str] = {snapshot.alias: snapshot.checksum for snapshot in catalog.snapshots}
+    for source in active_sources:
+        checksum = source.checksum
+        if checksum is None:
+            raise IndexUnavailableError(
+                code="INDEX_STALE",
+                message=f"Source {source.alias!r} is active without a recorded checksum.",
+                remediation="Run ragadmin reindex to validate and snapshot active sources.",
+            )
+
+        snapshot_checksum = snapshot_checksums.get(source.alias)
+        if snapshot_checksum != checksum:
+            raise IndexUnavailableError(
+                code="INDEX_STALE",
+                message=f"Source {source.alias!r} has changed since the last index build.",
+                remediation="Run ragadmin reindex to rebuild the index with the latest sources.",
+            )
+
+
+@trace_call
+def _is_active_source(source: SourceRecord) -> bool:
+    """Return ``True`` when a source is active.
+
+    Args:
+        source: Source record from the catalog.
+
+    Returns:
+        ``True`` if the source status is :attr:`SourceStatus.ACTIVE`.
+    """
+
+    status = source.status if isinstance(source.status, SourceStatus) else SourceStatus(str(source.status))
+    return status is SourceStatus.ACTIVE
 
 
 def _serialize_query_response(response: QueryResponse) -> dict[str, Any]:
@@ -384,7 +465,11 @@ class _StaticIngestionPort(IngestionPort):
                 checksum="sha256:bootstrap-info",
             ),
         ]
-        return SourceCatalog(version=1, updated_at=now, sources=sources, snapshots=[])
+        snapshots = [
+            SourceSnapshot(alias="man-pages", checksum="sha256:bootstrap-man"),
+            SourceSnapshot(alias="info-pages", checksum="sha256:bootstrap-info"),
+        ]
+        return SourceCatalog(version=1, updated_at=now, sources=sources, snapshots=snapshots)
 
     def create_source(self, request):  # pragma: no cover - future transport tasks
         """Placeholder for future create-source implementation."""

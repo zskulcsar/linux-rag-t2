@@ -1,12 +1,16 @@
 """Contract tests for Unix socket transport endpoints."""
 
 import asyncio
+import datetime as dt
 import json
 from pathlib import Path
+from typing import cast
 
 import pytest
 
-from services.rag_backend.adapters.transport import server
+from services.rag_backend.adapters.transport import create_default_handlers, server
+from services.rag_backend.ports import IngestionPort, SourceCatalog, SourceRecord, SourceSnapshot
+from services.rag_backend.ports.ingestion import SourceStatus, SourceType
 
 HANDSHAKE_REQUEST = {
     "type": "handshake",
@@ -212,3 +216,137 @@ async def test_admin_init_endpoint_reports_dependency_checks(tmp_path: Path) -> 
     assert isinstance(body.get("catalog_version"), int)
     assert isinstance(body.get("created_directories"), list)
     assert isinstance(body.get("seeded_sources"), list)
+
+
+@pytest.mark.asyncio
+async def test_admin_init_rejects_when_index_missing(tmp_path: Path) -> None:
+    """`/v1/admin/init` should reject when no index snapshot exists for the catalog."""
+
+    socket_path = tmp_path / "backend.sock"
+    correlation_id = "contract-admin-init-missing"
+
+    handlers = create_default_handlers()
+
+    class _MissingIndexPort:
+        def list_sources(self) -> SourceCatalog:
+            now = dt.datetime.now(dt.timezone.utc)
+            return SourceCatalog(version=0, updated_at=now, sources=[], snapshots=[])
+
+        def create_source(self, request):  # pragma: no cover - not needed for contract tests
+            raise NotImplementedError
+
+        def update_source(self, alias, request):  # pragma: no cover - not needed for contract tests
+            raise NotImplementedError
+
+        def remove_source(self, alias):  # pragma: no cover - not needed for contract tests
+            raise NotImplementedError
+
+        def start_reindex(self, trigger):  # pragma: no cover - not needed for contract tests
+            raise NotImplementedError
+
+    handlers.ingestion_port = cast(IngestionPort, _MissingIndexPort())
+
+    async with server.transport_server(socket_path=socket_path, handlers=handlers):
+        reader, writer = await _connect_and_handshake(socket_path)
+
+        request = {
+            "type": "request",
+            "path": "/v1/admin/init",
+            "correlation_id": correlation_id,
+            "body": {},
+        }
+
+        try:
+            await asyncio.wait_for(_write_frame(writer, request), timeout=1)
+            response = await asyncio.wait_for(_read_frame(reader), timeout=1)
+        finally:
+            writer.close()
+            await writer.wait_closed()
+
+    assert response["type"] == "response"
+    assert response["status"] == 409
+    assert response["correlation_id"] == correlation_id
+
+    body = response["body"]
+    assert body["code"] == "INDEX_MISSING"
+    assert "reindex" in body["remediation"].lower()
+
+
+@pytest.mark.asyncio
+async def test_admin_init_rejects_when_catalog_newer_than_index(tmp_path: Path) -> None:
+    """`/v1/admin/init` should reject when catalog checksums differ from index snapshots."""
+
+    socket_path = tmp_path / "backend.sock"
+    correlation_id = "contract-admin-init-stale"
+
+    handlers = create_default_handlers()
+
+    class _StaleIndexPort:
+        def list_sources(self) -> SourceCatalog:
+            now = dt.datetime.now(dt.timezone.utc)
+            sources = [
+                SourceRecord(
+                    alias="man-pages",
+                    type=SourceType.MAN,
+                    location="/usr/share/man",
+                    language="en",
+                    size_bytes=1024,
+                    last_updated=now,
+                    status=SourceStatus.ACTIVE,
+                    checksum="sha256:newer-man",
+                ),
+                SourceRecord(
+                    alias="info-pages",
+                    type=SourceType.INFO,
+                    location="/usr/share/info",
+                    language="en",
+                    size_bytes=512,
+                    last_updated=now,
+                    status=SourceStatus.ACTIVE,
+                    checksum="sha256:bootstrap-info",
+                ),
+            ]
+            snapshots = [
+                SourceSnapshot(alias="man-pages", checksum="sha256:bootstrap-man"),
+                SourceSnapshot(alias="info-pages", checksum="sha256:bootstrap-info"),
+            ]
+            return SourceCatalog(version=2, updated_at=now, sources=sources, snapshots=snapshots)
+
+        def create_source(self, request):  # pragma: no cover - not needed for contract tests
+            raise NotImplementedError
+
+        def update_source(self, alias, request):  # pragma: no cover - not needed for contract tests
+            raise NotImplementedError
+
+        def remove_source(self, alias):  # pragma: no cover - not needed for contract tests
+            raise NotImplementedError
+
+        def start_reindex(self, trigger):  # pragma: no cover - not needed for contract tests
+            raise NotImplementedError
+
+    handlers.ingestion_port = cast(IngestionPort, _StaleIndexPort())
+
+    async with server.transport_server(socket_path=socket_path, handlers=handlers):
+        reader, writer = await _connect_and_handshake(socket_path)
+
+        request = {
+            "type": "request",
+            "path": "/v1/admin/init",
+            "correlation_id": correlation_id,
+            "body": {},
+        }
+
+        try:
+            await asyncio.wait_for(_write_frame(writer, request), timeout=1)
+            response = await asyncio.wait_for(_read_frame(reader), timeout=1)
+        finally:
+            writer.close()
+            await writer.wait_closed()
+
+    assert response["type"] == "response"
+    assert response["status"] == 409
+    assert response["correlation_id"] == correlation_id
+
+    body = response["body"]
+    assert body["code"] == "INDEX_STALE"
+    assert "reindex" in body["remediation"].lower()
