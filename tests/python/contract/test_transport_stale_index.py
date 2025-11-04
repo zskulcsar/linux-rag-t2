@@ -6,7 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from services.rag_backend.adapters.transport import server
+from services.rag_backend.adapters.transport import (
+    IndexUnavailableError,
+    TransportHandlers,
+    create_default_handlers,
+    server,
+)
+from services.rag_backend.ports.query import QueryPort, QueryRequest, QueryResponse
 
 HANDSHAKE_REQUEST = {
     "type": "handshake",
@@ -72,7 +78,19 @@ async def test_query_rejects_when_index_stale(tmp_path: Path) -> None:
     socket_path = tmp_path / "backend.sock"
     correlation_id = "contract-stale-index"
 
-    async with server.transport_server(socket_path=socket_path):
+    handlers = create_default_handlers()
+
+    class _StaleQueryPort(QueryPort):
+        def query(self, request: QueryRequest) -> QueryResponse:
+            raise IndexUnavailableError(
+                code="INDEX_STALE",
+                message="The active index is stale.",
+                remediation="Reindex the catalog via ragadmin reindex.",
+            )
+
+    handlers.query_port = _StaleQueryPort()
+
+    async with server.transport_server(socket_path=socket_path, handlers=handlers):
         reader, writer = await _connect_and_handshake(socket_path)
 
         request = {
