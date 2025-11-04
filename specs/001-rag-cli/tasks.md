@@ -79,7 +79,7 @@
 
 ### Milestone 5 – Shared Go IPC client
 
-- [ ] T038 [P] Add failing Go unit tests for request builders and decoders in `tests/go/unit/ipc/client_test.go`.
+- [X] T038 [P] Add failing Go unit tests for request builders and decoders in `tests/go/unit/ipc/client_test.go`.
 - [ ] T039 Implement request builders, decoders, and retry/backoff logic in `cli/shared/ipc/client.go`.
 - [ ] T040 Record Milestone 5 completion in `specs/001-rag-cli/milestones.md` once shared IPC tests turn green.
 
