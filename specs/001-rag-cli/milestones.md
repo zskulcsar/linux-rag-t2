@@ -24,9 +24,10 @@
 - [X] Execute offline guard suites (`uv run pytest tests/python/integration/test_offline_guards.py`, `go test ./tests/go/contract -run OfflineGuard`) confirming all checks pass.
 
 ## Milestone 4 – Transport endpoints (Plan step 4)
-- [ ] Map domain ports to `/v1/*` handlers in transport adapter with error semantics.
-- [ ] Add init verification path covering FR-005 (Weaviate + Ollama checks).
-- [ ] Extend contract tests to cover stale index and init failure flows.
+- [X] Map domain ports to `/v1/*` handlers in transport adapter with error semantics.
+- [X] Add init verification path covering FR-005 (Weaviate + Ollama checks).
+- [X] Extend contract tests to cover stale index and init failure flows.
+- [X] Execute transport endpoint suites (`uv run pytest tests/python/contract/test_transport_endpoints.py tests/python/contract/test_transport_stale_index.py`) confirming green tests before documenting completion.
 
 ## Milestone 5 – Shared Go IPC client (Plan step 5)
 - [ ] Implement request builders and response decoders shared by CLIs.
