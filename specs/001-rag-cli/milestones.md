@@ -30,8 +30,9 @@
 - [X] Execute transport endpoint suites (`uv run pytest tests/python/contract/test_transport_endpoints.py tests/python/contract/test_transport_stale_index.py`) confirming green tests before documenting completion.
 
 ## Milestone 5 – Shared Go IPC client (Plan step 5)
-- [ ] Implement request builders and response decoders shared by CLIs.
-- [ ] Cover with Go unit tests mirroring backend contract validation; evaluate need for retry/backoff after baseline flows are validated.
+- [X] Implement request builders and response decoders shared by CLIs.
+- [X] Cover with Go unit tests mirroring backend contract validation; evaluate need for retry/backoff after baseline flows are validated.
+- [X] Execute shared IPC suites (`GOCACHE=$(pwd)/.gocache go test ./tests/go/unit/ipc ./tests/go/contract`) confirming green results before documenting completion.
 
 ## Milestone 6 – `ragadmin` CLI (Plan step 6)
 - [ ] Scaffold Cobra root and subcommands (init, sources, reindex, health).

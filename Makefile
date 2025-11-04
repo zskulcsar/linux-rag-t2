@@ -52,7 +52,7 @@ test: test-go test-python ## Run all test suites.
 test-go: test-go-unit test-go-contract ## Run all Go tests.
 
 test-go-unit: ## Execute Go unit tests for CLI modules.
-	$(GO_TEST) ./cli/...
+	$(GO_TEST) ./tests/go/unit/ipc/...
 
 test-go-contract: ## Execute Go contract tests.
 	$(GO_TEST) ./tests/go/contract/...
@@ -116,3 +116,6 @@ docs-backend: ## Generate documentation for the Python backend service.
 	else \
 		python scripts/docs/generate_backend_docs.py; \
 	fi
+
+helper.clean-go-cache: ## Cleares the go cache
+	go clean -cache

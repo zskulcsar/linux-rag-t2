@@ -1,44 +1,20 @@
+// Package ipc provides newline-delimited JSON clients and helpers for the backend Unix socket transport.
 package ipc
 
 import (
 	"bufio"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net"
-	"net/http"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 )
-
-const (
-	protocolName    = "rag-cli-ipc"
-	protocolVersion = 1
-
-	requestType   = "request"
-	responseType  = "response"
-	handshakeType = "handshake"
-	handshakeAck  = "handshake_ack"
-	queryPath     = "/v1/query"
-
-	defaultClientID   = "ipc-client"
-	defaultDialTimout = 2 * time.Second
-)
-
-// Config describes how to construct a new IPC client.
-type Config struct {
-	SocketPath  string
-	ClientID    string
-	DialTimeout time.Duration
-	Logger      *slog.Logger
-}
 
 // Client is a newline-delimited JSON IPC client that communicates with the backend server.
 type Client struct {
@@ -50,72 +26,7 @@ type Client struct {
 	clientID          string
 	awaitHandshakeAck bool
 	mu                sync.Mutex
-}
-
-// ErrExternalNetworkBlocked is returned when the offline guard prevents an outbound HTTP call.
-var ErrExternalNetworkBlocked = errors.New("ipc: external network access blocked")
-
-var (
-	offlineGuardMu                sync.Mutex
-	offlineGuardInstallCount      int
-	offlineGuardOriginalTransport http.RoundTripper
-)
-
-type offlineTransport struct {
-	base http.RoundTripper
-	log  *slog.Logger
-}
-
-// QueryRequest mirrors the backend contract for issuing query operations.
-type QueryRequest struct {
-	Question         string `json:"question"`
-	MaxContextTokens int    `json:"max_context_tokens"`
-	TraceID          string `json:"trace_id,omitempty"`
-}
-
-// QueryReference captures a single reference entry returned by the backend.
-type QueryReference struct {
-	Label string `json:"label"`
-	URL   string `json:"url,omitempty"`
-	Notes string `json:"notes,omitempty"`
-}
-
-// QueryResponse represents the structured answer returned by the backend query endpoint.
-type QueryResponse struct {
-	Summary    string           `json:"summary"`
-	Steps      []string         `json:"steps"`
-	References []QueryReference `json:"references"`
-	Confidence float64          `json:"confidence"`
-	TraceID    string           `json:"trace_id"`
-	LatencyMS  int              `json:"latency_ms"`
-}
-
-type handshakeFrame struct {
-	Type     string `json:"type"`
-	Protocol string `json:"protocol"`
-	Version  int    `json:"version"`
-	Client   string `json:"client"`
-}
-
-type handshakeAckFrame struct {
-	Type     string `json:"type"`
-	Protocol string `json:"protocol"`
-	Version  int    `json:"version"`
-	Server   string `json:"server"`
-}
-
-type requestFrame struct {
-	Type          string       `json:"type"`
-	Path          string       `json:"path"`
-	CorrelationID string       `json:"correlation_id"`
-	Body          QueryRequest `json:"body"`
-}
-
-type responseFrame struct {
-	Type          string          `json:"type"`
-	Status        int             `json:"status"`
-	CorrelationID string          `json:"correlation_id"`
-	Body          json.RawMessage `json:"body"`
+	retrySchedule     []time.Duration
 }
 
 // NewClient establishes a Unix socket connection, performs the handshake, and returns a ready client.
@@ -143,6 +54,7 @@ func NewClient(cfg Config) (*Client, error) {
 		logger = slog.Default()
 	}
 	log := logger.With("socket", socket, "client", clientID)
+	retrySchedule := normalizeRetrySchedule(cfg.RetrySchedule)
 	log.Info("IPCClient.NewClient(config) :: dial")
 
 	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
@@ -160,6 +72,7 @@ func NewClient(cfg Config) (*Client, error) {
 		reader:            bufio.NewReader(conn),
 		writer:            bufio.NewWriter(conn),
 		clientID:          clientID,
+		retrySchedule:     retrySchedule,
 		log:               log,
 		awaitHandshakeAck: true,
 	}
@@ -173,6 +86,7 @@ func NewClient(cfg Config) (*Client, error) {
 	return c, nil
 }
 
+// sendHandshake sends the initial identification frame to the backend.
 func (c *Client) sendHandshake() error {
 	c.log.Info("IPCClient.sendHandshake() :: start")
 
@@ -212,8 +126,14 @@ func (c *Client) Query(ctx context.Context, req QueryRequest) (QueryResponse, er
 	if c.conn == nil {
 		return QueryResponse{}, errors.New("ipc: client closed")
 	}
-	if strings.TrimSpace(req.Question) == "" {
+	req.Question = strings.TrimSpace(req.Question)
+	if req.Question == "" {
 		return QueryResponse{}, errors.New("ipc: question must be provided")
+	}
+	req.ConversationID = strings.TrimSpace(req.ConversationID)
+	req.TraceID = strings.TrimSpace(req.TraceID)
+	if req.MaxContextTokens <= 0 {
+		req.MaxContextTokens = defaultMaxContextTokens
 	}
 
 	correlationID := newCorrelationID()
@@ -242,7 +162,7 @@ func (c *Client) Query(ctx context.Context, req QueryRequest) (QueryResponse, er
 		}
 	}
 
-	data, err := readFrame(ctx, c.reader, c.conn)
+	data, err := c.readFrameWithRetry(ctx)
 	if err != nil {
 		c.log.Error(
 			"IPCClient.Query(ctx, request) :: read_failed",
@@ -266,8 +186,8 @@ func (c *Client) Query(ctx context.Context, req QueryRequest) (QueryResponse, er
 		return QueryResponse{}, fmt.Errorf("ipc: backend returned status %d", respFrame.Status)
 	}
 
-	var queryResp QueryResponse
-	if err := json.Unmarshal(respFrame.Body, &queryResp); err != nil {
+	queryResp, err := DecodeQueryResponse(respFrame.Body)
+	if err != nil {
 		return QueryResponse{}, fmt.Errorf("ipc: decode query response: %w", err)
 	}
 
@@ -280,8 +200,9 @@ func (c *Client) Query(ctx context.Context, req QueryRequest) (QueryResponse, er
 	return queryResp, nil
 }
 
+// consumeHandshakeAck waits for the server handshake acknowledgement.
 func (c *Client) consumeHandshakeAck(ctx context.Context) error {
-	data, err := readFrame(ctx, c.reader, c.conn)
+	data, err := c.readFrameWithRetry(ctx)
 	if err != nil {
 		c.log.Error("IPCClient.consumeHandshakeAck(ctx) :: read_failed", slog.String("error", err.Error()))
 		return fmt.Errorf("ipc: read handshake acknowledgement: %w", err)
@@ -307,149 +228,84 @@ func (c *Client) consumeHandshakeAck(ctx context.Context) error {
 	return nil
 }
 
-func writeFrame(writer *bufio.Writer, payload any) error {
-	bytes, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
+// readFrameWithRetry reads a frame, retrying on temporary network errors.
+func (c *Client) readFrameWithRetry(ctx context.Context) ([]byte, error) {
+	var attempt int
+	for {
+		data, err := readFrame(ctx, c.reader, c.conn)
+		if err == nil {
+			return data, nil
+		}
+		if !isRetryableError(err) || attempt >= len(c.retrySchedule) {
+			return nil, err
+		}
 
-	if _, err := fmt.Fprintf(writer, "%d\n", len(bytes)); err != nil {
-		return err
+		delay := c.retrySchedule[attempt]
+		attempt++
+		c.log.Warn(
+			"IPCClient.readFrameWithRetry(ctx) :: retry",
+			slog.String("error", err.Error()),
+			slog.Duration("delay", delay),
+			slog.Int("attempt", attempt),
+		)
+		if err := sleepWithContext(ctx, delay); err != nil {
+			return nil, err
+		}
 	}
-	if _, err := writer.Write(bytes); err != nil {
-		return err
-	}
-	if err := writer.WriteByte('\n'); err != nil {
-		return err
-	}
-	return writer.Flush()
 }
 
-func readFrame(ctx context.Context, reader *bufio.Reader, conn net.Conn) ([]byte, error) {
+// normalizeRetrySchedule sanitizes custom retry schedules and falls back to defaults.
+func normalizeRetrySchedule(schedule []time.Duration) []time.Duration {
+	if len(schedule) == 0 {
+		return append([]time.Duration(nil), defaultRetrySchedule...)
+	}
+
+	out := make([]time.Duration, 0, len(schedule))
+	for _, delay := range schedule {
+		if delay <= 0 {
+			continue
+		}
+		out = append(out, delay)
+	}
+	if len(out) == 0 {
+		return append([]time.Duration(nil), defaultRetrySchedule...)
+	}
+	return out
+}
+
+// isRetryableError reports whether the error warrants another frame read attempt.
+func isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		if netErr.Timeout() || netErr.Temporary() {
+			return true
+		}
+	}
+
+	return errors.Is(err, io.ErrUnexpectedEOF)
+}
+
+// sleepWithContext pauses for the delay or until the context is cancelled.
+func sleepWithContext(ctx context.Context, delay time.Duration) error {
+	if delay <= 0 {
+		return nil
+	}
+
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
-	var cancel context.CancelFunc
-	if deadline, ok := ctx.Deadline(); ok {
-		if err := conn.SetReadDeadline(deadline); err != nil {
-			return nil, err
-		}
-		cancel = func() { _ = conn.SetReadDeadline(time.Time{}) }
-	} else {
-		cancel = func() {}
-	}
-	defer cancel()
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
 
-	lengthLine, err := reader.ReadString('\n')
-	if err != nil {
-		return nil, err
-	}
-
-	var payloadLength int
-	if _, err := fmt.Sscanf(lengthLine, "%d\n", &payloadLength); err != nil {
-		return nil, fmt.Errorf("invalid length prefix %q: %w", strings.TrimSpace(lengthLine), err)
-	}
-
-	payload := make([]byte, payloadLength)
-	if _, err := io.ReadFull(reader, payload); err != nil {
-		return nil, err
-	}
-
-	term, err := reader.ReadByte()
-	if err != nil {
-		return nil, err
-	}
-	if term != '\n' {
-		return nil, fmt.Errorf("expected newline terminator, got %q", term)
-	}
-
-	return payload, nil
-}
-
-func newCorrelationID() string {
-	var buf [16]byte
-	if _, err := rand.Read(buf[:]); err != nil {
-		return hex.EncodeToString([]byte(time.Now().Format(time.RFC3339Nano)))
-	}
-	return hex.EncodeToString(buf[:])
-}
-
-// InstallOfflineHTTPGuard wraps the default HTTP transport to block outbound requests to non-loopback hosts.
-// The returned restore function must be invoked to revert to the original transport once offline enforcement is no longer required.
-func InstallOfflineHTTPGuard() func() {
-	offlineGuardMu.Lock()
-	defer offlineGuardMu.Unlock()
-
-	if offlineGuardInstallCount == 0 {
-		offlineGuardOriginalTransport = http.DefaultTransport
-		logger := slog.Default()
-		if logger == nil {
-			logger = slog.New(slogdiscardHandler{})
-		}
-		http.DefaultTransport = &offlineTransport{
-			base: offlineGuardOriginalTransport,
-			log:  logger.With(slog.String("component", "ipc.offline_guard")),
-		}
-	}
-	offlineGuardInstallCount++
-
-	return func() {
-		offlineGuardMu.Lock()
-		defer offlineGuardMu.Unlock()
-
-		if offlineGuardInstallCount == 0 {
-			return
-		}
-		offlineGuardInstallCount--
-		if offlineGuardInstallCount == 0 && offlineGuardOriginalTransport != nil {
-			http.DefaultTransport = offlineGuardOriginalTransport
-			offlineGuardOriginalTransport = nil
-		}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
 	}
 }
-
-func (t *offlineTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	if req == nil || req.URL == nil {
-		return t.base.RoundTrip(req)
-	}
-
-	host := req.URL.Hostname()
-	if isRemoteHost(host) {
-		if t.log != nil {
-			t.log.Warn(
-				"OfflineGuard blocked outbound HTTP request",
-				slog.String("method", req.Method),
-				slog.String("url", req.URL.Redacted()),
-			)
-		}
-		return nil, ErrExternalNetworkBlocked
-	}
-
-	return t.base.RoundTrip(req)
-}
-
-func isRemoteHost(host string) bool {
-	if host == "" {
-		return false
-	}
-
-	lowered := strings.ToLower(host)
-	if lowered == "localhost" {
-		return false
-	}
-
-	ip := net.ParseIP(host)
-	if ip == nil {
-		return true
-	}
-
-	return !ip.IsLoopback()
-}
-
-type slogdiscardHandler struct{}
-
-func (slogdiscardHandler) Enabled(context.Context, slog.Level) bool  { return false }
-func (slogdiscardHandler) Handle(context.Context, slog.Record) error { return nil }
-func (slogdiscardHandler) WithAttrs([]slog.Attr) slog.Handler        { return slogdiscardHandler{} }
-func (slogdiscardHandler) WithGroup(string) slog.Handler             { return slogdiscardHandler{} }
