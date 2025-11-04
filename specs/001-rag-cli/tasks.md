@@ -93,10 +93,10 @@
 
 ### Tests for User Story 1 (MANDATORY) ⚠️
 
-- [ ] T041 [P] [US1] Add failing `ragman` CLI contract tests for success and no-answer paths in `tests/go/contract/ragman_query_test.go`. Extend cases to cover the 0.35 confidence threshold, stale-index fallbacks, structured `summary`/`steps`/`references` fields, raw JSON output (`--json`), citation marker reuse for repeated `{alias, document_ref}` pairs, and correlation ID propagation in logs. Include assertions for `--plain` mode to ensure sections and inline citations mirror the markdown output (FR-002).
-- [ ] T042 [P] [US1] Add failing backend integration test asserting `summary`, ordered `steps`, `references`, semantic chunk counts (≤2 000 tokens), citation and confidence fields in `tests/python/integration/test_query_flow.py`.
-- [ ] T043 [P] [US1] Add failing latency benchmark tests for SC-001 in `tests/python/performance/test_query_latency.py`.
-- [ ] T044 [P] [US1] Add failing context-limit truncation tests in `tests/python/integration/test_context_limits.py`.
+- [X] T041 [P] [US1] Add failing `ragman` CLI contract tests for success and no-answer paths in `tests/go/contract/ragman_query_test.go`. Extend cases to cover the 0.35 confidence threshold, stale-index fallbacks, structured `summary`/`steps`/`references` fields, raw JSON output (`--json`), citation marker reuse for repeated `{alias, document_ref}` pairs, and correlation ID propagation in logs. Include assertions for `--plain` mode to ensure sections and inline citations mirror the markdown output (FR-002).
+- [X] T042 [P] [US1] Add failing backend integration test asserting `summary`, ordered `steps`, `references`, semantic chunk counts (≤2 000 tokens), citation and confidence fields in `tests/python/integration/test_query_flow.py`.
+- [X] T043 [P] [US1] Add failing latency benchmark tests for SC-001 in `tests/python/performance/test_query_latency.py`.
+- [X] T044 [P] [US1] Add failing context-limit truncation tests in `tests/python/integration/test_context_limits.py`.
 
 ### Implementation for User Story 1
 
