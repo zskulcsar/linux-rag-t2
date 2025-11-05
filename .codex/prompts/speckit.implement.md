@@ -138,5 +138,6 @@ You **MUST** us all skills applicable. Re-read the `using-superpowers` instructi
    - Validate that tests pass and coverage meets requirements
    - Confirm the implementation follows the technical plan
    - Report final status with summary of completed work
+   - Report all skills used while completing the task
 
 Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.
