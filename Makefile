@@ -11,7 +11,7 @@ MKDOCS_SITE_DIR := docs/site
 UV_ENV := PYTHONPATH=$(CURDIR) UV_CACHE_DIR=$(CURDIR)/.uv_cache
 UV_PYTEST := $(UV_ENV) uv run --project services/rag_backend pytest
 GO_ENV := GOCACHE=$(CURDIR)/.gocache
-GO_TEST := $(GO_ENV) go test
+GO_TEST := $(GO_ENV) go test -v
 
 GOFMT_PATHS := $(shell find cli tests -type f -name '*.go' -not -path '*/vendor/*' 2>/dev/null)
 
