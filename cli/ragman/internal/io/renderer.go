@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"text/template"
 
 	"github.com/linux-rag-t2/cli/shared/ipc"
 )
@@ -42,84 +43,6 @@ func Render(resp ipc.QueryResponse, opts Options) (string, error) {
 	}
 }
 
-func renderMarkdown(resp ipc.QueryResponse, opts Options) string {
-	var buf bytes.Buffer
-	buf.WriteString("Summary\n-------\n")
-	buf.WriteString(resp.Summary)
-	if len(resp.Steps) > 0 {
-		buf.WriteString("\n\nSteps\n-----\n")
-		for idx, step := range resp.Steps {
-			buf.WriteString(fmt.Sprintf("%d. %s\n", idx+1, step))
-		}
-	}
-
-	citationSet := enumerateCitations(resp)
-	if len(citationSet) > 0 {
-		buf.WriteString("\nReferences\n----------\n")
-		for _, entry := range citationSet {
-			buf.WriteString(fmt.Sprintf("[%d] %s — %s\n", entry.Index, entry.Alias, entry.DocumentRef))
-			if entry.Excerpt != "" {
-				buf.WriteString(fmt.Sprintf("    %s\n", entry.Excerpt))
-			}
-			if ref := lookupReference(entry.DocumentRef, resp.References); ref != nil {
-				if ref.URL != "" {
-					buf.WriteString(fmt.Sprintf("    Link: %s\n", ref.URL))
-				}
-				if ref.Notes != "" {
-					buf.WriteString(fmt.Sprintf("    Notes: %s\n", ref.Notes))
-				}
-			}
-		}
-	}
-
-	buf.WriteString("\nConfidence\n----------\n")
-	buf.WriteString(fmt.Sprintf("Confidence: %s (threshold %s)\n", percentage(resp.Confidence), percentage(opts.ConfidenceThreshold)))
-	if opts.TraceID != "" {
-		buf.WriteString(fmt.Sprintf("Trace ID: %s\n", opts.TraceID))
-	}
-	return strings.TrimRight(buf.String(), "\n")
-}
-
-func renderPlain(resp ipc.QueryResponse, opts Options) string {
-	var buf bytes.Buffer
-	buf.WriteString("SUMMARY:\n")
-	buf.WriteString(resp.Summary)
-	if len(resp.Steps) > 0 {
-		buf.WriteString("\n\nSTEPS:\n")
-		for idx, step := range resp.Steps {
-			buf.WriteString(fmt.Sprintf("%d) %s\n", idx+1, step))
-		}
-	}
-
-	citationSet := enumerateCitations(resp)
-	if len(citationSet) > 0 {
-		buf.WriteString("\nREFERENCES:\n")
-		for _, entry := range citationSet {
-			line := fmt.Sprintf("[%d] %s :: %s", entry.Index, entry.Alias, entry.DocumentRef)
-			buf.WriteString(line + "\n")
-			if entry.Excerpt != "" {
-				buf.WriteString("    " + entry.Excerpt + "\n")
-			}
-			if ref := lookupReference(entry.DocumentRef, resp.References); ref != nil {
-				if ref.URL != "" {
-					buf.WriteString("    LINK: " + ref.URL + "\n")
-				}
-				if ref.Notes != "" {
-					buf.WriteString("    NOTES: " + ref.Notes + "\n")
-				}
-			}
-		}
-	}
-
-	buf.WriteString("\nCONFIDENCE:\n")
-	buf.WriteString(fmt.Sprintf("%s (threshold %s)\n", percentage(resp.Confidence), percentage(opts.ConfidenceThreshold)))
-	if opts.TraceID != "" {
-		buf.WriteString(fmt.Sprintf("TRACE ID:\n%s\n", opts.TraceID))
-	}
-
-	return strings.TrimRight(buf.String(), "\n")
-}
-
 func renderJSON(resp ipc.QueryResponse, opts Options) (string, error) {
 	payload := map[string]any{
 		"summary":              resp.Summary,
@@ -131,6 +54,17 @@ func renderJSON(resp ipc.QueryResponse, opts Options) (string, error) {
 		"trace_id":             coalesce(resp.TraceID, opts.TraceID),
 		"latency_ms":           resp.LatencyMS,
 		"no_answer":            resp.NoAnswer,
+		"context_truncated":    resp.ContextTruncated,
+		"stale_index_detected": resp.StaleIndexDetected,
+	}
+	if resp.SemanticChunkCount != nil {
+		payload["semantic_chunk_count"] = *resp.SemanticChunkCount
+	}
+	if resp.BackendCorrelationID != "" {
+		payload["backend_correlation_id"] = resp.BackendCorrelationID
+	}
+	if resp.ConfidenceThreshold != nil {
+		payload["effective_confidence_threshold"] = *resp.ConfidenceThreshold
 	}
 	if resp.RetrievalLatencyMS != nil {
 		payload["retrieval_latency_ms"] = *resp.RetrievalLatencyMS
@@ -150,6 +84,191 @@ func renderJSON(resp ipc.QueryResponse, opts Options) (string, error) {
 		return "", fmt.Errorf("renderer: encode json: %w", err)
 	}
 	return string(data), nil
+}
+
+var (
+	templateFuncs = template.FuncMap{
+		"inc": func(i int) int { return i + 1 },
+	}
+
+	markdownTemplate = template.Must(template.New("markdown").
+				Funcs(templateFuncs).
+				Parse(markdownTemplateSrc))
+
+	plainTemplate = template.Must(template.New("plain").
+			Funcs(templateFuncs).
+			Parse(plainTemplateSrc))
+)
+
+const markdownTemplateSrc = `{{.ConfidenceLine}}{{if .HasTruncationWarning}}
+{{.TruncationWarning}}{{end}}{{if .Fallback}}
+
+No answer found
+---------------
+{{.FallbackBody}}{{else}}
+
+Summary
+-------
+{{.Summary}}{{if .HasSteps}}
+
+Steps
+-----
+{{range $idx, $step := .Steps}}{{printf "%d. %s\n" (inc $idx) $step}}{{end}}{{end}}{{if .HasReferences}}
+
+References
+----------
+{{range .References}}[{{.Index}}] {{.Alias}} — {{.DocumentRef}}
+{{if .HasExcerpt}}    {{.Excerpt}}
+{{end}}{{if .HasURL}}    Link: {{.URL}}
+{{end}}{{if .HasNotes}}    Notes: {{.Notes}}
+{{end}}
+{{end}}{{end}}{{end}}
+
+Trace ID: {{.TraceID}}`
+
+const plainTemplateSrc = `{{.ConfidenceLine}}{{if .HasTruncationWarning}}
+{{.TruncationWarning}}{{end}}{{if .Fallback}}
+
+No answer found
+---------------
+{{.FallbackBody}}{{else}}
+
+SUMMARY:
+{{.Summary}}{{if .HasSteps}}
+
+STEPS:
+{{range $idx, $step := .Steps}}{{printf "%d) %s\n" (inc $idx) $step}}{{end}}{{end}}{{if .HasReferences}}
+
+REFERENCES:
+{{range .References}}[{{.Index}}] {{.Alias}} :: {{.DocumentRef}}
+{{if .HasExcerpt}}    {{.Excerpt}}
+{{end}}{{if .HasURL}}    LINK: {{.URL}}
+{{end}}{{if .HasNotes}}    NOTES: {{.Notes}}
+{{end}}
+{{end}}{{end}}{{end}}
+
+TRACE ID: {{.TraceID}}`
+
+func renderMarkdown(resp ipc.QueryResponse, opts Options) string {
+	view := buildViewModel(resp, opts)
+	var buf bytes.Buffer
+	_ = markdownTemplate.Execute(&buf, view)
+	return strings.TrimSpace(buf.String())
+}
+
+func renderPlain(resp ipc.QueryResponse, opts Options) string {
+	view := buildViewModel(resp, opts)
+	var buf bytes.Buffer
+	_ = plainTemplate.Execute(&buf, view)
+	return strings.TrimSpace(buf.String())
+}
+
+func buildViewModel(resp ipc.QueryResponse, opts Options) rendererViewModel {
+	traceID := coalesce(resp.TraceID, opts.TraceID)
+	fallback := resp.NoAnswer || resp.Confidence < opts.ConfidenceThreshold
+
+	var fallbackBody string
+	defaultFallback := "Answer is below the confidence threshold. Please rephrase your query or refresh sources via ragadmin."
+	if fallback {
+		fallbackBody = strings.TrimSpace(resp.Summary)
+		lowered := strings.ToLower(fallbackBody)
+		if fallbackBody == "" {
+			fallbackBody = defaultFallback
+		} else if !strings.Contains(lowered, "rephrase your query") {
+			fallbackBody = fallbackBody + "\n\n" + defaultFallback
+		}
+	}
+
+	truncationWarning := ""
+	if resp.ContextTruncated {
+		message := strings.TrimSpace(resp.Summary)
+		if message == "" {
+			message = "The retrieved context exceeded the token budget and was truncated. Please adjust your question or the --context-tokens limit."
+		}
+		truncationWarning = fmt.Sprintf("Context truncated: %s", message)
+	}
+
+	citations := enumerateCitations(resp)
+	references := buildReferenceViews(citations, resp.References)
+
+	cleanSteps := make([]string, 0, len(resp.Steps))
+	for _, step := range resp.Steps {
+		step = strings.TrimSpace(step)
+		if step == "" {
+			continue
+		}
+		cleanSteps = append(cleanSteps, step)
+	}
+
+	view := rendererViewModel{
+		ConfidenceLine:       fmt.Sprintf("Confidence %s (threshold %s)", percentage(resp.Confidence), percentage(opts.ConfidenceThreshold)),
+		TraceID:              traceID,
+		Fallback:             fallback,
+		FallbackBody:         fallbackBody,
+		Summary:              strings.TrimSpace(resp.Summary),
+		Steps:                cleanSteps,
+		HasSteps:             len(cleanSteps) > 0 && !fallback,
+		References:           references,
+		HasReferences:        len(references) > 0 && !fallback,
+		HasTruncationWarning: resp.ContextTruncated,
+		TruncationWarning:    truncationWarning,
+	}
+
+	if fallback {
+		view.HasSteps = false
+		view.HasReferences = false
+	}
+
+	return view
+}
+
+type rendererViewModel struct {
+	ConfidenceLine       string
+	TraceID              string
+	Fallback             bool
+	FallbackBody         string
+	Summary              string
+	Steps                []string
+	HasSteps             bool
+	References           []referenceView
+	HasReferences        bool
+	HasTruncationWarning bool
+	TruncationWarning    string
+}
+
+type referenceView struct {
+	Index       int
+	Alias       string
+	DocumentRef string
+	Excerpt     string
+	URL         string
+	Notes       string
+	HasExcerpt  bool
+	HasURL      bool
+	HasNotes    bool
+}
+
+func buildReferenceViews(entries []citationEntry, refs []ipc.QueryReference) []referenceView {
+	var results []referenceView
+	for _, entry := range entries {
+		ref := lookupReference(entry.DocumentRef, refs)
+		excerpt := strings.TrimSpace(entry.Excerpt)
+		view := referenceView{
+			Index:       entry.Index,
+			Alias:       entry.Alias,
+			DocumentRef: entry.DocumentRef,
+			Excerpt:     excerpt,
+			HasExcerpt:  excerpt != "",
+		}
+		if ref != nil {
+			view.URL = strings.TrimSpace(ref.URL)
+			view.Notes = strings.TrimSpace(ref.Notes)
+			view.HasURL = view.URL != ""
+			view.HasNotes = view.Notes != ""
+		}
+		results = append(results, view)
+	}
+	return results
 }
 
 type citationEntry struct {

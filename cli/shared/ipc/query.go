@@ -37,18 +37,23 @@ type QueryCitation struct {
 
 // QueryResponse represents the structured answer returned by the backend query endpoint.
 type QueryResponse struct {
-	Summary            string           `json:"summary"`
-	Steps              []string         `json:"steps"`
-	References         []QueryReference `json:"references"`
-	Citations          []QueryCitation  `json:"citations"`
-	Confidence         float64          `json:"confidence"`
-	TraceID            string           `json:"trace_id"`
-	LatencyMS          int              `json:"latency_ms"`
-	RetrievalLatencyMS *int             `json:"retrieval_latency_ms,omitempty"`
-	LLMLatencyMS       *int             `json:"llm_latency_ms,omitempty"`
-	IndexVersion       *string          `json:"index_version,omitempty"`
-	Answer             *string          `json:"answer,omitempty"`
-	NoAnswer           bool             `json:"no_answer,omitempty"`
+	Summary              string           `json:"summary"`
+	Steps                []string         `json:"steps"`
+	References           []QueryReference `json:"references"`
+	Citations            []QueryCitation  `json:"citations"`
+	Confidence           float64          `json:"confidence"`
+	TraceID              string           `json:"trace_id"`
+	LatencyMS            int              `json:"latency_ms"`
+	RetrievalLatencyMS   *int             `json:"retrieval_latency_ms,omitempty"`
+	LLMLatencyMS         *int             `json:"llm_latency_ms,omitempty"`
+	IndexVersion         *string          `json:"index_version,omitempty"`
+	Answer               *string          `json:"answer,omitempty"`
+	NoAnswer             bool             `json:"no_answer,omitempty"`
+	SemanticChunkCount   *int             `json:"semantic_chunk_count,omitempty"`
+	ContextTruncated     bool             `json:"context_truncated,omitempty"`
+	ConfidenceThreshold  *float64         `json:"confidence_threshold,omitempty"`
+	StaleIndexDetected   bool             `json:"stale_index_detected,omitempty"`
+	BackendCorrelationID string           `json:"backend_correlation_id,omitempty"`
 }
 
 // QueryRequestInput captures user-provided fields used to build JSON transport requests.
