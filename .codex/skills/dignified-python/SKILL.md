@@ -8,7 +8,7 @@ description: "Apply Python best practices, idioms, and conventions. Use when wri
 
 ## Purpose
 
-This skill provides workstack's Python coding standards and patterns. These standards emphasize **LBYL (Look Before You Leap)** patterns, explicit type annotations, and deterministic error handling.
+This skill provides Python coding standards and patterns. These standards emphasize **LBYL (Look Before You Leap)** patterns, explicit type annotations, and deterministic error handling.
 
 **Core Philosophy**: Write explicit, predictable code that fails fast at proper boundaries.
 
@@ -506,16 +506,15 @@ Before path operations:
 
 For more detailed information, consult:
 
-- **.agent/docs/EXCEPTION_HANDLING.md** - Complete exception handling guide
-- **.agent/docs/PATTERNS.md** - Comprehensive code examples
-- **.agent/docs/QUICK_REFERENCE.md** - Quick lookup reference
-- **tests/CLAUDE.md** - Testing patterns and practices
+- **./EXCEPTION_HANDLING.md** - Complete exception handling guide
+- **./PATTERNS.md** - Comprehensive code examples
+- **./QUICK_REFERENCE.md** - Quick lookup reference
 
 ---
 
 ## QUICK DECISION TREE
 
-**Writing Python code in workstack?**
+**Writing Python code?**
 
 1. **About to use `try/except`?**
    - → Check [Exception Handling](#1-exception-handling---never-for-control-flow-) section

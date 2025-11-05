@@ -1,6 +1,6 @@
-# Workstack Documentation
+# Python project Documentation
 
-**Welcome!** This directory contains detailed documentation for the workstack project.
+**Welcome!** This directory contains detailed documentation for any python project.
 
 ---
 
@@ -19,7 +19,7 @@ Choose your starting point based on your task:
 
 ### 📋 Core Standards (Start here)
 
-**[../../CLAUDE.md](../../CLAUDE.md)** - Coding standards and rules
+**[../SKILL.md](../SKILL.md)** - Coding standards and rules
 
 - Core rules (type annotations, imports, exception handling, etc.)
 - Quick reference table to all other docs
@@ -44,38 +44,14 @@ Choose your starting point based on your task:
 - Dictionary access, validation, file processing
 - Anti-patterns and examples
 
-**[PUBLISHING.md](PUBLISHING.md)** - PyPI publishing guide
-
-- Publishing both devclikit and workstack packages
-- Authentication setup and credentials
-- Version management and release process
-- Testing and troubleshooting
-
 ### 🧪 Testing
 
-**[../../tests/CLAUDE.md](../../tests/CLAUDE.md)** - Testing patterns and practices
+**[../../test-driven-development/SKILL.md](../../test-driven-development/SKILL.md)** - Testing patterns and practices
+**[../../testing-antipatterns/SKILL.md](../../testing-antipatterns/SKILL.md)** - Testing anti patterns and examples
 
 - Unit tests with fakes
 - Integration tests with real implementations
 - Testing patterns
-
----
-
-## Documentation Hierarchy
-
-```
-📂 Root Level (/)
-├─ CLAUDE.md ................... Core coding standards (START HERE)
-├─ README.md ................... Project overview
-│
-📂 docs/ (You are here)
-├─ README.md ................... This file - documentation index
-├─ PATTERNS.md ................. Code examples and patterns
-└─ EXCEPTION_HANDLING.md ....... Complete exception guide
-│
-📂 tests/
-└─ CLAUDE.md ................... Testing patterns and practices
-```
 
 ---
 
@@ -86,23 +62,22 @@ Choose your starting point based on your task:
 **1. First-time contributor:**
 
 ```
-CLAUDE.md (core rules)
+SKILL.md (core rules)
   └─> PATTERNS.md (see examples)
-      └─> tests/CLAUDE.md (learn testing)
+      └─> ../../test-driven-development/SKILL.md (learn testing)
 ```
 
 **2. Working with exceptions:**
 
 ```
-CLAUDE.md#exception-handling (rules)
+SKILL.md#exception-handling (rules)
   └─> EXCEPTION_HANDLING.md (complete guide)
-      └─> PATTERNS.md (related examples)
 ```
 
 **3. Understanding a pattern:**
 
 ```
-CLAUDE.md (read rule)
+SKILL.md (read rule)
   └─> PATTERNS.md#specific-pattern (see example)
 ```
 
@@ -112,40 +87,25 @@ CLAUDE.md (read rule)
 
 ### Most Referenced Documents
 
-1. [../../CLAUDE.md](../../CLAUDE.md) - Core standards (read first!)
-2. [PATTERNS.md](PATTERNS.md) - Code examples
-3. [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) - Exception guide
-4. [../../tests/CLAUDE.md](../../tests/CLAUDE.md) - Testing guide
-5. [PUBLISHING.md](PUBLISHING.md) - Publishing to PyPI
+1. [PATTERNS.md](PATTERNS.md) - Code examples
+2. [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) - Exception guide
+3. [../../test-driven-development/SKILL.md](../../test-driven-development/SKILL.md) - Testing guide
 
 ### By Topic
 
 **Writing code:**
 
-- [../../CLAUDE.md](../../CLAUDE.md) - Coding standards
+- [SKILL.md](SKILL.md) - Coding standards
 - [PATTERNS.md](PATTERNS.md) - Examples
 - [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) - Exception rules
 
 **Testing:**
 
-- [../../tests/CLAUDE.md](../../tests/CLAUDE.md) - Testing patterns
-
-**Publishing:**
-
-- [PUBLISHING.md](PUBLISHING.md) - Publishing to PyPI
+- [../../test-driven-development/SKILL.md](../../test-driven-development/SKILL.md) - Testing patterns
 
 ---
 
 ## Documentation Maintenance
-
-### Keeping Docs Up-to-Date
-
-When making changes to the codebase:
-
-1. **Update PATTERNS.md** - If you add new patterns or examples
-2. **Update EXCEPTION_HANDLING.md** - If exception handling patterns change
-3. **Update tests/CLAUDE.md** - If testing patterns change
-4. **Update CLAUDE.md** - If core rules change
 
 ### Review Checklist
 
@@ -153,7 +113,7 @@ During code review, verify:
 
 - [ ] Examples in PATTERNS.md still compile and follow current patterns
 - [ ] EXCEPTION_HANDLING.md reflects current exception handling approach
-- [ ] tests/CLAUDE.md matches current testing practices
+- [ ] ../../test-driven-development/SKILL.md matches current testing practices
 - [ ] Links in all docs point to files that exist
 
 ---
@@ -179,19 +139,3 @@ If you can't find what you need:
 2. Check [EXCEPTION_HANDLING.md](EXCEPTION_HANDLING.md) for exception handling details
 
 Still stuck? The documentation may need improvement - consider opening an issue or PR.
-
----
-
-## Future Documentation (Planned)
-
-These documents have been planned but not yet implemented:
-
-- **guides/ADDING_A_COMMAND.md** - Step-by-step command guide
-- **guides/ADDING_AN_OPS_INTERFACE.md** - Step-by-step ops interface guide
-- **COMMON_TASKS.md** - FAQ and common tasks
-
-Note: ARCHITECTURE.md, GLOSSARY.md, and FEATURE_INDEX.md now exist in the `.agent/` directory.
-
----
-
-**Last updated**: 2025-10-08 (Documentation restructure - moved to .agent/ directory)

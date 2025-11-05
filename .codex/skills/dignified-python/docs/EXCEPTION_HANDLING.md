@@ -2,7 +2,7 @@
 
 **📍 You are here**: .codex/skills/dignified-python/docs/EXCEPTION_HANDLING.md
 
-**Purpose**: Complete guide to exception handling in workstack. This codebase has strict rules about exception usage.
+**Purpose**: Complete guide to exception handling in python projects. This codebase has strict rules about exception usage.
 
 **Related docs**:
 
@@ -82,7 +82,7 @@ Exception handling is acceptable in these rare cases:
 
 ## Critical Enforcement
 
-⚠️ **Claude Code: You MUST NOT violate these exception handling rules. Specifically:**
+⚠️ **Codex CLI: You MUST NOT violate these exception handling rules. Specifically:**
 
 1. **NEVER write try/except blocks for alternate execution paths** - Let exceptions bubble up instead of catching them to try alternative approaches
 2. **NEVER swallow exceptions silently** - Don't use empty `except:` blocks or `except Exception: pass` patterns

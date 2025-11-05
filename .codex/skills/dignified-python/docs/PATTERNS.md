@@ -2,7 +2,7 @@
 
 **📍 You are here**: .codex/skills/dignified-python/docs/PATTERNS.md
 
-**Purpose**: Detailed examples for patterns referenced in CLAUDE.md coding standards.
+**Purpose**: Detailed examples for patterns referenced in ../SKILL.md coding standards.
 
 **Related docs**:
 
