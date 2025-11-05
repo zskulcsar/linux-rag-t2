@@ -40,9 +40,10 @@
 - [ ] Add CLI contract tests invoking fixture backend responses.
 
 ## Milestone 7 – `ragman` CLI (Plan step 7)
-- [ ] Implement query command with confidence + citation rendering.
-- [ ] Support `--json` output and latency reporting.
-- [ ] Add no-answer path per FR-002 edge cases.
+- [X] Implement query command with confidence + citation rendering.
+- [X] Support `--json` output and latency reporting.
+- [X] Add no-answer path per FR-002 edge cases.
+- [X] Execute CLI/backend verification suites (`GOCACHE=$(pwd)/../.gocache go test ./unit/ragman`, `UV_CACHE_DIR=$(pwd)/.uv-cache uv run pytest tests/python/unit -k query`) confirming green results.
 
 ## Milestone 8 – Contract & integration testing (Plan step 8)
 - [ ] Build Go/Python end-to-end test suites invoking both CLIs against backend.
