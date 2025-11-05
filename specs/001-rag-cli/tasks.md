@@ -100,7 +100,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T045 [US1] Implement query application orchestrator with telemetry in `services/rag_backend/application/query_runner.py`. Load the minimum confidence from presentation config and pass the effective threshold into responses.
+- [X] T045 [US1] Implement query application orchestrator with telemetry in `services/rag_backend/application/query_runner.py`. Load the minimum confidence from presentation config and pass the effective threshold into responses.
 - [ ] T046 [US1] Instrument latency metrics and thresholds in `services/rag_backend/application/query_metrics.py`.
 - [ ] T047 [US1] Implement `ragman` root and query spf13/cobra commands in `cli/ragman/cmd/root.go` and `cli/ragman/cmd/query.go`. Commands must emit correlation IDs and request the structured answer format over the IPC client. Expose `--plain`, `--json`, `--context-tokens`, and `--conversation` flags.
 - [ ] T048 [US1] Implement terminal/JSON renderers with citation, confidence, and truncation messaging in `cli/ragman/internal/io/renderer.go`. Render Summary, Steps, and References sections with inline aliases and fall back to the standard “No answer found” block when confidence < 0.35. Provide markdown, plain, and JSON presenters via templates that display confidence as a percentage header and honour `${XDG_CONFIG_HOME}/ragcli/config.yaml` defaults.

@@ -48,6 +48,11 @@ class QueryResponse:
     index_version: str | None = None
     answer: str | None = None
     no_answer: bool = False
+    semantic_chunk_count: int | None = None
+    context_truncated: bool = False
+    confidence_threshold: float | None = None
+    stale_index_detected: bool = False
+    backend_correlation_id: str | None = None
 
 
 class QueryPort(Protocol):
