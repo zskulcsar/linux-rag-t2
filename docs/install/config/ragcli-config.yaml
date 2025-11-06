@@ -1,0 +1,5 @@
+ragman:
+  confidence_threshold: 0.35
+  presenter_default: markdown
+ragadmin:
+  output_default: table

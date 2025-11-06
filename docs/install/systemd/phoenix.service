@@ -1,0 +1,21 @@
+[Unit]
+Description=Arize Phoenix Observability Service
+Documentation=https://github.com/arize-ai/phoenix
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=phoenix
+Group=phoenix
+EnvironmentFile=/etc/phoenix/phoenix.env
+WorkingDirectory=/opt/phoenix
+ExecStart=/opt/phoenix/venv/bin/python -m phoenix.server.main serve --host ${PHOENIX_HOST} --port ${PHOENIX_PORT}
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=phoenix
+
+[Install]
+WantedBy=multi-user.target

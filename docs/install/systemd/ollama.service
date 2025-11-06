@@ -1,0 +1,22 @@
+[Unit]
+Description=Ollama Local Model Server
+Documentation=https://github.com/ollama/ollama
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ollama
+Group=ollama
+ExecStart=/usr/bin/ollama serve
+Restart=always
+RestartSec=5s
+Environment="PATH=/usr/bin:/usr/local/bin"
+WorkingDirectory=/usr/share/ollama
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ollama
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
