@@ -101,8 +101,8 @@ curl http://localhost:6006/health
 ```
 
 > **Tip:** Update the environment files in `/etc/{weaviate,phoenix}/` if you
-> need to change ports or bind addresses. Reflect the same changes later in
-> `/etc/ragcli/ragbackend.env`.
+> need to change ports or bind addresses. Mirror those hostnames in the backend
+> `backend` section inside `/etc/ragcli/config.yaml`.
 
 ## 4. Prepare Python Dependencies
 
@@ -143,35 +143,33 @@ sudo docs/install/scripts/setup_ragcli.sh /opt/linux-rag-t2 ragcli
 Artifacts created by the script:
 
 - `/etc/ragcli/config.yaml` (template: `docs/install/config/ragcli-config.yaml`)
-- `/etc/ragcli/ragbackend.env` (backend environment overrides)
 - `/var/lib/ragcli/ragcli/` (state) and `/var/lib/ragcli/ragcli/kiwix`
 - `/var/log/ragcli/` and `/run/ragcli/`
 
 ## 7. Review Backend Environment
 
-Inspect `/etc/ragcli/ragbackend.env` and adjust hostnames/ports to match
-your deployment:
+Inspect `/etc/ragcli/config.yaml` and adjust the backend section to match your
+deployment. The default installed by the script looks like:
 
-```ini
-# Runtime directories
-RAGCLI_CONFIG=/etc/ragcli/config.yaml
-RAGCLI_RUNTIME_DIR=/run/ragcli
-RAGCLI_STATE_DIR=/var/lib/ragcli
-RAGCLI_LOG_DIR=/var/log/ragcli
-
-# Transport endpoints
-RAGCLI_SOCKET=${RAGCLI_RUNTIME_DIR}/backend.sock
-WEAVIATE_URL=http://localhost:8080
-OLLAMA_URL=http://localhost:11434
-PHOENIX_URL=http://localhost:6006
-
-# Logging
-RAGCLI_LOG_LEVEL=INFO
+```yaml
+ragman:
+  confidence_threshold: 0.35
+  presenter_default: markdown
+ragadmin:
+  output_default: table
+backend:
+  socket: /run/ragcli/backend.sock
+  weaviate_url: http://localhost:8080
+  ollama_url: http://localhost:11434
+  phoenix_url: http://localhost:6006
+  log_level: INFO
+  trace: false
 ```
 
-Set `RAGCLI_LOG_LEVEL=DEBUG` when you need verbose diagnostics or leave it at
-`INFO` for quieter logs. The launcher also accepts `--trace` if you need deeper
-per-call instrumentation during troubleshooting sessions.
+Set `log_level` to `DEBUG` when you need verbose diagnostics or leave it at
+`INFO` for quieter logs. Toggle `trace: true` only when you need deep tracing;
+otherwise keep it `false` to minimize overhead. The `ragman`/`ragadmin` blocks
+remain available for CLI defaults (confidence threshold, presenters, etc.).
 
 ## 8. Install Systemd Units
 
@@ -186,6 +184,9 @@ sudo systemctl daemon-reload
 Confirm the dependency unit files (`ollama.service`, `weaviate.service`,
 `phoenix.service`) exist in `/etc/systemd/system`; copy them from
 `docs/install/systemd/` if necessary.
+
+The `ragbackend.service` unit invokes `python -m services.rag_backend.main --config /etc/ragcli/config.yaml`;
+update the `RAGCLI_CONFIG` environment variable inside the unit file if you relocate the config.
 
 ## 9. Enable and Start Services
 

@@ -31,13 +31,16 @@
 1. Launch the Python backend (development mode) via the launcher module:
    ```bash
    uv run python -m services.rag_backend.main \
+     --config "${XDG_CONFIG_HOME:-$HOME/.config}/ragcli/config.yaml" \
      --socket "${XDG_RUNTIME_DIR:-/tmp}/ragcli/backend.sock" \
      --weaviate-url http://localhost:8080 \
      --ollama-url http://localhost:11434 \
      --phoenix-url http://localhost:6006 \
      --log-level INFO
    ```
-   Append `--trace` when you want the optional `TraceController` instrumentation.
+   The `--config` flag is required; the other options override values from the
+   file when you need ad-hoc adjustments. Append `--trace` when you want the
+   optional `TraceController` instrumentation.
    Offline enforcement is always active, so only loopback services are reachable.
    You can also run `make run-backend` to execute the same entrypoint with repo
    defaults.
