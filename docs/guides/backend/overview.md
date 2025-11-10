@@ -67,8 +67,16 @@ log entries and Phoenix traces.
 ## Configuration
 
 - XDG-compliant directories determine config/data/runtime socket paths.
-- Runtime options (socket path, Ollama URL, Weaviate URL) are supplied via CLI
-  flags when launching the backend module (`python -m services.rag_backend.main`).
+- Launch the backend with `python -m services.rag_backend.main` (or `make run-backend`)
+  and provide the required flags:
+  - `--socket` (Unix socket path, usually `${XDG_RUNTIME_DIR:-/tmp}/ragcli/backend.sock`)
+  - `--weaviate-url` (HTTP endpoint for the local Weaviate instance)
+  - `--ollama-url` (HTTP endpoint for the Ollama runtime)
+  - `--phoenix-url` (HTTP endpoint for the Phoenix UI)
+  - `--log-level` (optional stdlib logging verbosity, defaults to `INFO`)
+  - `--trace` (optional flag that enables the telemetry `TraceController`)
+- Offline enforcement is always active, meaning any outbound TCP connection
+  targeting non-loopback hosts raises an `OfflineNetworkError`.
 
 ## Roadmap
 

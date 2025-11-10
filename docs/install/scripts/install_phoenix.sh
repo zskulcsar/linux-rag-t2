@@ -33,13 +33,10 @@ else
 fi
 chown -R phoenix:phoenix /opt/phoenix
 
-echo "[phoenix] writing environment file to /etc/phoenix/phoenix.env"
-install -d /etc/phoenix
-cat > /etc/phoenix/phoenix.env <<'ENV'
-PHOENIX_HOST=0.0.0.0
-PHOENIX_PORT=6006
-ENV
-chmod 0644 /etc/phoenix/phoenix.env
+# TODO: this is not required, --host and --port are not understood by phoenix
+# echo "[phoenix] writing environment file to /etc/phoenix/phoenix.env"
+# install -d /etc/phoenix
+# install -m 0644 "$(dirname "$0")/../config/phoenix.env" /etc/phoenix/phoenix.env
 
 echo "[phoenix] installing systemd unit"
 install -m 0644 "$(dirname "$0")/../systemd/phoenix.service" /etc/systemd/system/phoenix.service

@@ -10,9 +10,10 @@ nav:
       - ragadmin: guides/cli/ragadmin.md
   - Backend Service:
       - Overview: guides/backend/overview.md
+  - Installation: install/index.md
 
 theme:
-  name: mkdocs
+  name: material
 
 markdown_extensions:
   - tables

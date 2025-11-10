@@ -46,35 +46,22 @@ install -d -m 0755 "${CONFIG_DIR}"
 CONFIG_FILE="${CONFIG_DIR}/config.yaml"
 if [[ ! -f "${CONFIG_FILE}" ]]; then
   echo "Writing default config to ${CONFIG_FILE}"
-  cat >"${CONFIG_FILE}" <<'YAML'
-ragman:
-  confidence_threshold: 0.35
-  presenter_default: markdown
-ragadmin:
-  output_default: table
-YAML
+  install -m 0644 -o ${SERVICE_USER} -g ${SERVICE_USER} "$(dirname "$0")/../config/ragcli-config.yaml" ${CONFIG_FILE}
+#   cat >"${CONFIG_FILE}" <<'YAML'
+# ragman:
+#   confidence_threshold: 0.35
+#   presenter_default: markdown
+# ragadmin:
+#   output_default: table
+# YAML
 fi
-chown "${SERVICE_USER}:${SERVICE_USER}" "${CONFIG_FILE}"
-chmod 0644 "${CONFIG_FILE}"
+# chown "${SERVICE_USER}:${SERVICE_USER}" "${CONFIG_FILE}"
+# chmod 0644 "${CONFIG_FILE}"
 
-ENV_FILE="${CONFIG_DIR}/ragbackend.env"
-echo "Writing environment file to ${ENV_FILE}"
-cat >"${ENV_FILE}" <<ENV
-# Runtime paths
-RAGCLI_CONFIG=${CONFIG_FILE}
-RAGCLI_RUNTIME_DIR=${RUNTIME_DIR}
-RAGCLI_STATE_DIR=${STATE_DIR}
-RAGCLI_LOG_DIR=${LOG_DIR}
 
-# Transport endpoints
-RAGCLI_SOCKET=\${RAGCLI_RUNTIME_DIR}/backend.sock
-WEAVIATE_URL=http://localhost:8080
-OLLAMA_URL=http://localhost:11434
-PHOENIX_URL=http://localhost:6006
+echo "Installing systemd unit"
+install -m 0644 "$(dirname "$0")/../systemd/ragbackend.service" /etc/systemd/system/ragbackend.service
+systemctl daemon-reload
+systemctl enable --now ragbackend.service
 
-# Repository location
-RAGCLI_REPO=${REPO_PATH}
-ENV
-chmod 0644 "${ENV_FILE}"
-
-echo "Setup complete."
+echo "Setup complete. Inspect logs with: journalctl -u ragbackend -f"

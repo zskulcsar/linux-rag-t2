@@ -43,7 +43,7 @@ and systemd registration for each dependency.
 ### 3.1 Ollama – Local Model Server
 
 ```bash
-sudo bash docs/install/scripts/install_ollama.sh
+sudo docs/install/scripts/install_ollama.sh
 ```
 
 This script:
@@ -63,7 +63,7 @@ sudo journalctl -u ollama -f
 ### 3.2 Weaviate – Vector Database
 
 ```bash
-sudo bash docs/install/scripts/install_weaviate.sh 1.26.4
+sudo docs/install/scripts/install_weaviate.sh 1.26.4
 ```
 
 This script:
@@ -83,7 +83,7 @@ curl http://localhost:8080/v1/.well-known/ready
 ### 3.3 Arize Phoenix – Observability
 
 ```bash
-sudo bash docs/install/scripts/install_phoenix.sh
+sudo docs/install/scripts/install_phoenix.sh
 ```
 
 This script:
@@ -137,7 +137,7 @@ Bootstrap XDG-compliant directories, create the `ragcli` user if required,
 and seed configuration defaults:
 
 ```bash
-sudo bash docs/install/scripts/setup_ragcli.sh /opt/linux-rag-t2 ragcli
+sudo docs/install/scripts/setup_ragcli.sh /opt/linux-rag-t2 ragcli
 ```
 
 Artifacts created by the script:
@@ -164,7 +164,14 @@ RAGCLI_SOCKET=${RAGCLI_RUNTIME_DIR}/backend.sock
 WEAVIATE_URL=http://localhost:8080
 OLLAMA_URL=http://localhost:11434
 PHOENIX_URL=http://localhost:6006
+
+# Logging
+RAGCLI_LOG_LEVEL=INFO
 ```
+
+Set `RAGCLI_LOG_LEVEL=DEBUG` when you need verbose diagnostics or leave it at
+`INFO` for quieter logs. The launcher also accepts `--trace` if you need deeper
+per-call instrumentation during troubleshooting sessions.
 
 ## 8. Install Systemd Units
 

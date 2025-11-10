@@ -3,19 +3,23 @@ Description=Linux RAG Backend Service
 Documentation=https://github.com/linux-rag-t2/linux-rag-t2/tree/main/docs/install
 Wants=network-online.target ollama.service weaviate.service phoenix.service
 After=network-online.target ollama.service weaviate.service phoenix.service
-ConditionPathExists=/opt/linux-rag-t2
+# TODO: this doesn't work, we need to find a way for absolute paths to be sourced at install time
+ConditionPathExists=/home/zsoltk/git/linux-rag-t2
 
 [Service]
 Type=simple
 User=ragcli
 Group=ragcli
+Environment=RAGCLI_LOG_LEVEL=INFO
 EnvironmentFile=/etc/ragcli/ragbackend.env
-WorkingDirectory=/opt/linux-rag-t2
+# TODO: this doesn't work, we need to find a way for absolute paths to be sourced at install time
+WorkingDirectory=/home/zsoltk/git/linux-rag-t2
 ExecStart=/usr/bin/env uv run python -m services.rag_backend.main \
   --socket "${RAGCLI_SOCKET}" \
   --weaviate-url "${WEAVIATE_URL}" \
   --ollama-url "${OLLAMA_URL}" \
-  --phoenix-url "${PHOENIX_URL}"
+  --phoenix-url "${PHOENIX_URL}" \
+  --log-level "${RAGCLI_LOG_LEVEL}"
 ExecStartPre=/usr/bin/env test -S "${RAGCLI_SOCKET}" || /usr/bin/env rm -f "${RAGCLI_SOCKET}"
 ExecStartPre=/usr/bin/env mkdir -p "${RAGCLI_RUNTIME_DIR}"
 ExecStartPre=/usr/bin/env mkdir -p "${RAGCLI_STATE_DIR}"
