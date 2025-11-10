@@ -3,3 +3,10 @@ ragman:
   presenter_default: markdown
 ragadmin:
   output_default: table
+backend:
+  socket: /run/ragcli/backend.sock
+  weaviate_url: http://localhost:8080
+  ollama_url: http://localhost:11434
+  phoenix_url: http://localhost:6006
+  log_level: INFO
+  trace: false

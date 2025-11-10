@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import textwrap
 from typing import Any
 
 import pytest
@@ -24,6 +25,8 @@ EXPECTED_HANDSHAKE_RESPONSE = {
     "version": 1,
     "server": "rag-backend",
 }
+
+READ_TIMEOUT = 3.0
 
 
 async def _write_frame(writer: asyncio.StreamWriter, message: dict[str, Any]) -> None:
@@ -78,43 +81,47 @@ def _launch_env(project_root: Path) -> dict[str, str]:
 
 
 @pytest.mark.asyncio
-async def test_backend_launcher_starts_transport_and_logs_configuration(tmp_path: Path) -> None:
-    """The launcher should start the transport server and log runtime configuration."""
+async def test_backend_launcher_requires_config_and_loads_defaults(tmp_path: Path) -> None:
+    """Launcher must read settings from config file and require --config."""
+
+    config_path = tmp_path / "ragcli-config.yaml"
+    socket_path = tmp_path / "backend.sock"
+    config_path.write_text(
+        textwrap.dedent(
+            f"""
+            backend:
+              socket: "{socket_path}"
+              weaviate_url: "http://127.0.0.1:8080"
+              ollama_url: "http://127.0.0.1:11434"
+              phoenix_url: "http://127.0.0.1:6006"
+              log_level: INFO
+              trace: false
+            """
+        ).strip(),
+        encoding="utf-8",
+    )
 
     project_root = Path(__file__).resolve().parents[3]
-    socket_path = tmp_path / "backend.sock"
-    command = [
+    process = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
         "services.rag_backend.main",
-        "--socket",
-        str(socket_path),
-        "--ollama-url",
-        "http://127.0.0.1:11434",
-        "--weaviate-url",
-        "http://127.0.0.1:8080",
-        "--phoenix-url",
-        "http://127.0.0.1:6006",
-    ]
-    process = await asyncio.create_subprocess_exec(
-        *command,
+        "--config",
+        str(config_path),
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         env=_launch_env(project_root),
     )
 
-    stdout: bytes = b""
-    stderr: bytes = b""
     try:
         await _wait_for_socket(socket_path, timeout=5.0)
         reader, writer = await asyncio.open_unix_connection(path=str(socket_path))
         try:
             await _write_frame(writer, HANDSHAKE_REQUEST)
-            handshake = await asyncio.wait_for(_read_frame(reader), timeout=1)
+            handshake = await asyncio.wait_for(_read_frame(reader), timeout=READ_TIMEOUT)
         finally:
             writer.close()
             await writer.wait_closed()
-
         assert handshake == EXPECTED_HANDSHAKE_RESPONSE
     finally:
         process.terminate()
@@ -125,3 +132,139 @@ async def test_backend_launcher_starts_transport_and_logs_configuration(tmp_path
     assert "http://127.0.0.1:8080" in combined_output
     assert "http://127.0.0.1:6006" in combined_output
     assert "offline_mode" in combined_output or "offline guard" in combined_output.lower()
+
+
+@pytest.mark.asyncio
+async def test_backend_launcher_allows_cli_overrides(tmp_path: Path) -> None:
+    """CLI flags should override config values."""
+
+    socket_path = tmp_path / "backend.sock"
+    config_path = tmp_path / "ragcli-config.yaml"
+    config_path.write_text(
+        textwrap.dedent(
+            f"""
+            backend:
+              socket: "{socket_path}"
+              weaviate_url: "http://bad-host:8080"
+              ollama_url: "http://bad-host:11434"
+              phoenix_url: "http://bad-host:6006"
+              log_level: INFO
+              trace: false
+            """
+        ).strip(),
+        encoding="utf-8",
+    )
+
+    project_root = Path(__file__).resolve().parents[3]
+    command = [
+        sys.executable,
+        "-m",
+        "services.rag_backend.main",
+        "--config",
+        str(config_path),
+        "--weaviate-url",
+        "http://override:8080",
+        "--ollama-url",
+        "http://override:11434",
+        "--phoenix-url",
+        "http://override:6006",
+        "--log-level",
+        "DEBUG",
+    ]
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        env=_launch_env(project_root),
+    )
+
+    try:
+        await _wait_for_socket(socket_path, timeout=5.0)
+        reader, writer = await asyncio.open_unix_connection(path=str(socket_path))
+        try:
+            await _write_frame(writer, HANDSHAKE_REQUEST)
+            handshake = await asyncio.wait_for(_read_frame(reader), timeout=READ_TIMEOUT)
+        finally:
+            writer.close()
+            await writer.wait_closed()
+        assert handshake == EXPECTED_HANDSHAKE_RESPONSE
+    finally:
+        process.terminate()
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5)
+
+    combined_output = (stdout + stderr).decode("utf-8", errors="replace")
+    assert "http://override:11434" in combined_output
+    assert "http://override:8080" in combined_output
+    assert "http://override:6006" in combined_output
+    assert "log_level=DEBUG" in combined_output
+
+
+@pytest.mark.asyncio
+async def test_backend_launcher_trace_flag_enables_controller(tmp_path: Path) -> None:
+    """Passing --trace should enable the trace controller regardless of config."""
+
+    socket_path = tmp_path / "backend.sock"
+    config_path = tmp_path / "ragcli-config.yaml"
+    config_path.write_text(
+        textwrap.dedent(
+            f"""
+            backend:
+              socket: "{socket_path}"
+              weaviate_url: "http://127.0.0.1:8080"
+              ollama_url: "http://127.0.0.1:11434"
+              phoenix_url: "http://127.0.0.1:6006"
+              log_level: INFO
+              trace: false
+            """
+        ).strip(),
+        encoding="utf-8",
+    )
+
+    project_root = Path(__file__).resolve().parents[3]
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "services.rag_backend.main",
+        "--config",
+        str(config_path),
+        "--trace",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        env=_launch_env(project_root),
+    )
+
+    try:
+        await _wait_for_socket(socket_path, timeout=5.0)
+        reader, writer = await asyncio.open_unix_connection(path=str(socket_path))
+        try:
+            await _write_frame(writer, HANDSHAKE_REQUEST)
+            handshake = await asyncio.wait_for(_read_frame(reader), timeout=READ_TIMEOUT)
+        finally:
+            writer.close()
+            await writer.wait_closed()
+        assert handshake == EXPECTED_HANDSHAKE_RESPONSE
+    finally:
+        process.terminate()
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5)
+
+    combined_output = (stdout + stderr).decode("utf-8", errors="replace")
+    assert "TraceController.enable" in combined_output
+
+
+@pytest.mark.asyncio
+async def test_backend_launcher_requires_config_flag(tmp_path: Path) -> None:
+    """Missing --config should cause the launcher to exit with an error."""
+
+    project_root = Path(__file__).resolve().parents[3]
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "services.rag_backend.main",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        env=_launch_env(project_root),
+    )
+    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5)
+    assert process.returncode != 0
+    combined_output = (stdout + stderr).decode("utf-8", errors="replace")
+    assert "--config" in combined_output

@@ -45,7 +45,7 @@ class TraceController:
     """
 
     logger: Any | None = None
-    include_modules: tuple[str, ...] = ()
+    include_modules: tuple[str, ...] = ("services.rag_backend",)
     exclude_modules: tuple[str, ...] = ("services.rag_backend.telemetry",)
     _enabled: bool = field(init=False, default=False)
     _previous_trace: Callable | None = field(init=False, default=None)
