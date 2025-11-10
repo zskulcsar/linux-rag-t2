@@ -106,6 +106,12 @@
 - [X] T048 [US1] Implement terminal/JSON renderers with citation, confidence, and truncation messaging in `cli/ragman/internal/io/renderer.go`. Render Summary, Steps, and References sections with inline aliases and fall back to the standard “No answer found” block when confidence < 0.35. Provide markdown, plain, and JSON presenters via templates that display confidence as a percentage header and honour `${XDG_CONFIG_HOME}/ragcli/config.yaml` defaults.
 - [X] T049 [US1] Record Milestone 7 completion in `specs/001-rag-cli/milestones.md` after CLI and backend tests pass.
 
+### Milestone 7b – Backend Launcher Wiring
+
+- [ ] T049_1 [P] Add failing end-to-end launcher tests (e.g., `tests/python/integration/test_backend_launcher.py`) that invoke `uv run python -m services.rag_backend.main` (or equivalent) and assert it boots the Unix socket server with configurable socket/Ollama/Weaviate/Phoenix URLs plus offline guard enforcement.
+- [ ] T049_2 Implement the backend launcher module (`services/rag_backend/main.py` or package) that parses CLI flags/env, wires telemetry/offline guards, instantiates transport handlers, and runs `transport_server`.
+- [ ] T049_3 Update operational docs and tooling (`specs/001-rag-cli/quickstart.md`, `docs/guides/backend/overview.md`, `docs/install/systemd/ragbackend.service`, Makefile target descriptions) to reference the new launcher entrypoint and its flags.
+
 ---
 
 ## Phase 4: User Story 2 - Manage English Sources via ragadmin (Priority: P1)
