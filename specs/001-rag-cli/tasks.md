@@ -109,7 +109,7 @@
 ### Milestone 7b – Backend Launcher Wiring
 
 - [X] T049_1 [P] Add failing end-to-end launcher tests (e.g., `tests/python/integration/test_backend_launcher.py`) that invoke `uv run python -m services.rag_backend.main` (or equivalent) and assert it boots the Unix socket server with configurable socket/Ollama/Weaviate/Phoenix URLs plus offline guard enforcement.
-- [ ] T049_2 Implement the backend launcher module (`services/rag_backend/main.py` or package) that parses CLI flags/env, wires telemetry/offline guards, instantiates transport handlers, and runs `transport_server`.
+- [X] T049_2 Implement the backend launcher module (`services/rag_backend/main.py` or package) that parses CLI flags/env, wires telemetry/offline guards, instantiates transport handlers, and runs `transport_server`.
 - [ ] T049_3 Update operational docs and tooling (`specs/001-rag-cli/quickstart.md`, `docs/guides/backend/overview.md`, `docs/install/systemd/ragbackend.service`, Makefile target descriptions) to reference the new launcher entrypoint and its flags.
 
 ---
