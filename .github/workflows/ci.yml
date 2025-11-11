@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  python:
+    name: Python Pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install uv
+
+      - name: Sync dependencies
+        run: uv sync --project services/rag_backend
+
+      - name: Lint (Python)
+        run: make lint-python
+
+      - name: Typecheck (Python)
+        run: make typecheck
+
+      - name: Security Audit (Python)
+        run: make security-python
+
+      - name: Tests (Python)
+        run: make test-python
+
+      - name: Build Package (Python)
+        run: make package-python
+
+  go:
+    name: Go Pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+
+      - name: Lint (Go)
+        run: make lint-go
+
+      - name: Typecheck (Go)
+        run: make typecheck-go
+
+      - name: Security Audit (Go)
+        run: make security-go
+
+      - name: Tests (Go)
+        run: make test-go
+
+      - name: Build Package (Go)
+        run: make package-go

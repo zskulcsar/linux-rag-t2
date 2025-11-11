@@ -20,9 +20,10 @@ DESTDIR ?=
 
 GOFMT_PATHS := $(shell find cli tests -type f -name '*.go' -not -path '*/vendor/*' 2>/dev/null)
 
-.PHONY: help fmt fmt-go fmt-python lint lint-go lint-python typecheck \
-	test test-go test-go-unit test-go-contract \
-	test-python test-python-unit test-python-integration test-python-contract \
+.PHONY: help fmt fmt-go fmt-python lint lint-go lint-python typecheck typecheck-go \
+		test test-go test-go-unit test-go-contract \
+		test-python test-python-unit test-python-integration test-python-contract \
+		security security-python security-go \
 		docs docs-serve docs-cli docs-backend build-go \
 		package package-go package-python install install-go install-python \
 		clean
@@ -53,6 +54,26 @@ lint-python: ## Run Ruff lint checks.
 
 typecheck: ## Execute Python type checking with mypy.
 	uv run mypy services/rag_backend
+
+typecheck-go: ## Execute go vet across all Go packages.
+	GO111MODULE=on $(GO_ENV) go vet ./...
+
+security: security-python security-go ## Run dependency/security audits for Python and Go modules.
+
+security-python: ## Run pip-audit against the backend project.
+	$(UV_ENV) uv run --project services/rag_backend --with pip-audit pip-audit
+
+security-go: ## Run govulncheck against the Go modules (ragman/ragadmin).
+	@if [ -d "$(CURDIR)/cli/ragman" ]; then \
+		( cd cli/ragman && GO111MODULE=on $(GO_ENV) go run golang.org/x/vuln/cmd/govulncheck@latest ./... ); \
+	else \
+		echo "Skipping ragman govulncheck; module missing."; \
+	fi
+	@if [ -d "$(CURDIR)/cli/ragadmin" ]; then \
+		( cd cli/ragadmin && GO111MODULE=on $(GO_ENV) go run golang.org/x/vuln/cmd/govulncheck@latest ./... ); \
+	else \
+		echo "Skipping ragadmin govulncheck; module missing."; \
+	fi
 
 test: test-go test-python ## Run all test suites.
 
