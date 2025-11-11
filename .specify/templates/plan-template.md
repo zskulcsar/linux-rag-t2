@@ -32,6 +32,10 @@
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 - Confirm the feature adheres to the monorepo layout and keeps every touched module independently buildable, testable, and deployable (Principle IV).
+- Describe how proposed changes preserve hexagonal architecture boundaries: identify affected domain services, ports, and adapters, and ensure infrastructure access stays behind adapters (Principle IV).
+- Highlight any refactoring required to keep source files concise with one class per file and document how responsibilities remain focused (Principle VI).
+- Explain how the proposed solution follows the KISS principle, noting simplifications chosen over more complex alternatives (Principle VII).
+- Outline the logging approach: identify INFO-level milestones, DEBUG-level diagnostic messages, and confirm each function/method will emit the mandated formatted log entry (Principle V).
 - Identify required documentation updates: public docstrings, module docs, MkDocs entries, and ADRs for significant design shifts (Principle II).
 - Define the pytest strategy up front, covering contract, integration, unit, and performance smoke tests to satisfy coverage gates (Principle III).
 - Capture observability impacts: health/readiness probes, structured logging, metrics, and trace propagation changes (Principle V).

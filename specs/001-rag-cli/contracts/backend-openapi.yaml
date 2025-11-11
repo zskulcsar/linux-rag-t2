@@ -1,0 +1,488 @@
+openapi: 3.1.0
+info:
+  title: Linux RAG Backend IPC
+  version: 0.1.0
+  description: >
+    Contract for the Unix-socket JSON API consumed by the `ragman` and `ragadmin`
+    CLIs. The API is transported over newline-delimited JSON frames using an
+    HTTP-over-Unix mapping; this OpenAPI document captures the semantic contract.
+servers:
+  - url: http+unix://%2Ftmp%2Fragcli%2Fbackend.sock
+    description: Default runtime socket (URL-encoded for OpenAPI tooling)
+tags:
+  - name: Query
+  - name: Sources
+  - name: Index
+  - name: Admin
+paths:
+  /v1/query:
+    post:
+      tags: [Query]
+      summary: Execute an English knowledge query.
+      operationId: query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        '200':
+          description: Answer generated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '409':
+          description: Index unavailable or stale.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndexUnavailable'
+  /v1/sources:
+    get:
+      tags: [Sources]
+      summary: List knowledge sources.
+      operationId: listSources
+      responses:
+        '200':
+          description: Catalog snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceListResponse'
+    post:
+      tags: [Sources]
+      summary: Add a knowledge source.
+      operationId: addSource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SourceCreateRequest'
+      responses:
+        '201':
+          description: Source accepted for ingestion.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceResponse'
+        '409':
+          description: Alias collision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/sources/{alias}:
+    parameters:
+      - $ref: '#/components/parameters/SourceAlias'
+    patch:
+      tags: [Sources]
+      summary: Update metadata for a source.
+      operationId: updateSource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SourceUpdateRequest'
+      responses:
+        '200':
+          description: Source updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceResponse'
+        '404':
+          description: Alias not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Sources]
+      summary: Remove a source and quarantine its data.
+      operationId: removeSource
+      responses:
+        '202':
+          description: Removal scheduled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceResponse'
+        '404':
+          description: Alias not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/sources/{alias}/refresh:
+    parameters:
+      - $ref: '#/components/parameters/SourceAlias'
+    post:
+      tags: [Sources]
+      summary: Reinjest/refresh a source outside of a full rebuild.
+      operationId: refreshSource
+      responses:
+        '202':
+          description: Refresh accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestionJobResponse'
+        '404':
+          description: Alias not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/index/rebuild:
+    post:
+      tags: [Index]
+      summary: Trigger an index rebuild.
+      operationId: rebuildIndex
+      responses:
+        '202':
+          description: Rebuild started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestionJobResponse'
+  /v1/index/status:
+    get:
+      tags: [Index]
+      summary: Fetch current index state.
+      operationId: getIndexStatus
+      responses:
+        '200':
+          description: Current index metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndexStatus'
+  /v1/admin/init:
+    post:
+      tags: [Admin]
+      summary: Initialize directories, catalog, and default sources.
+      operationId: initSystem
+      responses:
+        '200':
+          description: Initialization complete.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitResponse'
+  /v1/admin/health:
+    get:
+      tags: [Admin]
+      summary: Run health diagnostics for dependencies and storage.
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Health summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthSummary'
+
+components:
+  parameters:
+    SourceAlias:
+      name: alias
+      in: path
+      required: true
+      description: Human-readable source alias.
+      schema:
+        type: string
+        pattern: '^[a-z0-9][a-z0-9-]{1,30}$'
+  schemas:
+    QueryRequest:
+      type: object
+      required: [question, max_context_tokens]
+      properties:
+        question:
+          type: string
+          description: English natural-language question.
+          minLength: 1
+        conversation_id:
+          type: string
+          description: Optional identifier for contextual follow-up.
+        max_context_tokens:
+          type: integer
+          minimum: 512
+          maximum: 8192
+          default: 4096
+        trace_id:
+          type: string
+          description: Correlation identifier propagated from CLI.
+    QueryResponse:
+      type: object
+      required: [summary, steps, references, confidence, trace_id, latency_ms]
+      properties:
+        summary:
+          type: string
+          description: High-level answer paragraph or low-confidence guidance.
+        steps:
+          type: array
+          description: Ordered procedural guidance.
+          items:
+            type: string
+        references:
+          type: array
+          description: Render-ready references displayed in the CLI.
+          items:
+            $ref: '#/components/schemas/Reference'
+        answer:
+          type: string
+          description: Deprecated combined answer string retained for backwards compatibility.
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        citations:
+          type: array
+          minItems: 0
+          items:
+            $ref: '#/components/schemas/Citation'
+        no_answer:
+          type: boolean
+          default: false
+        latency_ms:
+          type: integer
+        retrieval_latency_ms:
+          type: integer
+        llm_latency_ms:
+          type: integer
+        trace_id:
+          type: string
+        index_version:
+          type: string
+    Reference:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+        url:
+          type: string
+        notes:
+          type: string
+    Citation:
+      type: object
+      required: [alias, document_ref]
+      properties:
+        alias:
+          type: string
+        document_ref:
+          type: string
+        excerpt:
+          type: string
+    IndexUnavailable:
+      type: object
+      required: [code, message, remediation]
+      properties:
+        code:
+          type: string
+          enum: [INDEX_STALE, INDEX_MISSING]
+        message:
+          type: string
+        remediation:
+          type: string
+    SourceListResponse:
+      type: object
+      required: [sources, catalog_version]
+      properties:
+        catalog_version:
+          type: integer
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/Source'
+    SourceCreateRequest:
+      type: object
+      required: [type, location]
+      properties:
+        type:
+          type: string
+          enum: [man, kiwix, info]
+        location:
+          type: string
+        language:
+          type: string
+          default: en
+        notes:
+          type: string
+    SourceUpdateRequest:
+      type: object
+      properties:
+        location:
+          type: string
+        notes:
+          type: string
+        language:
+          type: string
+        status:
+          type: string
+          enum: [active, quarantined]
+    SourceResponse:
+      type: object
+      required: [source, job]
+      properties:
+        source:
+          $ref: '#/components/schemas/Source'
+        job:
+          $ref: '#/components/schemas/IngestionJob'
+    Source:
+      type: object
+      required: [alias, type, location, language, size_bytes, status, last_updated]
+      properties:
+        alias:
+          type: string
+        type:
+          type: string
+          enum: [man, kiwix, info]
+        location:
+          type: string
+        language:
+          type: string
+        size_bytes:
+          type: integer
+        last_updated:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending_validation, active, quarantined, error]
+        checksum:
+          type: string
+        notes:
+          type: string
+    IngestionJob:
+      type: object
+      required: [job_id, source_alias, status]
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        source_alias:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, succeeded, failed, cancelled]
+        requested_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        documents_processed:
+          type: integer
+        stage:
+          type: string
+          description: Current workflow stage (e.g., discovering, vectorizing, writing, completed).
+        percent_complete:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        error_message:
+          type: string
+        trigger:
+          type: string
+          enum: [init, manual, scheduled]
+    IngestionJobResponse:
+      type: object
+      required: [job]
+      properties:
+        job:
+          $ref: '#/components/schemas/IngestionJob'
+    IndexStatus:
+      type: object
+      required: [index_id, status, built_at, document_count, size_bytes, sources]
+      properties:
+        index_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [ready, stale, building, failed]
+        built_at:
+          type: string
+          format: date-time
+        document_count:
+          type: integer
+        size_bytes:
+          type: integer
+        freshness_expires_at:
+          type: string
+          format: date-time
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceSnapshot'
+    SourceSnapshot:
+      type: object
+      required: [alias, checksum]
+      properties:
+        alias:
+          type: string
+        checksum:
+          type: string
+    InitResponse:
+      type: object
+      required: [catalog_version, created_directories, seeded_sources]
+      properties:
+        catalog_version:
+          type: integer
+        created_directories:
+          type: array
+          items:
+            type: string
+        seeded_sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/Source'
+    HealthSummary:
+      type: object
+      required: [overall_status, results, trace_id]
+      properties:
+        overall_status:
+          type: string
+          enum: [pass, warn, fail]
+        trace_id:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HealthResult'
+    HealthResult:
+      type: object
+      required: [component, status, message]
+      properties:
+        component:
+          type: string
+          enum: [index_freshness, source_access, disk_capacity, ollama, weaviate]
+        status:
+          type: string
+          enum: [pass, warn, fail]
+        message:
+          type: string
+        remediation:
+          type: string
+        metrics:
+          type: object
+          additionalProperties:
+            type: number
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        code:
+          type: string

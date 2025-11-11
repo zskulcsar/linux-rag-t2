@@ -9,6 +9,8 @@ $ARGUMENTS
 ```
 
 You **MUST** consider the user input before proceeding (if not empty).
+You **MUST** use the configured MCP servers. use context7.
+You **MUST** respect the ground rules established at `.specify/memory/constitution.md`.
 
 ## Outline
 

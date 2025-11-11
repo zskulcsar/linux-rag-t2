@@ -9,6 +9,10 @@ $ARGUMENTS
 ```
 
 You **MUST** consider the user input before proceeding (if not empty).
+You **MUST** use the configured MCP servers. use context7.
+You **MUST** respect the ground rules established in the [Consitution](.specify/memory/constitution.md).
+You **MUST** us all skills applicable. Re-read the `using-superpowers` instructions at `{CODEX_HOME}/skills/using-superpowers/SKILL.md`.
+**IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.**
 
 ## Outline
 
@@ -114,6 +118,8 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **Tests before code**: If you need to write tests for contracts, entities, and integration scenarios
    - **Core development**: Implement models, services, CLI commands, endpoints
    - **Integration work**: Database connections, middleware, logging, external services
+   - **Documentation**: For each new or modified public module, class, or function, add Google-style docstrings covering purpose, arguments, returns, and an illustrative example per Constitution §II.
+   - **Observability**: Instrument public-facing APIs with the approved telemetry decorators, wrap critical multi-step sections in the observability context manager, and ensure the tracing controller remains available for opt-in deep diagnostics, consistent with Constitution §V.
    - **Polish and validation**: Unit tests, performance optimization, documentation
 
 8. Progress tracking and error handling:
@@ -125,10 +131,13 @@ You **MUST** consider the user input before proceeding (if not empty).
    - **IMPORTANT** For completed tasks, make sure to mark the task off as [X] in the tasks file.
 
 9. Completion validation:
+   - Review generated code and ensure all public surfaces include up-to-date Google-style docstrings (purpose, arguments, returns, examples) per the [Constitution]
+   - Confirm baseline decorators, critical-section context managers, and tracing hooks are applied or documented appropriately so observability requirements in the [Constitution] are satisfied
    - Verify all required tasks are completed
    - Check that implemented features match the original specification
    - Validate that tests pass and coverage meets requirements
    - Confirm the implementation follows the technical plan
    - Report final status with summary of completed work
+   - Report all skills used while completing the task
 
 Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.

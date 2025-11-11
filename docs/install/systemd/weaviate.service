@@ -1,0 +1,22 @@
+[Unit]
+Description=Weaviate Vector Database
+Documentation=https://weaviate.io/developers/weaviate/current/deployment/local
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=weaviate
+Group=weaviate
+EnvironmentFile=/etc/weaviate/weaviate.env
+WorkingDirectory=/var/lib/weaviate
+ExecStart=/opt/weaviate/weaviate --scheme ${WEAVIATE_SCHEME} --host ${WEAVIATE_HOST} --port ${WEAVIATE_PORT}
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=weaviate
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

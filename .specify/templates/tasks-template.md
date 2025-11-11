@@ -12,6 +12,11 @@ description: "Task list template for feature implementation"
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
+- **Architecture**: Break down work so ports, adapters, and domain services remain separated per the hexagonal architecture mandate; tasks must call out port/interface modifications explicitly.
+- **Maintainability**: Split responsibilities across small, coherent files; ensure each class lives in its own module unless explicitly paired with a value object.
+- **Simplicity**: Prefer the smallest viable implementation; flag any optional complexity or alternative approach deferred for future iterations.
+- **Logging**: Instrument functions and methods with required INFO/DEBUG messages using the `ClassName.method(params) :: step` format and capture sensitive data safeguards.
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
@@ -68,6 +73,10 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] T007 Create base models/entities that all stories depend on
 - [ ] T008 Configure error handling and logging infrastructure
 - [ ] T009 Setup environment configuration management
+- [ ] T009A Define or update core domain services and ports to satisfy hexagonal architecture boundaries
+- [ ] T009B Identify and refactor any oversized legacy files that the feature touches so each class resides in its own module
+- [ ] T009C Document simplifications adopted (or justify unavoidable complexity) for touched components to uphold the KISS principle
+- [ ] T009D Establish or update logging instrumentation to satisfy INFO/DEBUG coverage with the mandated message format for touched components
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -152,6 +161,9 @@ Examples of foundational tasks (adjust based on your project):
 
 - [ ] TXXX [P] Documentation updates in docs/
 - [ ] TXXX Code cleanup and refactoring
+- [ ] TXXX [P] Split oversized modules touched by this feature into focused files with one class per module
+- [ ] TXXX Validate that any temporary complexity has an explicit follow-up if it violates KISS intent
+- [ ] TXXX Audit logging statements to ensure required INFO/DEBUG coverage and message format without leaking sensitive data
 - [ ] TXXX Performance optimization across all stories
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
 - [ ] TXXX Security hardening
