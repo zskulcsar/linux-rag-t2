@@ -22,7 +22,11 @@ from services.rag_backend.ports import (
     SourceRecord,
     SourceSnapshot,
 )
-from services.rag_backend.ports.ingestion import IngestionStatus, SourceStatus, SourceType
+from services.rag_backend.ports.ingestion import (
+    IngestionStatus,
+    SourceStatus,
+    SourceType,
+)
 from services.rag_backend.ports.query import Citation
 from services.rag_backend.telemetry import trace_call, trace_section
 
@@ -30,7 +34,9 @@ from services.rag_backend.telemetry import trace_call, trace_section
 class TransportError(RuntimeError):
     """Base transport-level error mapped to standardized response payloads."""
 
-    def __init__(self, *, status: int, code: str, message: str, remediation: str | None = None) -> None:
+    def __init__(
+        self, *, status: int, code: str, message: str, remediation: str | None = None
+    ) -> None:
         """Initialize the transport error.
 
         Args:
@@ -74,7 +80,9 @@ class IndexUnavailableError(TransportError):
             remediation: Recommended action for the operator.
         """
 
-        super().__init__(status=409, code=code, message=message, remediation=remediation)
+        super().__init__(
+            status=409, code=code, message=message, remediation=remediation
+        )
 
 
 @dataclass
@@ -84,7 +92,9 @@ class TransportHandlers:
     query_port: QueryPort
     ingestion_port: IngestionPort
     health_port: HealthPort | None = None
-    _clock: Callable[[], dt.datetime] = field(default=lambda: dt.datetime.now(dt.timezone.utc))
+    _clock: Callable[[], dt.datetime] = field(
+        default=lambda: dt.datetime.now(dt.timezone.utc)
+    )
 
     def dispatch(self, path: str, body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         """Dispatch a transport path to the appropriate handler.
@@ -109,7 +119,9 @@ class TransportHandlers:
             return self._handle_reindex(body)
         if path == "/v1/admin/init":
             return self._handle_admin_init()
-        raise TransportError(status=404, code="NOT_FOUND", message=f"Unknown path {path!r}")
+        raise TransportError(
+            status=404, code="NOT_FOUND", message=f"Unknown path {path!r}"
+        )
 
     def _handle_query(self, body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         """Invoke the query port and serialize the structured response.
@@ -214,7 +226,9 @@ class TransportHandlers:
 
         with trace_section("transport.admin_init.catalog", metadata=metadata):
             _ensure_index_current(catalog)
-            seeded_sources = [_serialize_source_record(source) for source in catalog.sources]
+            seeded_sources = [
+                _serialize_source_record(source) for source in catalog.sources
+            ]
             created_directories = [
                 "~/.config/ragcli",
                 "~/.local/share/ragcli",
@@ -266,7 +280,9 @@ def _ensure_index_current(catalog: SourceCatalog) -> None:
             remediation="Run ragadmin reindex to align the index with the current catalog.",
         )
 
-    snapshot_checksums: Dict[str, str] = {snapshot.alias: snapshot.checksum for snapshot in catalog.snapshots}
+    snapshot_checksums: Dict[str, str] = {
+        snapshot.alias: snapshot.checksum for snapshot in catalog.snapshots
+    }
     for source in active_sources:
         checksum = source.checksum
         if checksum is None:
@@ -296,7 +312,11 @@ def _is_active_source(source: SourceRecord) -> bool:
         ``True`` if the source status is :attr:`SourceStatus.ACTIVE`.
     """
 
-    status = source.status if isinstance(source.status, SourceStatus) else SourceStatus(str(source.status))
+    status = (
+        source.status
+        if isinstance(source.status, SourceStatus)
+        else SourceStatus(str(source.status))
+    )
     return status is SourceStatus.ACTIVE
 
 
@@ -311,8 +331,12 @@ def _serialize_query_response(response: QueryResponse) -> dict[str, Any]:
     """
 
     payload = dataclasses.asdict(response)
-    payload["citations"] = [dataclasses.asdict(citation) for citation in response.citations]
-    payload["references"] = [dataclasses.asdict(reference) for reference in response.references]
+    payload["citations"] = [
+        dataclasses.asdict(citation) for citation in response.citations
+    ]
+    payload["references"] = [
+        dataclasses.asdict(reference) for reference in response.references
+    ]
     return payload
 
 
@@ -349,12 +373,16 @@ def _serialize_source_record(record: SourceRecord) -> dict[str, Any]:
 
     return {
         "alias": record.alias,
-        "type": record.type.value if isinstance(record.type, SourceType) else str(record.type),
+        "type": record.type.value
+        if isinstance(record.type, SourceType)
+        else str(record.type),
         "location": record.location,
         "language": record.language,
         "size_bytes": record.size_bytes,
         "last_updated": record.last_updated.isoformat(),
-        "status": record.status.value if isinstance(record.status, SourceStatus) else str(record.status),
+        "status": record.status.value
+        if isinstance(record.status, SourceStatus)
+        else str(record.status),
         "checksum": record.checksum,
         "notes": record.notes,
     }
@@ -373,7 +401,9 @@ def _serialize_ingestion_job(job: IngestionJob) -> dict[str, Any]:
     return {
         "job_id": job.job_id,
         "source_alias": job.source_alias,
-        "status": job.status.value if isinstance(job.status, IngestionStatus) else str(job.status),
+        "status": job.status.value
+        if isinstance(job.status, IngestionStatus)
+        else str(job.status),
         "requested_at": job.requested_at.isoformat(),
         "started_at": job.started_at.isoformat() if job.started_at else None,
         "completed_at": job.completed_at.isoformat() if job.completed_at else None,
@@ -381,7 +411,9 @@ def _serialize_ingestion_job(job: IngestionJob) -> dict[str, Any]:
         "stage": job.stage,
         "percent_complete": job.percent_complete,
         "error_message": job.error_message,
-        "trigger": job.trigger.value if isinstance(job.trigger, IngestionTrigger) else str(job.trigger),
+        "trigger": job.trigger.value
+        if isinstance(job.trigger, IngestionTrigger)
+        else str(job.trigger),
     }
 
 
@@ -469,13 +501,17 @@ class _StaticIngestionPort(IngestionPort):
             SourceSnapshot(alias="man-pages", checksum="sha256:bootstrap-man"),
             SourceSnapshot(alias="info-pages", checksum="sha256:bootstrap-info"),
         ]
-        return SourceCatalog(version=1, updated_at=now, sources=sources, snapshots=snapshots)
+        return SourceCatalog(
+            version=1, updated_at=now, sources=sources, snapshots=snapshots
+        )
 
     def create_source(self, request):  # pragma: no cover - future transport tasks
         """Placeholder for future create-source implementation."""
         raise NotImplementedError
 
-    def update_source(self, alias, request):  # pragma: no cover - future transport tasks
+    def update_source(
+        self, alias, request
+    ):  # pragma: no cover - future transport tasks
         """Placeholder for future update-source implementation."""
         raise NotImplementedError
 

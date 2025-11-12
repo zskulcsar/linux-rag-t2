@@ -107,7 +107,9 @@ class JobRecoveryService:
             "processed_count": len(set(processed_document_ids)),
             "total_count": len(document_ids),
         }
-        with trace_section("job_recovery.record_progress", metadata=metadata) as section:
+        with trace_section(
+            "job_recovery.record_progress", metadata=metadata
+        ) as section:
             if job.status is not models.IngestionStatus.RUNNING:
                 raise ValueError("only running jobs can be checkpointed")
 
@@ -119,7 +121,11 @@ class JobRecoveryService:
                     section.debug("processed_detected", document_id=identifier)
 
             if not document_ids:
-                return Checkpoint(processed_document_ids=tuple(), percent_complete=0.0, captured_at=self._clock())
+                return Checkpoint(
+                    processed_document_ids=tuple(),
+                    percent_complete=0.0,
+                    captured_at=self._clock(),
+                )
 
             percent_complete = (len(ordered_processed) / len(document_ids)) * 100.0
             section.debug("percent_complete", value=percent_complete)
@@ -164,11 +170,18 @@ class JobRecoveryService:
             if checkpoint is None:
                 raise ValueError("checkpoint state is required to resume ingestion")
 
-            if job.status not in (models.IngestionStatus.RUNNING, models.IngestionStatus.FAILED):
+            if job.status not in (
+                models.IngestionStatus.RUNNING,
+                models.IngestionStatus.FAILED,
+            ):
                 raise ValueError("only running or failed jobs can be resumed")
 
             processed_set = set(checkpoint.processed_document_ids)
-            remaining = tuple(identifier for identifier in document_ids if identifier not in processed_set)
+            remaining = tuple(
+                identifier
+                for identifier in document_ids
+                if identifier not in processed_set
+            )
             section.debug("remaining_identified", remaining=remaining)
 
             resume_stage = "resuming_ingestion"
@@ -181,7 +194,11 @@ class JobRecoveryService:
                 resume_stage=resume_stage,
                 recovery_started_at=self._clock(),
             )
-            section.debug("plan_created", resume_stage=resume_stage, remaining_count=len(remaining))
+            section.debug(
+                "plan_created",
+                resume_stage=resume_stage,
+                remaining_count=len(remaining),
+            )
             return plan
 
     @trace_call

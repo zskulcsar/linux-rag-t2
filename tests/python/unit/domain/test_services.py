@@ -68,9 +68,9 @@ def test_mark_source_quarantined_records_reason_and_timestamp() -> None:
 
     later = base_time + dt.timedelta(minutes=5)
     reason = "Path missing during validation"
-    quarantine = source_service.SourceService(clock=lambda: later).mark_source_quarantined(
-        source=active_source, reason=reason
-    )
+    quarantine = source_service.SourceService(
+        clock=lambda: later
+    ).mark_source_quarantined(source=active_source, reason=reason)
 
     assert quarantine.status is models.KnowledgeSourceStatus.QUARANTINED
     assert reason in (quarantine.notes or "")
@@ -131,7 +131,9 @@ def test_restore_quarantined_source_promotes_to_active() -> None:
         updated_at=_utc(dt.datetime(2025, 1, 2, 9, 0, 0)),
     )
 
-    restored = source_service.SourceService(clock=lambda: base_time).restore_quarantined_source(
+    restored = source_service.SourceService(
+        clock=lambda: base_time
+    ).restore_quarantined_source(
         source=quarantined,
         checksum="new",
         size_bytes=2048,
@@ -160,7 +162,9 @@ def test_restore_quarantined_source_promotes_to_active() -> None:
     )
 
     with pytest.raises(ValueError):
-        source_service.SourceService(clock=lambda: base_time).restore_quarantined_source(
+        source_service.SourceService(
+            clock=lambda: base_time
+        ).restore_quarantined_source(
             source=active_source,
             checksum="abc",
             size_bytes=1024,
@@ -185,25 +189,25 @@ def test_ingestion_state_machine_enforces_valid_transitions() -> None:
         trigger=models.IngestionTrigger.MANUAL,
     )
 
-    running = source_service.SourceService(clock=lambda: requested_at).mark_ingestion_running(
-        job=job, stage="vectorizing"
-    )
+    running = source_service.SourceService(
+        clock=lambda: requested_at
+    ).mark_ingestion_running(job=job, stage="vectorizing")
     assert running.status is models.IngestionStatus.RUNNING
     assert running.stage == "vectorizing"
     assert running.started_at == requested_at
 
     completed_at = requested_at + dt.timedelta(minutes=15)
-    succeeded = source_service.SourceService(clock=lambda: completed_at).mark_ingestion_succeeded(
-        job=running, documents_processed=128
-    )
+    succeeded = source_service.SourceService(
+        clock=lambda: completed_at
+    ).mark_ingestion_succeeded(job=running, documents_processed=128)
     assert succeeded.status is models.IngestionStatus.SUCCEEDED
     assert succeeded.completed_at == completed_at
     assert succeeded.documents_processed == 128
 
     with pytest.raises(ValueError):
-        source_service.SourceService(clock=lambda: completed_at).mark_ingestion_succeeded(
-            job=job, documents_processed=1
-        )
+        source_service.SourceService(
+            clock=lambda: completed_at
+        ).mark_ingestion_succeeded(job=job, documents_processed=1)
 
 
 def test_index_service_marks_ready_and_detects_staleness() -> None:

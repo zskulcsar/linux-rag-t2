@@ -53,7 +53,9 @@ async def _read_frame(reader: asyncio.StreamReader) -> dict[str, Any]:
 
     payload = await reader.readexactly(payload_length)
     newline = await reader.readexactly(1)
-    assert newline == b"\n", "launcher transport must terminate frames with a newline sentinel"
+    assert newline == b"\n", (
+        "launcher transport must terminate frames with a newline sentinel"
+    )
     return json.loads(payload.decode("utf-8"))
 
 
@@ -81,7 +83,9 @@ def _launch_env(project_root: Path) -> dict[str, str]:
 
 
 @pytest.mark.asyncio
-async def test_backend_launcher_requires_config_and_loads_defaults(tmp_path: Path) -> None:
+async def test_backend_launcher_requires_config_and_loads_defaults(
+    tmp_path: Path,
+) -> None:
     """Launcher must read settings from config file and require --config."""
 
     config_path = tmp_path / "ragcli-config.yaml"
@@ -118,7 +122,9 @@ async def test_backend_launcher_requires_config_and_loads_defaults(tmp_path: Pat
         reader, writer = await asyncio.open_unix_connection(path=str(socket_path))
         try:
             await _write_frame(writer, HANDSHAKE_REQUEST)
-            handshake = await asyncio.wait_for(_read_frame(reader), timeout=READ_TIMEOUT)
+            handshake = await asyncio.wait_for(
+                _read_frame(reader), timeout=READ_TIMEOUT
+            )
         finally:
             writer.close()
             await writer.wait_closed()
@@ -131,7 +137,9 @@ async def test_backend_launcher_requires_config_and_loads_defaults(tmp_path: Pat
     assert "http://127.0.0.1:11434" in combined_output
     assert "http://127.0.0.1:8080" in combined_output
     assert "http://127.0.0.1:6006" in combined_output
-    assert "offline_mode" in combined_output or "offline guard" in combined_output.lower()
+    assert (
+        "offline_mode" in combined_output or "offline guard" in combined_output.lower()
+    )
 
 
 @pytest.mark.asyncio
@@ -183,7 +191,9 @@ async def test_backend_launcher_allows_cli_overrides(tmp_path: Path) -> None:
         reader, writer = await asyncio.open_unix_connection(path=str(socket_path))
         try:
             await _write_frame(writer, HANDSHAKE_REQUEST)
-            handshake = await asyncio.wait_for(_read_frame(reader), timeout=READ_TIMEOUT)
+            handshake = await asyncio.wait_for(
+                _read_frame(reader), timeout=READ_TIMEOUT
+            )
         finally:
             writer.close()
             await writer.wait_closed()
@@ -238,7 +248,9 @@ async def test_backend_launcher_trace_flag_enables_controller(tmp_path: Path) ->
         reader, writer = await asyncio.open_unix_connection(path=str(socket_path))
         try:
             await _write_frame(writer, HANDSHAKE_REQUEST)
-            handshake = await asyncio.wait_for(_read_frame(reader), timeout=READ_TIMEOUT)
+            handshake = await asyncio.wait_for(
+                _read_frame(reader), timeout=READ_TIMEOUT
+            )
         finally:
             writer.close()
             await writer.wait_closed()

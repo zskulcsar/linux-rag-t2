@@ -26,7 +26,9 @@ class CaptureLogger:
 def test_trace_section_records_lifecycle() -> None:
     logger = CaptureLogger()
 
-    with TraceSection(name="ingest", logger=logger, metadata={"alias": "docs"}) as section:
+    with TraceSection(
+        name="ingest", logger=logger, metadata={"alias": "docs"}
+    ) as section:
         section.debug("chunk_loaded", chunk_id=1)
 
     assert logger.records[0]["message"] == "ingest :: start"

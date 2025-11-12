@@ -40,9 +40,9 @@ async def _read_frame(reader: asyncio.StreamReader) -> dict:
 
     payload = await reader.readexactly(payload_length)
     newline = await reader.readexactly(1)
-    assert (
-        newline == b"\n"
-    ), "transport must terminate frames with a trailing newline sentinel"
+    assert newline == b"\n", (
+        "transport must terminate frames with a trailing newline sentinel"
+    )
 
     return json.loads(payload.decode("utf-8"))
 
@@ -75,4 +75,3 @@ async def test_transport_server_creates_socket_and_acknowledges_handshake(
         "version": 1,
         "server": "rag-backend",
     }
-

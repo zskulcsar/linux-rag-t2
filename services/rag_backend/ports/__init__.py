@@ -41,4 +41,3 @@ __all__ = [
     "Reference",
     "Citation",
 ]
-

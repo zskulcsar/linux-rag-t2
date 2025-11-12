@@ -5,7 +5,13 @@ from __future__ import annotations
 import datetime as dt
 from typing import Callable, Iterable, List
 
-from services.rag_backend.ports.health import HealthCheck, HealthComponent, HealthPort, HealthReport, HealthStatus
+from services.rag_backend.ports.health import (
+    HealthCheck,
+    HealthComponent,
+    HealthPort,
+    HealthReport,
+    HealthStatus,
+)
 
 CheckFactory = Callable[[], HealthCheck]
 Clock = Callable[[], dt.datetime]
@@ -31,7 +37,9 @@ class HealthService(HealthPort):
             :func:`datetime.datetime.now` with a UTC timezone.
     """
 
-    def __init__(self, check_factories: Iterable[CheckFactory], clock: Clock | None = None) -> None:
+    def __init__(
+        self, check_factories: Iterable[CheckFactory], clock: Clock | None = None
+    ) -> None:
         """Instantiate the health service.
 
         Args:

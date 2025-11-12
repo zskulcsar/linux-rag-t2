@@ -23,7 +23,9 @@ def _assert_list_of(annotation: Any, expected_inner: Any) -> None:
     origin = get_origin(annotation)
     assert origin is list, f"expected list[...] annotation, got {annotation!r}"
     (inner,) = get_args(annotation)
-    assert inner is expected_inner, f"expected inner type {expected_inner!r}, got {inner!r}"
+    assert inner is expected_inner, (
+        f"expected inner type {expected_inner!r}, got {inner!r}"
+    )
 
 
 def _assert_optional(annotation: Any, expected_inner: Any) -> None:
@@ -33,9 +35,13 @@ def _assert_optional(annotation: Any, expected_inner: Any) -> None:
         return
 
     origin = get_origin(annotation)
-    assert origin in {Union, types.UnionType}, f"expected optional {expected_inner!r}, got {annotation!r}"
+    assert origin in {Union, types.UnionType}, (
+        f"expected optional {expected_inner!r}, got {annotation!r}"
+    )
     args = set(get_args(annotation))
-    assert expected_inner in args and type(None) in args, f"expected optional {expected_inner!r}, got {annotation!r}"
+    assert expected_inner in args and type(None) in args, (
+        f"expected optional {expected_inner!r}, got {annotation!r}"
+    )
 
 
 def test_query_port_contract_shapes() -> None:
@@ -61,14 +67,18 @@ def test_query_port_contract_shapes() -> None:
     assert citation_hints["document_ref"] is str
     _assert_optional(citation_hints["excerpt"], str)
 
-    assert dataclasses.is_dataclass(query_request), "QueryRequest dataclass must be defined"
+    assert dataclasses.is_dataclass(query_request), (
+        "QueryRequest dataclass must be defined"
+    )
     request_hints = get_type_hints(query_request)
     assert request_hints["question"] is str
     _assert_optional(request_hints["conversation_id"], str)
     assert request_hints["max_context_tokens"] is int
     _assert_optional(request_hints["trace_id"], str)
 
-    assert dataclasses.is_dataclass(query_response), "QueryResponse dataclass must be defined"
+    assert dataclasses.is_dataclass(query_response), (
+        "QueryResponse dataclass must be defined"
+    )
     response_hints = get_type_hints(query_response)
     assert response_hints["summary"] is str
     _assert_list_of(response_hints["steps"], str)
@@ -89,7 +99,9 @@ def test_query_port_contract_shapes() -> None:
     assert method is not None, "QueryPort.query method must be defined"
     signature = inspect.signature(method)
     params = list(signature.parameters.values())
-    assert len(params) == 2 and params[0].name == "self", "QueryPort.query must accept self and request"
+    assert len(params) == 2 and params[0].name == "self", (
+        "QueryPort.query must accept self and request"
+    )
 
     method_hints = get_type_hints(method, module.__dict__)
     assert method_hints["request"] is query_request
@@ -135,7 +147,11 @@ def test_ingestion_port_contract_shapes() -> None:
     }
 
     assert issubclass(ingestion_trigger, enum.Enum)
-    assert {member.value for member in ingestion_trigger} == {"init", "manual", "scheduled"}
+    assert {member.value for member in ingestion_trigger} == {
+        "init",
+        "manual",
+        "scheduled",
+    }
 
     assert dataclasses.is_dataclass(snapshot_entry)
     snapshot_hints = get_type_hints(snapshot_entry)
@@ -219,7 +235,9 @@ def test_ingestion_port_contract_shapes() -> None:
 
     reindex_sig = inspect.signature(ingestion_port.start_reindex)
     reindex_params = list(reindex_sig.parameters.values())
-    assert len(reindex_params) == 2 and reindex_params[1].annotation is ingestion_trigger
+    assert (
+        len(reindex_params) == 2 and reindex_params[1].annotation is ingestion_trigger
+    )
     assert reindex_sig.return_annotation is ingestion_job
 
 

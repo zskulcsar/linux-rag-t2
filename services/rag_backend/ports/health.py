@@ -32,7 +32,9 @@ class HealthCheck:
     status: HealthStatus
     message: str
     remediation: str | None = None
-    timestamp: dt.datetime = field(default_factory=lambda: dt.datetime.now(dt.timezone.utc))
+    timestamp: dt.datetime = field(
+        default_factory=lambda: dt.datetime.now(dt.timezone.utc)
+    )
     metrics: dict[str, Union[int, float]] = field(default_factory=dict)
 
 
@@ -42,7 +44,9 @@ class HealthReport:
 
     status: HealthStatus
     checks: list[HealthCheck] = field(default_factory=list)
-    generated_at: dt.datetime = field(default_factory=lambda: dt.datetime.now(dt.timezone.utc))
+    generated_at: dt.datetime = field(
+        default_factory=lambda: dt.datetime.now(dt.timezone.utc)
+    )
 
 
 class HealthPort(Protocol):

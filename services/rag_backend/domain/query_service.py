@@ -31,7 +31,9 @@ class QueryService:
             marked stale. Defaults to seven days.
     """
 
-    def __init__(self, clock: Clock | None = None, freshness_ttl: dt.timedelta | None = None) -> None:
+    def __init__(
+        self, clock: Clock | None = None, freshness_ttl: dt.timedelta | None = None
+    ) -> None:
         """Create a query service with optional clock and freshness override.
 
         Args:

@@ -12,10 +12,17 @@ import pytest
 from services.rag_backend.adapters.storage.catalog import CatalogStorage
 from services.rag_backend.adapters.storage.quarantine import SourceQuarantineManager
 from services.rag_backend.domain import models
-from services.rag_backend.ports.ingestion import SourceCatalog, SourceRecord, SourceStatus, SourceType
+from services.rag_backend.ports.ingestion import (
+    SourceCatalog,
+    SourceRecord,
+    SourceStatus,
+    SourceType,
+)
 
 
-def _utc(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> dt.datetime:
+def _utc(
+    year: int, month: int, day: int, hour: int = 0, minute: int = 0
+) -> dt.datetime:
     return dt.datetime(year, month, day, hour, minute, tzinfo=dt.timezone.utc)
 
 
@@ -55,10 +62,14 @@ def _catalog(updated_at: dt.datetime) -> SourceCatalog:
         ),
     ]
 
-    return SourceCatalog(version=5, updated_at=updated_at, sources=sources, snapshots=[])
+    return SourceCatalog(
+        version=5, updated_at=updated_at, sources=sources, snapshots=[]
+    )
 
 
-def test_quarantine_manager_updates_catalog_and_audit_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_quarantine_manager_updates_catalog_and_audit_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Ensure manager marks the source as quarantined and records audit metadata."""
 
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
@@ -92,7 +103,9 @@ def test_quarantine_manager_updates_catalog_and_audit_log(tmp_path: Path, monkey
     assert audit_entry["target"] == "info-pages"
 
 
-def test_quarantine_manager_rejects_unknown_alias(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_quarantine_manager_rejects_unknown_alias(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Ensure attempting to quarantine a missing alias raises a ValueError."""
 
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))

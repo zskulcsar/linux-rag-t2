@@ -41,8 +41,12 @@ class KnowledgeSource:
     status: KnowledgeSourceStatus
     checksum: Optional[str] = None
     notes: Optional[str] = None
-    created_at: dt.datetime = field(default_factory=lambda: dt.datetime.now(dt.timezone.utc))
-    updated_at: dt.datetime = field(default_factory=lambda: dt.datetime.now(dt.timezone.utc))
+    created_at: dt.datetime = field(
+        default_factory=lambda: dt.datetime.now(dt.timezone.utc)
+    )
+    updated_at: dt.datetime = field(
+        default_factory=lambda: dt.datetime.now(dt.timezone.utc)
+    )
 
 
 class IndexStatus(str, enum.Enum):

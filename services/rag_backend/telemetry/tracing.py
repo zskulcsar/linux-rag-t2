@@ -11,7 +11,9 @@ from typing import Any, Callable, Iterable
 from .logger import get_logger
 
 
-def _default_filter(module_name: str, include: Iterable[str], exclude: Iterable[str]) -> bool:
+def _default_filter(
+    module_name: str, include: Iterable[str], exclude: Iterable[str]
+) -> bool:
     """Determine whether a module should be traced.
 
     Args:

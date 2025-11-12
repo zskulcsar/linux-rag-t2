@@ -165,7 +165,9 @@ async def _handle_connection(
         "socket": str(sockname),
         "correlation_id": correlation_id,
     }
-    async with async_trace_section("transport.connection", metadata=metadata) as section:
+    async with async_trace_section(
+        "transport.connection", metadata=metadata
+    ) as section:
         request: dict[str, Any] | None = None
         try:
             request = await _read_frame(reader)
@@ -184,7 +186,11 @@ async def _handle_connection(
             await _send_error(
                 writer,
                 status=400,
-                correlation_id=(request.get("correlation_id") if isinstance(request, dict) else correlation_id),
+                correlation_id=(
+                    request.get("correlation_id")
+                    if isinstance(request, dict)
+                    else correlation_id
+                ),
                 code="HANDSHAKE_ERROR",
                 message=str(exc),
             )
@@ -259,7 +265,9 @@ async def _handle_connection(
                         },
                     )
                     continue
-                except Exception as exc:  # pragma: no cover - guard against unexpected failures
+                except (
+                    Exception
+                ) as exc:  # pragma: no cover - guard against unexpected failures
                     section.debug("handler_exception", error=str(exc), path=path)
                     await _send_error(
                         writer,

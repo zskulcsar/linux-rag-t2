@@ -34,7 +34,9 @@ def test_trace_controller_enable_disable(monkeypatch) -> None:
 
     monkeypatch.setattr(sys, "gettrace", lambda: "previous-hook")
     monkeypatch.setattr(sys, "settrace", lambda func: settrace_calls.append(func))
-    monkeypatch.setattr(threading, "settrace", lambda func: thread_settrace_calls.append(func))
+    monkeypatch.setattr(
+        threading, "settrace", lambda func: thread_settrace_calls.append(func)
+    )
 
     controller = TraceController(logger=logger, include_modules=("tests.",))
     controller.enable()

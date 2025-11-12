@@ -14,14 +14,18 @@ from services.rag_backend.telemetry import trace_call, trace_section
 class EmbeddingMetrics(Protocol):
     """Interface for recording embedding metrics per alias."""
 
-    def record_embedding(self, alias: str, vector_size: int, latency_ms: float) -> None:  # pragma: no cover - Protocol
+    def record_embedding(
+        self, alias: str, vector_size: int, latency_ms: float
+    ) -> None:  # pragma: no cover - Protocol
         ...
 
 
 class HttpClient(Protocol):
     """Minimal HTTP client protocol required for Ollama interactions."""
 
-    def post(self, url: str, json: dict[str, Any], timeout: float) -> Any:  # pragma: no cover - Protocol
+    def post(
+        self, url: str, json: dict[str, Any], timeout: float
+    ) -> Any:  # pragma: no cover - Protocol
         ...
 
 
@@ -143,7 +147,9 @@ class OllamaAdapter:
             elapsed_ms = (time.perf_counter() - start) * 1000.0
             if self._metrics:
                 for document, vector in zip(documents, embeddings, strict=True):
-                    self._metrics.record_embedding(document.alias, len(vector), elapsed_ms)
+                    self._metrics.record_embedding(
+                        document.alias, len(vector), elapsed_ms
+                    )
                     section.debug(
                         "metrics_recorded",
                         alias=document.alias,
@@ -203,4 +209,10 @@ class OllamaAdapter:
             return body
 
 
-__all__ = ["EmbeddingResult", "EmbeddingMetrics", "GenerationMetrics", "HttpClient", "OllamaAdapter"]
+__all__ = [
+    "EmbeddingResult",
+    "EmbeddingMetrics",
+    "GenerationMetrics",
+    "HttpClient",
+    "OllamaAdapter",
+]

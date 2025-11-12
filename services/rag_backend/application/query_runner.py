@@ -11,9 +11,7 @@ from services.rag_backend.ports import query as query_ports
 from services.rag_backend.telemetry import trace_call, trace_section
 
 DEFAULT_CONFIDENCE_THRESHOLD = 0.35
-LOW_CONFIDENCE_GUIDANCE = (
-    "Answer is below the confidence threshold. Please rephrase your query or refresh sources via ragadmin."
-)
+LOW_CONFIDENCE_GUIDANCE = "Answer is below the confidence threshold. Please rephrase your query or refresh sources via ragadmin."
 CONTEXT_TRUNCATION_MESSAGE = (
     "The retrieved context exceeded the configured token budget and was truncated. "
     "Please narrow your question or increase the --context-tokens limit."
@@ -82,7 +80,9 @@ def _load_confidence_threshold(config_path: Path, *, default: float) -> float:
 def _filtered_metadata(metadata: dict[str, Any]) -> dict[str, Any] | None:
     """Remove falsey values from a metadata mapping."""
 
-    filtered = {key: value for key, value in metadata.items() if value not in {None, ""}}
+    filtered = {
+        key: value for key, value in metadata.items() if value not in {None, ""}
+    }
     return filtered or None
 
 
@@ -115,7 +115,9 @@ class QueryRunner:
     ) -> None:
         self._query_port = query_port
         self._clock = clock or _default_clock
-        self._presentation_config_path = presentation_config_path or _default_config_path()
+        self._presentation_config_path = (
+            presentation_config_path or _default_config_path()
+        )
         resolved_threshold = _validate_confidence_threshold(
             confidence_threshold,
             default=DEFAULT_CONFIDENCE_THRESHOLD,
@@ -167,14 +169,18 @@ class QueryRunner:
             "max_context_tokens": max_context_tokens,
             "retrieved_context_tokens": retrieved_context_tokens,
         }
-        with trace_section("application.query.run", metadata=_filtered_metadata(metadata)) as section:
+        with trace_section(
+            "application.query.run", metadata=_filtered_metadata(metadata)
+        ) as section:
             context_truncated = False
             if (
                 retrieved_context_tokens is not None
                 and retrieved_context_tokens > max_context_tokens
             ):
                 overflow = retrieved_context_tokens - max_context_tokens
-                if overflow >= max_context_tokens * (_FATAL_CONTEXT_OVERFLOW_FACTOR - 1):
+                if overflow >= max_context_tokens * (
+                    _FATAL_CONTEXT_OVERFLOW_FACTOR - 1
+                ):
                     section.debug(
                         "context_budget_exceeded",
                         overflow_tokens=overflow,

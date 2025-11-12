@@ -130,7 +130,9 @@ class SourceService:
             models.KnowledgeSourceStatus.QUARANTINED,
             models.KnowledgeSourceStatus.ERROR,
         ):
-            raise ValueError("cannot mark an already quarantined or errored source as errored")
+            raise ValueError(
+                "cannot mark an already quarantined or errored source as errored"
+            )
 
         now = self._clock()
         notes = reason if not source.notes else f"{source.notes}\n{reason}"

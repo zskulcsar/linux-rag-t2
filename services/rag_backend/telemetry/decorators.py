@@ -33,8 +33,7 @@ def _serialise_arguments(bound_arguments: inspect.BoundArguments) -> dict[str, A
 
 
 @overload
-def trace_call(func: Callable[P, R]) -> Callable[P, R]:
-    ...
+def trace_call(func: Callable[P, R]) -> Callable[P, R]: ...
 
 
 @overload
@@ -42,8 +41,7 @@ def trace_call(
     *,
     name: str | None = ...,
     logger: Any | None = ...,
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    ...
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
 def trace_call(

@@ -26,7 +26,10 @@ from typing import Any, Iterable, Sequence
 
 import yaml
 
-from services.rag_backend.adapters.transport import create_default_handlers, transport_server
+from services.rag_backend.adapters.transport import (
+    create_default_handlers,
+    transport_server,
+)
 from services.rag_backend.application import offline_guard
 from services.rag_backend.telemetry import TraceController
 from services.rag_backend.telemetry.logger import get_logger
@@ -238,13 +241,19 @@ def _load_backend_settings(config_path: Path) -> dict[str, Any]:
     try:
         content = config_path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
-        raise LauncherConfigError(f"Configuration file {config_path} not found") from exc
+        raise LauncherConfigError(
+            f"Configuration file {config_path} not found"
+        ) from exc
     except OSError as exc:  # pragma: no cover - defensive guard
-        raise LauncherConfigError(f"Unable to read configuration file {config_path}") from exc
+        raise LauncherConfigError(
+            f"Unable to read configuration file {config_path}"
+        ) from exc
 
     raw_data = yaml.safe_load(content) or {}
     if not isinstance(raw_data, dict):
-        raise LauncherConfigError("Configuration file must contain a mapping at the root.")
+        raise LauncherConfigError(
+            "Configuration file must contain a mapping at the root."
+        )
 
     backend_data = raw_data.get("backend")
     if backend_data is None:
@@ -271,7 +280,9 @@ def _coalesce_value(
         return str(candidate)
     if default is not None:
         return default
-    raise LauncherConfigError(f"Missing required '{name}' setting in --config or CLI overrides.")
+    raise LauncherConfigError(
+        f"Missing required '{name}' setting in --config or CLI overrides."
+    )
 
 
 def _coalesce_bool(
@@ -386,7 +397,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         phoenix_url=config.phoenix_url,
         log_level=config.log_level,
     )
-    LOGGER.info("BackendLauncher.main(argv) :: offline_mode_enabled", offline_mode="active")
+    LOGGER.info(
+        "BackendLauncher.main(argv) :: offline_mode_enabled", offline_mode="active"
+    )
 
     try:
         with offline_guard.offline_mode():

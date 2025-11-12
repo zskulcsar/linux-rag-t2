@@ -128,7 +128,9 @@ class IngestionPort(Protocol):
     def create_source(self, request: SourceCreateRequest) -> SourceMutationResult:
         """Create a new source and optionally queue ingestion."""
 
-    def update_source(self, alias: str, request: SourceUpdateRequest) -> SourceMutationResult:
+    def update_source(
+        self, alias: str, request: SourceUpdateRequest
+    ) -> SourceMutationResult:
         """Update metadata for an existing source."""
 
     def remove_source(self, alias: str):

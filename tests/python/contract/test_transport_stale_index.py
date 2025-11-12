@@ -52,7 +52,9 @@ async def _read_frame(reader: asyncio.StreamReader) -> dict:
     return json.loads(payload.decode("utf-8"))
 
 
-async def _connect_and_handshake(socket_path: Path) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+async def _connect_and_handshake(
+    socket_path: Path,
+) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     """Connect to the server and validate the handshake prior to issuing requests."""
 
     reader, writer = await asyncio.wait_for(

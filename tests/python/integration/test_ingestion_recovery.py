@@ -20,7 +20,9 @@ def _utc(ts: dt.datetime) -> dt.datetime:
     return ts.replace(tzinfo=dt.timezone.utc)
 
 
-def _job(status: models.IngestionStatus, *, started_at: dt.datetime | None) -> models.IngestionJob:
+def _job(
+    status: models.IngestionStatus, *, started_at: dt.datetime | None
+) -> models.IngestionJob:
     return models.IngestionJob(
         job_id=str(uuid.uuid4()),
         source_alias="man-pages",
@@ -57,7 +59,9 @@ def test_job_recovery_plans_remaining_chunks_after_mid_run_failure() -> None:
     )
     assert checkpoint.percent_complete == 50.0
 
-    plan = service.plan_resume(job=job, checkpoint=checkpoint, document_ids=document_ids)
+    plan = service.plan_resume(
+        job=job, checkpoint=checkpoint, document_ids=document_ids
+    )
 
     assert isinstance(plan, ResumePlan)
     assert plan.resume_stage == "resuming_vectorizing"
@@ -69,7 +73,10 @@ def test_job_recovery_plans_remaining_chunks_after_mid_run_failure() -> None:
 def test_job_recovery_requires_checkpoint_for_resume() -> None:
     """Ensure service guards against resume attempts without checkpoint state."""
 
-    job = _job(models.IngestionStatus.RUNNING, started_at=_utc(dt.datetime(2025, 1, 2, 9, 5, 0)))
+    job = _job(
+        models.IngestionStatus.RUNNING,
+        started_at=_utc(dt.datetime(2025, 1, 2, 9, 5, 0)),
+    )
     service = JobRecoveryService(clock=lambda: _utc(dt.datetime(2025, 1, 2, 9, 15, 0)))
 
     with pytest.raises(ValueError):
@@ -84,7 +91,10 @@ def test_resume_updates_job_and_returns_remaining_docs() -> None:
     """Ensure resume updates job state and retains outstanding document IDs."""
 
     clock_time = _utc(dt.datetime(2025, 1, 2, 9, 20, 0))
-    running_job = _job(models.IngestionStatus.RUNNING, started_at=_utc(dt.datetime(2025, 1, 2, 9, 5, 0)))
+    running_job = _job(
+        models.IngestionStatus.RUNNING,
+        started_at=_utc(dt.datetime(2025, 1, 2, 9, 5, 0)),
+    )
     service = JobRecoveryService(clock=lambda: clock_time)
 
     processed_ids = {"man-pages:abc123:0", "man-pages:abc123:1"}
@@ -93,7 +103,9 @@ def test_resume_updates_job_and_returns_remaining_docs() -> None:
         job=running_job, processed_document_ids=processed_ids, document_ids=document_ids
     )
 
-    failed_job = replace(running_job, status=models.IngestionStatus.FAILED, stage="vectorizing")
+    failed_job = replace(
+        running_job, status=models.IngestionStatus.FAILED, stage="vectorizing"
+    )
 
     resumed_job, plan = service.resume(
         job=failed_job, document_ids=document_ids, checkpoint=checkpoint
@@ -111,7 +123,9 @@ def test_resume_marks_job_complete_when_no_remaining_docs() -> None:
     """Ensure resume promotes job to success when nothing remains to process."""
 
     clock_time = _utc(dt.datetime(2025, 1, 2, 9, 30, 0))
-    job = _job(models.IngestionStatus.FAILED, started_at=_utc(dt.datetime(2025, 1, 2, 9, 5, 0)))
+    job = _job(
+        models.IngestionStatus.FAILED, started_at=_utc(dt.datetime(2025, 1, 2, 9, 5, 0))
+    )
     service = JobRecoveryService(clock=lambda: clock_time)
 
     document_ids = ("man-pages:abc123:0",)
@@ -121,7 +135,9 @@ def test_resume_marks_job_complete_when_no_remaining_docs() -> None:
         captured_at=clock_time,
     )
 
-    resumed_job, plan = service.resume(job=job, document_ids=document_ids, checkpoint=checkpoint)
+    resumed_job, plan = service.resume(
+        job=job, document_ids=document_ids, checkpoint=checkpoint
+    )
 
     assert resumed_job.status is models.IngestionStatus.SUCCEEDED
     assert resumed_job.completed_at is not None
@@ -138,7 +154,9 @@ def test_resume_without_checkpoint_restarts_ingestion() -> None:
     service = JobRecoveryService(clock=lambda: clock_time)
 
     document_ids = tuple(f"man-pages:abc123:{index}" for index in range(3))
-    resumed_job, plan = service.resume(job=job, document_ids=document_ids, checkpoint=None)
+    resumed_job, plan = service.resume(
+        job=job, document_ids=document_ids, checkpoint=None
+    )
 
     assert resumed_job.status is models.IngestionStatus.RUNNING
     assert resumed_job.started_at == clock_time

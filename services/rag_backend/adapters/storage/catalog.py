@@ -9,7 +9,13 @@ import datetime as dt
 from pathlib import Path
 from typing import Any
 
-from services.rag_backend.ports.ingestion import SourceCatalog, SourceRecord, SourceSnapshot, SourceStatus, SourceType
+from services.rag_backend.ports.ingestion import (
+    SourceCatalog,
+    SourceRecord,
+    SourceSnapshot,
+    SourceStatus,
+    SourceType,
+)
 from services.rag_backend.telemetry import trace_call, trace_section
 
 
@@ -157,7 +163,9 @@ class CatalogStorage:
         >>> storage.save(SourceCatalog(version=1, updated_at=dt.datetime.now(dt.timezone.utc)))
     """
 
-    def __init__(self, *, base_dir: Path | None = None, filename: str = "catalog.json") -> None:
+    def __init__(
+        self, *, base_dir: Path | None = None, filename: str = "catalog.json"
+    ) -> None:
         """Create a new storage helper.
 
         Args:
@@ -205,7 +213,9 @@ class CatalogStorage:
 
             payload = _encode_catalog(catalog)
             temp_path = self._base_dir / f".{self._filename}.tmp"
-            temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+            temp_path.write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
             temp_path.replace(self._path)
 
 

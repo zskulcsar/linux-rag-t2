@@ -25,7 +25,9 @@ class _FakeBatch:
     def __exit__(self, exc_type, exc, tb) -> None:  # noqa: D401
         """No-op context manager exit."""
 
-    def add_data_object(self, data_object: dict[str, Any], class_name: str, uuid: str) -> None:
+    def add_data_object(
+        self, data_object: dict[str, Any], class_name: str, uuid: str
+    ) -> None:
         self.operations.append(
             {
                 "data": data_object,
@@ -75,7 +77,9 @@ class _FakeWeaviateClient:
     """Stub exposing the interfaces used by the adapter."""
 
     batch: _FakeBatch = field(default_factory=_FakeBatch)
-    query: _FakeWeaviateQuery = field(default_factory=lambda: _FakeWeaviateQuery(results=[]))
+    query: _FakeWeaviateQuery = field(
+        default_factory=lambda: _FakeWeaviateQuery(results=[])
+    )
 
 
 @dataclass
@@ -145,7 +149,9 @@ def test_weaviate_adapter_batches_documents_and_records_metrics() -> None:
 
     fake_client = _FakeWeaviateClient()
     metrics = _RecordingMetrics()
-    adapter = WeaviateAdapter(client=fake_client, class_name="Document", metrics=metrics)
+    adapter = WeaviateAdapter(
+        client=fake_client, class_name="Document", metrics=metrics
+    )
 
     adapter.ingest(documents)
 
@@ -201,9 +207,18 @@ def test_weaviate_adapter_query_applies_filters_and_records_metrics() -> None:
     assert builder.limit == 5
     where = builder.where or {}
     operands = where.get("operands", [])
-    assert any(op.get("path") == ["source_alias"] and op.get("valueString") == "man-pages" for op in operands)
-    assert any(op.get("path") == ["source_type"] and op.get("valueString") == "man" for op in operands)
-    assert any(op.get("path") == ["language"] and op.get("valueString") == "en" for op in operands)
+    assert any(
+        op.get("path") == ["source_alias"] and op.get("valueString") == "man-pages"
+        for op in operands
+    )
+    assert any(
+        op.get("path") == ["source_type"] and op.get("valueString") == "man"
+        for op in operands
+    )
+    assert any(
+        op.get("path") == ["language"] and op.get("valueString") == "en"
+        for op in operands
+    )
 
     assert "man-pages" in metrics.queries
     _, result_count = metrics.queries["man-pages"]
@@ -239,7 +254,10 @@ class _FakeHttpClient:
 
 
 def _embedding_payload(vectors: Sequence[Sequence[float]]) -> dict[str, Any]:
-    return {"model": "embeddinggemma:latest", "embeddings": [list(vector) for vector in vectors]}
+    return {
+        "model": "embeddinggemma:latest",
+        "embeddings": [list(vector) for vector in vectors],
+    }
 
 
 def test_ollama_adapter_returns_embeddings_and_records_metrics() -> None:

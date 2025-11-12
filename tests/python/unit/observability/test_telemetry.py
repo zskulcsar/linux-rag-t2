@@ -94,7 +94,9 @@ def test_configure_structlog_with_structlog(monkeypatch: pytest.MonkeyPatch) -> 
     assert stub.bound_context == {"service": "rag-backend"}
 
 
-def test_configure_structlog_without_structlog(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+def test_configure_structlog_without_structlog(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
     """Ensure configure_structlog degrades gracefully when structlog is missing."""
 
     monkeypatch.delitem(sys.modules, "structlog", raising=False)

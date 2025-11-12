@@ -9,7 +9,12 @@ from typing import cast
 import pytest
 
 from services.rag_backend.adapters.transport import create_default_handlers, server
-from services.rag_backend.ports import IngestionPort, SourceCatalog, SourceRecord, SourceSnapshot
+from services.rag_backend.ports import (
+    IngestionPort,
+    SourceCatalog,
+    SourceRecord,
+    SourceSnapshot,
+)
 from services.rag_backend.ports.ingestion import SourceStatus, SourceType
 
 HANDSHAKE_REQUEST = {
@@ -50,7 +55,9 @@ async def _read_frame(reader: asyncio.StreamReader) -> dict:
     return json.loads(payload.decode("utf-8"))
 
 
-async def _connect_and_handshake(socket_path: Path) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
+async def _connect_and_handshake(
+    socket_path: Path,
+) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     """Connect to the server and validate the handshake prior to issuing requests."""
 
     reader, writer = await asyncio.wait_for(
@@ -232,16 +239,24 @@ async def test_admin_init_rejects_when_index_missing(tmp_path: Path) -> None:
             now = dt.datetime.now(dt.timezone.utc)
             return SourceCatalog(version=0, updated_at=now, sources=[], snapshots=[])
 
-        def create_source(self, request):  # pragma: no cover - not needed for contract tests
+        def create_source(
+            self, request
+        ):  # pragma: no cover - not needed for contract tests
             raise NotImplementedError
 
-        def update_source(self, alias, request):  # pragma: no cover - not needed for contract tests
+        def update_source(
+            self, alias, request
+        ):  # pragma: no cover - not needed for contract tests
             raise NotImplementedError
 
-        def remove_source(self, alias):  # pragma: no cover - not needed for contract tests
+        def remove_source(
+            self, alias
+        ):  # pragma: no cover - not needed for contract tests
             raise NotImplementedError
 
-        def start_reindex(self, trigger):  # pragma: no cover - not needed for contract tests
+        def start_reindex(
+            self, trigger
+        ):  # pragma: no cover - not needed for contract tests
             raise NotImplementedError
 
     handlers.ingestion_port = cast(IngestionPort, _MissingIndexPort())
@@ -310,18 +325,28 @@ async def test_admin_init_rejects_when_catalog_newer_than_index(tmp_path: Path) 
                 SourceSnapshot(alias="man-pages", checksum="sha256:bootstrap-man"),
                 SourceSnapshot(alias="info-pages", checksum="sha256:bootstrap-info"),
             ]
-            return SourceCatalog(version=2, updated_at=now, sources=sources, snapshots=snapshots)
+            return SourceCatalog(
+                version=2, updated_at=now, sources=sources, snapshots=snapshots
+            )
 
-        def create_source(self, request):  # pragma: no cover - not needed for contract tests
+        def create_source(
+            self, request
+        ):  # pragma: no cover - not needed for contract tests
             raise NotImplementedError
 
-        def update_source(self, alias, request):  # pragma: no cover - not needed for contract tests
+        def update_source(
+            self, alias, request
+        ):  # pragma: no cover - not needed for contract tests
             raise NotImplementedError
 
-        def remove_source(self, alias):  # pragma: no cover - not needed for contract tests
+        def remove_source(
+            self, alias
+        ):  # pragma: no cover - not needed for contract tests
             raise NotImplementedError
 
-        def start_reindex(self, trigger):  # pragma: no cover - not needed for contract tests
+        def start_reindex(
+            self, trigger
+        ):  # pragma: no cover - not needed for contract tests
             raise NotImplementedError
 
     handlers.ingestion_port = cast(IngestionPort, _StaleIndexPort())

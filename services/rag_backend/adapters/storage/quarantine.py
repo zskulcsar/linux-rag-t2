@@ -14,7 +14,9 @@ from services.rag_backend.telemetry import trace_call, trace_section
 class AuditSinkProtocol:
     """Protocol describing the logger dependency for quarantine events."""
 
-    def append(self, entry: dict[str, str]) -> None:  # pragma: no cover - structural protocol
+    def append(
+        self, entry: dict[str, str]
+    ) -> None:  # pragma: no cover - structural protocol
         ...
 
 
@@ -71,7 +73,9 @@ class SourceQuarantineManager:
         with trace_section("catalog.quarantine", metadata=metadata) as section:
             catalog = self._storage.load()
             try:
-                record = next(source for source in catalog.sources if source.alias == alias)
+                record = next(
+                    source for source in catalog.sources if source.alias == alias
+                )
             except StopIteration as exc:
                 section.debug("alias_not_found")
                 raise ValueError(f"unknown source alias '{alias}'") from exc
@@ -86,7 +90,8 @@ class SourceQuarantineManager:
             section.debug("record_updated", timestamp=timestamp.isoformat())
 
             updated_sources = [
-                updated_record if source.alias == alias else source for source in catalog.sources
+                updated_record if source.alias == alias else source
+                for source in catalog.sources
             ]
             updated_catalog = replace(
                 catalog,

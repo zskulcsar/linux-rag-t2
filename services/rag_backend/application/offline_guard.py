@@ -67,7 +67,9 @@ def offline_mode() -> Iterator[None]:
     return _guard()
 
 
-def _guarded_create_connection(address: Any, *args: Any, **kwargs: Any) -> socket.socket:
+def _guarded_create_connection(
+    address: Any, *args: Any, **kwargs: Any
+) -> socket.socket:
     """Wrapper that blocks outbound connections that target remote hosts."""
 
     host = _extract_host(address)

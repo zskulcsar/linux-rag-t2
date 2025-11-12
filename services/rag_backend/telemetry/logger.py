@@ -80,7 +80,12 @@ def get_logger(name: str):
 
     _ROOT_LOGGER.debug(
         "LoggerFactory.get_logger(name) :: start",
-        extra={"context": {"logger_name": name, "structlog_available": _structlog is not None}},
+        extra={
+            "context": {
+                "logger_name": name,
+                "structlog_available": _structlog is not None,
+            }
+        },
     )
 
     if _structlog is not None:

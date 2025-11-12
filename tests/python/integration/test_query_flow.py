@@ -44,12 +44,22 @@ def test_query_runner_returns_structured_response() -> None:
             "Re-run ls -l to confirm the change.",
         ],
         references=[
-            query_ports.Reference(label="chmod(1)", url="man:chmod", notes="POSIX manual"),
+            query_ports.Reference(
+                label="chmod(1)", url="man:chmod", notes="POSIX manual"
+            ),
             query_ports.Reference(label="stat(1)"),
         ],
         citations=[
-            query_ports.Citation(alias="man-pages", document_ref="chmod(1)", excerpt="chmod changes file mode bits."),
-            query_ports.Citation(alias="man-pages", document_ref="stat(1)", excerpt="stat inspects file metadata."),
+            query_ports.Citation(
+                alias="man-pages",
+                document_ref="chmod(1)",
+                excerpt="chmod changes file mode bits.",
+            ),
+            query_ports.Citation(
+                alias="man-pages",
+                document_ref="stat(1)",
+                excerpt="stat inspects file metadata.",
+            ),
         ],
         confidence=0.81,
         trace_id="trace-query-runner",

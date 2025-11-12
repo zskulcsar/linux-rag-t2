@@ -143,8 +143,8 @@ func runStubServer(t *testing.T, socketPath string, ready chan<- struct{}, done 
 		"status":         200,
 		"correlation_id": correlationID,
 		"body": map[string]any{
-			"summary":   "Use chmod to adjust permissions.",
-			"steps":     []any{"Run chmod with desired mode", "Verify permissions with ls -l"},
+			"summary":    "Use chmod to adjust permissions.",
+			"steps":      []any{"Run chmod with desired mode", "Verify permissions with ls -l"},
 			"references": []any{map[string]any{"label": "chmod(1)"}},
 			"confidence": 0.82,
 			"trace_id":   "contract-trace",

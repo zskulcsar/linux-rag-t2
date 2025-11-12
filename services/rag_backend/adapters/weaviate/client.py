@@ -14,14 +14,18 @@ from services.rag_backend.telemetry import trace_call, trace_section
 class IngestionMetrics(Protocol):
     """Interface for recording ingestion metrics per alias."""
 
-    def record_ingestion(self, alias: str, count: int, latency_ms: float) -> None:  # pragma: no cover - Protocol
+    def record_ingestion(
+        self, alias: str, count: int, latency_ms: float
+    ) -> None:  # pragma: no cover - Protocol
         ...
 
 
 class QueryMetrics(Protocol):
     """Interface for recording query latency per alias."""
 
-    def record_query(self, alias: str, latency_ms: float, result_count: int) -> None:  # pragma: no cover - Protocol
+    def record_query(
+        self, alias: str, latency_ms: float, result_count: int
+    ) -> None:  # pragma: no cover - Protocol
         ...
 
 
@@ -144,7 +148,9 @@ class WeaviateAdapter:
         ) as section:
             with batch:
                 for document in doc_list:
-                    alias_counts[document.alias] = alias_counts.get(document.alias, 0) + 1
+                    alias_counts[document.alias] = (
+                        alias_counts.get(document.alias, 0) + 1
+                    )
 
                     payload = {
                         "text": document.text,
@@ -157,15 +163,25 @@ class WeaviateAdapter:
                     if document.embedding is not None:
                         payload["embedding"] = list(document.embedding)
 
-                    batch.add_data_object(payload, class_name=self._class_name, uuid=document.document_id)
-                    section.debug("document_enqueued", alias=document.alias, chunk_id=document.chunk_id)
+                    batch.add_data_object(
+                        payload, class_name=self._class_name, uuid=document.document_id
+                    )
+                    section.debug(
+                        "document_enqueued",
+                        alias=document.alias,
+                        chunk_id=document.chunk_id,
+                    )
 
             elapsed_ms = (time.perf_counter() - start) * 1000.0
             if self._metrics:
                 for alias, count in alias_counts.items():
                     self._metrics.record_ingestion(alias, count, elapsed_ms)
-                    section.debug("metrics_recorded", alias=alias, count=count, latency_ms=elapsed_ms)
-
+                    section.debug(
+                        "metrics_recorded",
+                        alias=alias,
+                        count=count,
+                        latency_ms=elapsed_ms,
+                    )
 
     @trace_call
     def query_documents(
@@ -224,13 +240,19 @@ class WeaviateAdapter:
         ) as section:
             builder = query_client.get(
                 self._class_name,
-                ["text", "checksum", "chunk_id", "source_alias", "source_type", "language", "embedding"],
+                [
+                    "text",
+                    "checksum",
+                    "chunk_id",
+                    "source_alias",
+                    "source_type",
+                    "language",
+                    "embedding",
+                ],
             )
             response = builder.with_where(filters).with_limit(limit).do()
             raw_entries = (
-                response.get("data", {})
-                .get("Get", {})
-                .get(self._class_name, [])
+                response.get("data", {}).get("Get", {}).get(self._class_name, [])
             )
 
             documents: list[Document] = []
