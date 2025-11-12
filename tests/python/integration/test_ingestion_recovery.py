@@ -8,8 +8,8 @@ from dataclasses import replace
 
 import pytest
 
-from services.rag_backend.domain import models
-from services.rag_backend.domain.job_recovery import (
+from domain import models
+from domain.job_recovery import (
     Checkpoint,
     JobRecoveryService,
     ResumePlan,

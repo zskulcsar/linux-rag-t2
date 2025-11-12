@@ -185,7 +185,7 @@ Confirm the dependency unit files (`ollama.service`, `weaviate.service`,
 `phoenix.service`) exist in `/etc/systemd/system`; copy them from
 `docs/install/systemd/` if necessary.
 
-The `ragbackend.service` unit invokes `python -m services.rag_backend.main --config /etc/ragcli/config.yaml`;
+The `ragbackend.service` unit invokes `PYTHONPATH=backend/src uv run --directory backend python -m main --config /etc/ragcli/config.yaml`;
 update the `RAGCLI_CONFIG` environment variable inside the unit file if you relocate the config.
 
 ## 9. Enable and Start Services

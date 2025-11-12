@@ -8,9 +8,9 @@ from typing import Any
 
 import math
 
-from services.rag_backend.adapters.ollama.client import OllamaAdapter
-from services.rag_backend.adapters.weaviate.client import Document, WeaviateAdapter
-from services.rag_backend.ports.ingestion import SourceType
+from adapters.ollama.client import OllamaAdapter
+from adapters.weaviate.client import Document, WeaviateAdapter
+from ports.ingestion import SourceType
 
 
 @dataclass

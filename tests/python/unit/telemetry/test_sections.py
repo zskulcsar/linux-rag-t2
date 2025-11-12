@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from services.rag_backend.telemetry.sections import TraceSection
+from telemetry.sections import TraceSection
 
 
 class CaptureLogger:

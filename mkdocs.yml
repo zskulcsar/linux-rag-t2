@@ -5,12 +5,28 @@ docs_dir: docs
 
 nav:
   - Overview: index.md
+  - Quickstart: specs/001-rag-cli/quickstart.md
   - CLI Guides:
       - ragman: guides/cli/ragman.md
       - ragadmin: guides/cli/ragadmin.md
   - Backend Service:
       - Overview: guides/backend/overview.md
   - Installation: install/index.md
+  - Design:
+    - 001-rag-cli:
+      - Specification: specs/001-rag-cli/specs.md
+      - Plan: specs/001-rag-cli/plan.md
+      - Data Model: specs/001-rag-cli/data-model.md
+      - Notes: specs/001-rag-cli/research.md
+      - Implementation:
+        - Checklists:
+          - Requirements: specs/001-rag-cli/requirements.md
+          - CLI: specs/001-rag-cli/cli.md
+        - Milestones: specs/001-rag-cli/milestones.md
+        - Tasks: specs/001-rag-cli/tasks.md
+        - Tools: specs/001-rag-cli/dependencies.md
+  - Code docs:
+    - #TODO
 
 theme:
   name: material

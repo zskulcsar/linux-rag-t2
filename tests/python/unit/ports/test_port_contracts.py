@@ -47,7 +47,7 @@ def _assert_optional(annotation: Any, expected_inner: Any) -> None:
 def test_query_port_contract_shapes() -> None:
     """Require the query port types and protocol to match the transport contract."""
 
-    module = importlib.import_module("services.rag_backend.ports.query")
+    module = importlib.import_module("ports.query")
 
     query_request = getattr(module, "QueryRequest", None)
     query_response = getattr(module, "QueryResponse", None)
@@ -111,7 +111,7 @@ def test_query_port_contract_shapes() -> None:
 def test_ingestion_port_contract_shapes() -> None:
     """Require the ingestion port types to reflect catalog, job, and adapter contracts."""
 
-    module = importlib.import_module("services.rag_backend.ports.ingestion")
+    module = importlib.import_module("ports.ingestion")
 
     source_type = getattr(module, "SourceType", None)
     source_status = getattr(module, "SourceStatus", None)
@@ -244,7 +244,7 @@ def test_ingestion_port_contract_shapes() -> None:
 def test_health_port_contract_shapes() -> None:
     """Require the health port types to expose consistent telemetry and status enums."""
 
-    module = importlib.import_module("services.rag_backend.ports.health")
+    module = importlib.import_module("ports.health")
 
     health_status = getattr(module, "HealthStatus", None)
     health_component = getattr(module, "HealthComponent", None)

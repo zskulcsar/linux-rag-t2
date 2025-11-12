@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from services.rag_backend.adapters.transport import server
+from adapters.transport import server
 
 HANDSHAKE_REQUEST = {
     "type": "handshake",

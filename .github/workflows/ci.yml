@@ -25,23 +25,25 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install uv
 
-      - name: Sync dependencies
-        run: uv sync --project services/rag_backend
+      - name: Bootstrap virtualenv
+        run: |
+          make venv
+          echo PATH=${GITHUB_WORKSPACE}/backend/.venv/bin:$PATH >> $GITHUB_ENV
 
       - name: Lint (Python)
-        run: make lint-python
+        run: make lint-py
 
       - name: Typecheck (Python)
-        run: make typecheck
+        run: make tc-py
 
       - name: Security Audit (Python)
-        run: make security-python
+        run: make vc-py
 
       - name: Tests (Python)
-        run: make test-python
+        run: make test-py
 
       - name: Build Package (Python)
-        run: make package-python
+        run: make pack-py
 
   go:
     name: Go Pipeline
@@ -59,13 +61,13 @@ jobs:
         run: make lint-go
 
       - name: Typecheck (Go)
-        run: make typecheck-go
+        run: make tc-go
 
       - name: Security Audit (Go)
-        run: make security-go
+        run: make vc-go
 
       - name: Tests (Go)
         run: make test-go
 
       - name: Build Package (Go)
-        run: make package-go
+        run: make pack-go

@@ -109,7 +109,7 @@ async def test_backend_launcher_requires_config_and_loads_defaults(
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "services.rag_backend.main",
+        "main",
         "--config",
         str(config_path),
         stdout=asyncio.subprocess.PIPE,
@@ -167,7 +167,7 @@ async def test_backend_launcher_allows_cli_overrides(tmp_path: Path) -> None:
     command = [
         sys.executable,
         "-m",
-        "services.rag_backend.main",
+        "main",
         "--config",
         str(config_path),
         "--weaviate-url",
@@ -234,7 +234,7 @@ async def test_backend_launcher_trace_flag_enables_controller(tmp_path: Path) ->
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "services.rag_backend.main",
+        "main",
         "--config",
         str(config_path),
         "--trace",
@@ -271,7 +271,7 @@ async def test_backend_launcher_requires_config_flag(tmp_path: Path) -> None:
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "services.rag_backend.main",
+        "main",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         env=_launch_env(project_root),

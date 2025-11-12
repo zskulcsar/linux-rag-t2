@@ -7,7 +7,7 @@ import uuid
 
 import pytest
 
-from services.rag_backend.domain import models, query_service, source_service
+from domain import models, query_service, source_service
 
 
 def _utc(ts: dt.datetime) -> dt.datetime:

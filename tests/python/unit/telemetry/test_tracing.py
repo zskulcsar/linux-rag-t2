@@ -4,9 +4,8 @@ import inspect
 import sys
 import threading
 
-import pytest
 
-from services.rag_backend.telemetry.tracing import TraceController
+from telemetry.tracing import TraceController
 
 
 class CaptureLogger:

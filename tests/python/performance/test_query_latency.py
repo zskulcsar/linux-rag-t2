@@ -5,10 +5,10 @@ from __future__ import annotations
 
 def _import_query_metrics():
     try:
-        from services.rag_backend.application import query_metrics  # type: ignore import-not-found
+        from application import query_metrics  # type: ignore import-not-found
     except ImportError as exc:
         raise AssertionError(
-            "services.rag_backend.application.query_metrics must provide latency tracking and SLO helpers."
+            "application.query_metrics must provide latency tracking and SLO helpers."
         ) from exc
     return query_metrics
 

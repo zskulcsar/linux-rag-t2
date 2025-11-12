@@ -6,15 +6,15 @@ import datetime as dt
 
 import pytest
 
-from services.rag_backend.ports import query as query_ports
+from ports import query as query_ports
 
 
 def _import_query_runner():
     try:
-        from services.rag_backend.application import query_runner  # type: ignore import-not-found
+        from application import query_runner  # type: ignore import-not-found
     except ImportError as exc:
         raise AssertionError(
-            "services.rag_backend.application.query_runner must expose context budget enforcement "
+            "application.query_runner must expose context budget enforcement "
             "for ragman queries."
         ) from exc
     return query_runner

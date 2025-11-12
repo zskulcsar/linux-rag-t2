@@ -6,13 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from services.rag_backend.adapters.transport import (
+from adapters.transport import (
     IndexUnavailableError,
-    TransportHandlers,
     create_default_handlers,
     server,
 )
-from services.rag_backend.ports.query import QueryPort, QueryRequest, QueryResponse
+from ports.query import QueryPort, QueryRequest, QueryResponse
 
 HANDSHAKE_REQUEST = {
     "type": "handshake",

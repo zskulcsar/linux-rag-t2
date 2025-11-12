@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from services.rag_backend.adapters.storage.audit_log import AuditLogger
-from services.rag_backend.adapters.storage.catalog import CatalogStorage
-from services.rag_backend.ports.ingestion import (
+from adapters.storage.audit_log import AuditLogger
+from adapters.storage.catalog import CatalogStorage
+from ports.ingestion import (
     SourceCatalog,
     SourceRecord,
     SourceSnapshot,

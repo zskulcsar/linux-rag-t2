@@ -30,7 +30,7 @@
 ## Start Backend Service
 1. Launch the Python backend (development mode) via the launcher module:
    ```bash
-   uv run python -m services.rag_backend.main \
+   PYTHONPATH=backend/src uv run --directory backend python -m main \
      --config "${XDG_CONFIG_HOME:-$HOME/.config}/ragcli/config.yaml" \
      --socket "${XDG_RUNTIME_DIR:-/tmp}/ragcli/backend.sock" \
      --weaviate-url http://localhost:8080 \

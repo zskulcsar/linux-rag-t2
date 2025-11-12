@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from services.rag_backend.telemetry.decorators import trace_call
+from telemetry.decorators import trace_call
 
 
 class CaptureLogger:

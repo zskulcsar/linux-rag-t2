@@ -8,14 +8,14 @@ from typing import cast
 
 import pytest
 
-from services.rag_backend.adapters.transport import create_default_handlers, server
-from services.rag_backend.ports import (
+from adapters.transport import create_default_handlers, server
+from ports import (
     IngestionPort,
     SourceCatalog,
     SourceRecord,
     SourceSnapshot,
 )
-from services.rag_backend.ports.ingestion import SourceStatus, SourceType
+from ports.ingestion import SourceStatus, SourceType
 
 HANDSHAKE_REQUEST = {
     "type": "handshake",

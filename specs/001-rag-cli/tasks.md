@@ -100,16 +100,16 @@
 
 ### Implementation for User Story 1
 
-- [X] T045 [US1] Implement query application orchestrator with telemetry in `services/rag_backend/application/query_runner.py`. Load the minimum confidence from presentation config and pass the effective threshold into responses.
-- [X] T046 [US1] Instrument latency metrics and thresholds in `services/rag_backend/application/query_metrics.py`.
+- [X] T045 [US1] Implement query application orchestrator with telemetry in `backend/src/application/query_runner.py`. Load the minimum confidence from presentation config and pass the effective threshold into responses.
+- [X] T046 [US1] Instrument latency metrics and thresholds in `backend/src/application/query_metrics.py`.
 - [X] T047 [US1] Implement `ragman` root and query spf13/cobra commands in `cli/ragman/cmd/root.go` and `cli/ragman/cmd/query.go`. Commands must emit correlation IDs and request the structured answer format over the IPC client. Expose `--plain`, `--json`, `--context-tokens`, and `--conversation` flags.
 - [X] T048 [US1] Implement terminal/JSON renderers with citation, confidence, and truncation messaging in `cli/ragman/internal/io/renderer.go`. Render Summary, Steps, and References sections with inline aliases and fall back to the standard “No answer found” block when confidence < 0.35. Provide markdown, plain, and JSON presenters via templates that display confidence as a percentage header and honour `${XDG_CONFIG_HOME}/ragcli/config.yaml` defaults.
 - [X] T049 [US1] Record Milestone 7 completion in `specs/001-rag-cli/milestones.md` after CLI and backend tests pass.
 
 ### Milestone 7b – Backend Launcher Wiring
 
-- [X] T049_1 [P] Add failing end-to-end launcher tests (e.g., `tests/python/integration/test_backend_launcher.py`) that invoke `uv run python -m services.rag_backend.main` (or equivalent) and assert it boots the Unix socket server with configurable socket/Ollama/Weaviate/Phoenix URLs plus offline guard enforcement.
-- [X] T049_2 Implement the backend launcher module (`services/rag_backend/main.py` or package) that parses CLI flags/env, wires telemetry/offline guards, instantiates transport handlers, and runs `transport_server`.
+- [X] T049_1 [P] Add failing end-to-end launcher tests (e.g., `tests/python/integration/test_backend_launcher.py`) that invoke `PYTHONPATH=backend/src uv run --directory backend python -m main` (or equivalent) and assert it boots the Unix socket server with configurable socket/Ollama/Weaviate/Phoenix URLs plus offline guard enforcement.
+- [X] T049_2 Implement the backend launcher module (`backend/src/main.py`) that parses CLI flags/env, wires telemetry/offline guards, instantiates transport handlers, and runs `transport_server`.
 - [X] T049_3 Update operational docs and tooling (`specs/001-rag-cli/quickstart.md`, `docs/guides/backend/overview.md`, `docs/install/systemd/ragbackend.service`, Makefile target descriptions) to reference the new launcher entrypoint and its flags.
 
 ---

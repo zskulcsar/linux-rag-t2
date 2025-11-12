@@ -9,7 +9,7 @@ from typing import Any, List
 
 import pytest
 
-from services.rag_backend.adapters.observability import telemetry
+from adapters.observability import telemetry
 
 
 class _StubStructlog:

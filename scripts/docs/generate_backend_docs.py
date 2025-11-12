@@ -31,6 +31,7 @@ dev_dependency_table = "\n".join(
 data_model_path = ROOT / "specs" / "001-rag-cli" / "data-model.md"
 contracts_path = ROOT / "specs" / "001-rag-cli" / "contracts" / "backend-openapi.yaml"
 
+## TODO: source this text from a markdown template instead of embedding here
 content = f"""# Backend Service Overview
 
 The Python backend (`services/rag_backend`) exposes the Unix-socket transport
@@ -67,7 +68,7 @@ captured in `specs/001-rag-cli/plan.md` and the data contracts codified in
 ## Planned Module Layout
 
 ```text
-services/rag_backend/
+backend/src/
 ├── domain/              # Core business logic
 ├── ports/               # Request/response interfaces
 ├── adapters/
@@ -85,7 +86,8 @@ services/rag_backend/
 - `uv run pytest tests/python/unit` for domain and port validation.
 - `uv run pytest tests/python/integration` for adapter behaviour with mocks.
 - `uv run pytest tests/python/contract` to ensure transport compliance.
-- `uv run mypy services/rag_backend` under strict settings (Constitution I).
+- `uv run pytest tests/python/performance` to ensure performance compliance.
+- `PYTHONPATH=backend/src uv run --directory backend mypy backend/src` under strict settings (Constitution I).
 
 ## Observability
 
@@ -97,8 +99,16 @@ log entries and Phoenix traces.
 ## Configuration
 
 - XDG-compliant directories determine config/data/runtime socket paths.
-- Runtime options (socket path, Ollama URL, Weaviate URL) are supplied via CLI
-  flags when launching the backend module (`python -m services.rag_backend.main`).
+- Launch the backend with `PYTHONPATH=backend/src uv run --directory backend python -m main` (or `make run-be`)
+  and provide the required flags:
+  - `--socket` (Unix socket path, usually `${{XDG_RUNTIME_DIR:-/tmp}}/ragcli/backend.sock`)
+  - `--weaviate-url` (HTTP endpoint for the local Weaviate instance)
+  - `--ollama-url` (HTTP endpoint for the Ollama runtime)
+  - `--phoenix-url` (HTTP endpoint for the Phoenix UI)
+  - `--log-level` (optional stdlib logging verbosity, defaults to `INFO`)
+  - `--trace` (optional flag that enables the telemetry `TraceController`)
+- Offline enforcement is always active, meaning any outbound TCP connection
+  targeting non-loopback hosts raises an `OfflineNetworkError`.
 
 ## Roadmap
 

@@ -13,7 +13,7 @@ Group=ragcli
 Environment="RAGCLI_CONFIG=/etc/ragcli/config.yaml"
 # TODO: this doesn't work, we need to find a way for absolute paths to be sourced at install time
 WorkingDirectory=/home/zsoltk/git/linux-rag-t2
-ExecStart=/usr/bin/env uv run python -m services.rag_backend.main \
+ExecStart=/usr/bin/env uv run --directory backend env PYTHONPATH=/home/zsoltk/git/linux-rag-t2/backend/src python -m main \
   --config "${RAGCLI_CONFIG}"
 Environment="PYTHONUNBUFFERED=1"
 Restart=on-failure

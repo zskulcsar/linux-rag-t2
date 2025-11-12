@@ -7,7 +7,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from services.rag_backend.application import offline_guard
+from application import offline_guard
 
 
 @contextmanager

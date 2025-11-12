@@ -9,10 +9,9 @@ from typing import Any
 
 import pytest
 
-from services.rag_backend.adapters.storage.catalog import CatalogStorage
-from services.rag_backend.adapters.storage.quarantine import SourceQuarantineManager
-from services.rag_backend.domain import models
-from services.rag_backend.ports.ingestion import (
+from adapters.storage.catalog import CatalogStorage
+from adapters.storage.quarantine import SourceQuarantineManager
+from ports.ingestion import (
     SourceCatalog,
     SourceRecord,
     SourceStatus,
