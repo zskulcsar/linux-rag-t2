@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import inspect
 from functools import wraps
-from typing import Any, Callable, ParamSpec, TypeVar, overload
+from typing import Any, Callable, TypeVar, overload, cast
 
 from .logger import get_logger
 
-P = ParamSpec("P")
-R = TypeVar("R")
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def _serialise_arguments(bound_arguments: inspect.BoundArguments) -> dict[str, Any]:
@@ -33,23 +32,23 @@ def _serialise_arguments(bound_arguments: inspect.BoundArguments) -> dict[str, A
 
 
 @overload
-def trace_call(func: Callable[P, R]) -> Callable[P, R]: ...
+def trace_call(func: F) -> F: ...
 
 
 @overload
 def trace_call(
     *,
-    name: str | None = ...,
-    logger: Any | None = ...,
-) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+    name: str | None = None,
+    logger: Any | None = None,
+) -> Callable[[F], F]: ...
 
 
 def trace_call(
-    func: Callable[P, R] | None = None,
+    func: F | None = None,
     *,
     name: str | None = None,
     logger: Any | None = None,
-) -> Callable[..., Any]:
+) -> F | Callable[[F], F]:
     """Decorate a callable so entry, exit, and errors emit structured logs.
 
     This decorator is safe for both synchronous and asynchronous callables. It
@@ -67,7 +66,7 @@ def trace_call(
         A callable that mirrors the wrapped function but adds logging side effects.
     """
 
-    def decorator(inner: Callable[P, R]) -> Callable[P, R]:
+    def decorator(inner: F) -> F:
         call_logger = logger or get_logger(f"{inner.__module__}.{inner.__qualname__}")
         call_name = name or f"{inner.__module__}.{inner.__qualname__}"
         signature = inspect.signature(inner)
@@ -75,7 +74,7 @@ def trace_call(
         if inspect.iscoroutinefunction(inner):
 
             @wraps(inner)
-            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+            async def async_wrapper(*args: Any, **kwargs: Any):
                 bound = signature.bind_partial(*args, **kwargs)
                 payload = _serialise_arguments(bound)
                 call_logger.info("%s :: enter", call_name, arguments=payload)
@@ -89,10 +88,10 @@ def trace_call(
                     )
                     raise
 
-            return async_wrapper
+            return cast(F, async_wrapper)
 
         @wraps(inner)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        def wrapper(*args: Any, **kwargs: Any):
             bound = signature.bind_partial(*args, **kwargs)
             payload = _serialise_arguments(bound)
             call_logger.info("%s :: enter", call_name, arguments=payload)
@@ -106,7 +105,7 @@ def trace_call(
                 )
                 raise
 
-        return wrapper
+        return cast(F, wrapper)
 
     if func is not None:
         return decorator(func)

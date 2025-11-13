@@ -22,6 +22,7 @@ import ipaddress
 import socket
 import threading
 from typing import Any
+from contextlib import AbstractContextManager
 
 
 CreateConnection = Callable[..., socket.socket]
@@ -35,7 +36,7 @@ class OfflineNetworkError(RuntimeError):
     """Raised when an outbound network connection violates offline guarantees."""
 
 
-def offline_mode() -> Iterator[None]:
+def offline_mode() -> AbstractContextManager[None]:
     """Activate offline enforcement for the current process.
 
     When active, attempts to open TCP connections to non-loopback hosts raise

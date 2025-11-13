@@ -6,7 +6,13 @@ import inspect
 import sys
 import threading
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable
+from types import FrameType
+from typing import TYPE_CHECKING, Any, Callable, Iterable, cast
+
+if TYPE_CHECKING:  # pragma: no cover - typing-time import
+    from _typeshed import TraceFunction as TypeshedTraceFunction
+else:  # pragma: no cover - runtime stub
+    TypeshedTraceFunction = Callable[[FrameType, str, Any], object]
 
 from .logger import get_logger
 
@@ -36,6 +42,9 @@ def _default_filter(
     return True
 
 
+TraceFunction = Callable[[FrameType, str, Any], "TraceFunction | None"]
+
+
 @dataclass
 class TraceController:
     """Manage activation of Python tracing hooks for deep observability sessions.
@@ -46,16 +55,14 @@ class TraceController:
         exclude_modules: Tuple of module prefixes to filter out during tracing.
     """
 
-    logger: Any | None = None
+    logger: Any = field(
+        default_factory=lambda: get_logger("rag_backend.telemetry.trace_controller")
+    )
     include_modules: tuple[str, ...] = ("adapters", "application", "domain", "ports", "telemetry", "main")
     exclude_modules: tuple[str, ...] = ("telemetry",)
     _enabled: bool = field(init=False, default=False)
-    _previous_trace: Callable | None = field(init=False, default=None)
+    _previous_trace: TraceFunction | None = field(init=False, default=None)
     _lock: threading.Lock = field(init=False, default_factory=threading.Lock)
-
-    def __post_init__(self) -> None:
-        if self.logger is None:
-            self.logger = get_logger("rag_backend.telemetry.trace_controller")
 
     def enable(self) -> None:
         """Enable tracing across the current interpreter.
@@ -73,8 +80,9 @@ class TraceController:
                 exclude=list(self.exclude_modules) or None,
             )
             self._previous_trace = sys.gettrace()
-            sys.settrace(self._trace)
-            threading.settrace(self._trace)
+            trace_callback = cast("TypeshedTraceFunction", self._trace)
+            sys.settrace(trace_callback)  # type: ignore[arg-type]
+            threading.settrace(trace_callback)  # type: ignore[arg-type]
             self._enabled = True
 
     def disable(self) -> None:
@@ -86,8 +94,9 @@ class TraceController:
         with self._lock:
             if not self._enabled:
                 return
-            sys.settrace(self._previous_trace)
-            threading.settrace(self._previous_trace)
+            previous = cast("TypeshedTraceFunction | None", self._previous_trace)
+            sys.settrace(previous)  # type: ignore[arg-type]
+            threading.settrace(previous)  # type: ignore[arg-type]
             self.logger.info("TraceController.disable(self) :: complete")
             self._enabled = False
             self._previous_trace = None
@@ -101,7 +110,9 @@ class TraceController:
 
         return self._enabled
 
-    def _trace(self, frame, event: str, arg):
+    def _trace(
+        self, frame: FrameType, event: str, arg: Any
+    ) -> TraceFunction | None:
         """Trace hook invoked by the Python interpreter.
 
         Args:

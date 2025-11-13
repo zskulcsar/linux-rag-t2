@@ -46,7 +46,7 @@ class TraceSection(AbstractContextManager["TraceSection"]):
         )
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> bool:
+    def __exit__(self, exc_type, exc, tb):
         """Exit the context, logging completion or error details.
 
         Args:

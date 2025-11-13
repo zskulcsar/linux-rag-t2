@@ -39,6 +39,14 @@ class TransportConnectionClosed(TransportProtocolError):
     """Raised when the client closes the connection gracefully."""
 
 
+def _normalize_correlation_id(candidate: Any | None, fallback: str) -> str:
+    """Ensure correlation identifiers are always non-empty strings."""
+
+    if isinstance(candidate, str) and candidate:
+        return candidate
+    return fallback
+
+
 @trace_call
 def _ensure_socket_directory(socket_path: Path) -> None:
     """Ensure the socket directory exists before binding.
@@ -171,7 +179,9 @@ async def _handle_connection(
         request: dict[str, Any] | None = None
         try:
             request = await _read_frame(reader)
-            request_correlation_id = request.get("correlation_id") or correlation_id
+            request_correlation_id = _normalize_correlation_id(
+                request.get("correlation_id"), correlation_id
+            )
             section.debug("handshake_request", correlation_id=request_correlation_id)
             response = _handshake_response(
                 request, request_correlation_id=request_correlation_id
@@ -186,10 +196,9 @@ async def _handle_connection(
             await _send_error(
                 writer,
                 status=400,
-                correlation_id=(
-                    request.get("correlation_id")
-                    if isinstance(request, dict)
-                    else correlation_id
+                correlation_id=_normalize_correlation_id(
+                    request.get("correlation_id") if isinstance(request, dict) else None,
+                    correlation_id,
                 ),
                 code="HANDSHAKE_ERROR",
                 message=str(exc),
@@ -229,14 +238,31 @@ async def _handle_connection(
                     await _send_error(
                         writer,
                         status=400,
-                        correlation_id=frame.get("correlation_id", correlation_id),
+                        correlation_id=_normalize_correlation_id(
+                            frame.get("correlation_id"), correlation_id
+                        ),
                         code="INVALID_FRAME_TYPE",
                         message=f"Expected frame type 'request', got {frame_type!r}",
                     )
                     continue
 
-                path = frame.get("path")
-                correlation = frame.get("correlation_id", correlation_id)
+                path_value = frame.get("path")
+                if not isinstance(path_value, str) or not path_value:
+                    section.debug("missing_path", path=path_value)
+                    await _send_error(
+                        writer,
+                        status=400,
+                        correlation_id=_normalize_correlation_id(
+                            frame.get("correlation_id"), correlation_id
+                        ),
+                        code="INVALID_PATH",
+                        message="Request path must be a non-empty string",
+                    )
+                    continue
+                path = path_value
+                correlation = _normalize_correlation_id(
+                    frame.get("correlation_id"), correlation_id
+                )
                 body = frame.get("body") or {}
 
                 try:
@@ -319,7 +345,6 @@ async def transport_server(
     path = Path(socket_path)
     _ensure_socket_directory(path)
 
-    loop = asyncio.get_running_loop()
     active_handlers = handlers or create_default_handlers()
     connection_handler = functools.partial(_handle_connection, handlers=active_handlers)
     server = await asyncio.start_unix_server(

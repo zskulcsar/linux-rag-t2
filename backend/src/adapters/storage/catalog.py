@@ -229,7 +229,8 @@ def _default_data_dir() -> Path:
         Path inside ``$XDG_DATA_HOME`` (or a fallback) dedicated to ragcli data.
     """
 
-    data_home = os.environ.get("XDG_DATA_HOME")
-    if not data_home:
-        data_home = Path.home() / ".local" / "share"
-    return Path(data_home) / "ragcli"
+    data_home_env = os.environ.get("XDG_DATA_HOME")
+    base_dir = (
+        Path(data_home_env) if data_home_env else Path.home() / ".local" / "share"
+    )
+    return base_dir / "ragcli"

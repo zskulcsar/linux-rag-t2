@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DOCS_DIR = ROOT / "docs" / "guides" / "backend"
 DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
-PYPROJECT = ROOT / "services" / "rag_backend" / "pyproject.toml"
+PYPROJECT = ROOT / "backend" / "pyproject.toml"
 
 project_meta = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
 
@@ -34,7 +34,7 @@ contracts_path = ROOT / "specs" / "001-rag-cli" / "contracts" / "backend-openapi
 ## TODO: source this text from a markdown template instead of embedding here
 content = f"""# Backend Service Overview
 
-The Python backend (`services/rag_backend`) exposes the Unix-socket transport
+The Python backend (`backend/src`) exposes the Unix-socket transport
 consumed by the Go CLIs and orchestrates retrieval, ingestion, and health
 evaluation workflows. It adheres to the hexagonal architecture decisions
 captured in `specs/001-rag-cli/plan.md` and the data contracts codified in

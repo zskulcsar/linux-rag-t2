@@ -42,7 +42,10 @@ clean: ## Removes all generated and downloaded artifacts; returns the repo to it
 		$(CURDIR)/.ruff_cache \
 		$(CURDIR)/.mypy_cache \
 		$(CURDIR)/.coverage \
-		$(CURDIR)/backend/.venv
+		$(CURDIR)/backend/.venv \
+		$(CURDIR)/backend/.mypy_cache \
+		$(CURDIR)/backend/.pytest_cache \
+		$(CURDIR)/backend/*.egg-info
 	@rm -rf build dist site .uv-cache *.egg-info
 	@find . -type d -name "__pycache__" -prune -exec rm -rf {} +
 
@@ -74,7 +77,7 @@ tc-go: ## Run `mypy` over Python sources
 	done
 
 tc-py: venv ## Run `go vet` over Go sources
-	@uv run mypy backend
+	@uv run --directory backend mypy .
 
 ## Security scans
 vc: vc-go vc-py ## Scan Go and Python dependencies for known vulnerabilities
@@ -105,7 +108,7 @@ test-unit-py: venv ## Run unit test suites for Python code
 test-contr: test-contr-go test-contr-py ## Run contract test suites for Go and Python code
 
 test-contr-go: ## Run contract test suites for Go code
-	$(GO) test -v ./tests/go/contract/...
+	@$(GO) test -v ./tests/go/contract/...
 
 test-contr-py: venv ## Run contract test suites for Python code
 	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest tests/python/contract

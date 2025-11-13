@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
+from types import ModuleType
 from typing import Any
 
+_structlog: ModuleType | None = None
 try:  # pragma: no cover - environment-dependent import
-    import structlog as _structlog
+    import structlog as _structlog  # type: ignore[assignment]
 except ModuleNotFoundError:  # pragma: no cover - fallback expected in tests
-    _structlog = None
+    pass
 
 _ROOT_LOGGER = logging.getLogger("rag_backend.telemetry.logger")
 

@@ -152,7 +152,7 @@ class WeaviateAdapter:
                         alias_counts.get(document.alias, 0) + 1
                     )
 
-                    payload = {
+                    payload: dict[str, Any] = {
                         "text": document.text,
                         "source_alias": document.alias,
                         "source_type": document.source_type.value,

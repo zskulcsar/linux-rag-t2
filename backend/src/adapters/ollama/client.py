@@ -178,7 +178,7 @@ class OllamaAdapter:
             The JSON payload returned by the Ollama completion endpoint.
         """
 
-        payload = {"model": self._model, "prompt": prompt}
+        payload: dict[str, Any] = {"model": self._model, "prompt": prompt}
         if options:
             payload["options"] = options
 

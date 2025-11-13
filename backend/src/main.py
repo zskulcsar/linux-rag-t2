@@ -274,7 +274,7 @@ def _coalesce_value(
     """Return the CLI override, config value, or default for a string option."""
 
     if cli_value not in {None, ""}:
-        return cli_value
+        return str(cli_value)
     candidate = config.get(name)
     if candidate not in {None, ""}:
         return str(candidate)
