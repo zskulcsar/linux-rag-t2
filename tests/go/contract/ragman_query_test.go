@@ -287,7 +287,7 @@ func runRagmanScenario(t *testing.T, scenario ragmanScenario) {
 	}
 	configPath := filepath.Join(configDir, "ragcli", "config.yaml")
 	configContent := "ragman:\n  confidence_threshold: 0.35\n  presenter_default: markdown\nragadmin:\n  output_default: table\n"
-	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o600); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 

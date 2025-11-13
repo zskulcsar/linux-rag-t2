@@ -9,9 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/cobra"
-
 	"github.com/linux-rag-t2/cli/ragman/internal/config"
+	"github.com/spf13/cobra"
 )
 
 type appStateKey struct{}

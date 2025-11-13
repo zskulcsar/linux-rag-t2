@@ -6,7 +6,7 @@
 
 # Others
 *.kate-swp
-tmp
+tmp/
 .tmp/
 
 # Python artifacts
@@ -31,6 +31,7 @@ bin/
 vendor/
 .gocache/
 .gomodcache/
+tmp-home/
 
 # Editor and OS noise
 .DS_Store

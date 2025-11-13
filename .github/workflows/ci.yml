@@ -60,7 +60,9 @@ jobs:
           cache-dependency-path: "**/go.sum"
 
       - name: Lint (Go)
-        run: make lint-go
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.6
 
       - name: Typecheck (Go)
         run: make tc-go

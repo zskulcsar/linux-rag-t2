@@ -11,10 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
-
 	renderio "github.com/linux-rag-t2/cli/ragman/internal/io"
 	"github.com/linux-rag-t2/cli/shared/ipc"
+	"github.com/spf13/cobra"
 )
 
 // newQueryCommand constructs the `query` subcommand responsible for invoking the backend.
