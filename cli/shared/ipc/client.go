@@ -136,51 +136,9 @@ func (c *Client) Query(ctx context.Context, req QueryRequest) (QueryResponse, er
 		req.MaxContextTokens = defaultMaxContextTokens
 	}
 
-	correlationID := newCorrelationID()
-	c.log.Info(
-		"IPCClient.Query(ctx, request) :: send",
-		slog.String("correlation_id", correlationID),
-	)
-
-	frame := requestFrame{
-		Type:          requestType,
-		Path:          queryPath,
-		CorrelationID: correlationID,
-		Body:          req,
-	}
-	if err := writeFrame(c.writer, frame); err != nil {
-		c.log.Error(
-			"IPCClient.Query(ctx, request) :: write_failed",
-			slog.String("error", err.Error()),
-		)
-		return QueryResponse{}, fmt.Errorf("ipc: write query request: %w", err)
-	}
-
-	if c.awaitHandshakeAck {
-		if err := c.consumeHandshakeAck(ctx); err != nil {
-			return QueryResponse{}, err
-		}
-	}
-
-	data, err := c.readFrameWithRetry(ctx)
+	respFrame, err := c.call(ctx, queryPath, req)
 	if err != nil {
-		c.log.Error(
-			"IPCClient.Query(ctx, request) :: read_failed",
-			slog.String("error", err.Error()),
-		)
-		return QueryResponse{}, fmt.Errorf("ipc: read query response: %w", err)
-	}
-
-	var respFrame responseFrame
-	if err := json.Unmarshal(data, &respFrame); err != nil {
-		return QueryResponse{}, fmt.Errorf("ipc: decode response frame: %w", err)
-	}
-
-	if respFrame.Type != responseType {
-		return QueryResponse{}, fmt.Errorf("ipc: unexpected frame type %q", respFrame.Type)
-	}
-	if respFrame.CorrelationID != correlationID {
-		return QueryResponse{}, fmt.Errorf("ipc: correlation id mismatch %q", respFrame.CorrelationID)
+		return QueryResponse{}, err
 	}
 	if respFrame.Status != 200 {
 		return QueryResponse{}, fmt.Errorf("ipc: backend returned status %d", respFrame.Status)
@@ -193,11 +151,70 @@ func (c *Client) Query(ctx context.Context, req QueryRequest) (QueryResponse, er
 
 	c.log.Info(
 		"IPCClient.Query(ctx, request) :: ok",
-		slog.String("correlation_id", correlationID),
+		slog.String("correlation_id", respFrame.CorrelationID),
 		slog.String("trace_id", queryResp.TraceID),
 	)
 
 	return queryResp, nil
+}
+
+func (c *Client) call(ctx context.Context, path string, body any) (responseFrame, error) {
+	if c.conn == nil {
+		return responseFrame{}, errors.New("ipc: client closed")
+	}
+	if body == nil {
+		body = map[string]any{}
+	}
+
+	correlationID := newCorrelationID()
+	c.log.Info(
+		"IPCClient.call(ctx, request) :: send",
+		slog.String("path", path),
+		slog.String("correlation_id", correlationID),
+	)
+
+	frame := requestFrame{
+		Type:          requestType,
+		Path:          path,
+		CorrelationID: correlationID,
+		Body:          body,
+	}
+	if err := writeFrame(c.writer, frame); err != nil {
+		c.log.Error(
+			"IPCClient.call(ctx, request) :: write_failed",
+			slog.String("error", err.Error()),
+		)
+		return responseFrame{}, fmt.Errorf("ipc: write request: %w", err)
+	}
+
+	if c.awaitHandshakeAck {
+		if err := c.consumeHandshakeAck(ctx); err != nil {
+			return responseFrame{}, err
+		}
+	}
+
+	data, err := c.readFrameWithRetry(ctx)
+	if err != nil {
+		c.log.Error(
+			"IPCClient.call(ctx, request) :: read_failed",
+			slog.String("error", err.Error()),
+		)
+		return responseFrame{}, fmt.Errorf("ipc: read response: %w", err)
+	}
+
+	var respFrame responseFrame
+	if err := json.Unmarshal(data, &respFrame); err != nil {
+		return responseFrame{}, fmt.Errorf("ipc: decode response frame: %w", err)
+	}
+
+	if respFrame.Type != responseType {
+		return responseFrame{}, fmt.Errorf("ipc: unexpected frame type %q", respFrame.Type)
+	}
+	if respFrame.CorrelationID != correlationID {
+		return responseFrame{}, fmt.Errorf("ipc: correlation id mismatch %q", respFrame.CorrelationID)
+	}
+
+	return respFrame, nil
 }
 
 // consumeHandshakeAck waits for the server handshake acknowledgement.

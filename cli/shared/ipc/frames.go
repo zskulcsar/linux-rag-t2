@@ -32,10 +32,10 @@ type handshakeAckFrame struct {
 
 // requestFrame represents a newline-delimited JSON request envelope.
 type requestFrame struct {
-	Type          string       `json:"type"`
-	Path          string       `json:"path"`
-	CorrelationID string       `json:"correlation_id"`
-	Body          QueryRequest `json:"body"`
+	Type          string `json:"type"`
+	Path          string `json:"path"`
+	CorrelationID string `json:"correlation_id"`
+	Body          any    `json:"body"`
 }
 
 // responseFrame represents a newline-delimited JSON response envelope.
@@ -121,4 +121,9 @@ func newCorrelationID() string {
 		return hex.EncodeToString([]byte(time.Now().Format(time.RFC3339Nano)))
 	}
 	return hex.EncodeToString(buf[:])
+}
+
+// NewTraceID exposes a helper for generating trace identifiers shared across commands.
+func NewTraceID() string {
+	return newCorrelationID()
 }
