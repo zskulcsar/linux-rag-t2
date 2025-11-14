@@ -172,6 +172,7 @@ install-py: venv ## Install compiled Python binaries
 ## Documentation
 docs: docs-py ## Build project documentation site using `mkdocs`
 	@if [ -f "$(MKDOCS_CONFIG)" ]; then \
+		ln -sf $(CURDIR)/specs $(CURDIR)/docs; \
 		mkdir -p $(MKDOCS_SITE_DIR); \
 		uv run mkdocs build --config-file $(MKDOCS_CONFIG) --site-dir $(MKDOCS_SITE_DIR); \
 	else \

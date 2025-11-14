@@ -14,19 +14,17 @@ nav:
   - Installation: install/index.md
   - Design:
     - 001-rag-cli:
-      - Specification: specs/001-rag-cli/specs.md
+      - Specification: specs/001-rag-cli/spec.md
       - Plan: specs/001-rag-cli/plan.md
       - Data Model: specs/001-rag-cli/data-model.md
       - Notes: specs/001-rag-cli/research.md
       - Implementation:
         - Checklists:
-          - Requirements: specs/001-rag-cli/requirements.md
-          - CLI: specs/001-rag-cli/cli.md
+          - Requirements: specs/001-rag-cli/checklists/requirements.md
+          - CLI: specs/001-rag-cli/checklists/cli.md
         - Milestones: specs/001-rag-cli/milestones.md
         - Tasks: specs/001-rag-cli/tasks.md
         - Tools: specs/001-rag-cli/dependencies.md
-  - Code docs:
-    - #TODO
 
 theme:
   name: material
@@ -37,5 +35,13 @@ markdown_extensions:
   - toc:
       permalink: true
 
-plugins:
-  - search
+# plugins:
+#   - search
+#   - mkdocs-autoapi:
+#       autoapi_dir: "backend"
+#       #autoapi_keep_files: true
+#       autoapi_add_nav_entry: true
+#   - mkdocstrings:
+#       handlers:
+#         python:
+#           paths: ["backend"]
