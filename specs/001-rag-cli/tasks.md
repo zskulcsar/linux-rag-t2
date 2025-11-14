@@ -122,11 +122,11 @@
 
 ### Tests for User Story 2 (MANDATORY) ⚠️
 
-- [ ] T050 [P] [US2] Add failing `ragadmin` contract tests for listing and adding sources in `tests/go/contract/ragadmin_sources_list_add_test.go`.
-- [ ] T051 [P] [US2] Add failing `ragadmin` contract tests for updating source metadata in `tests/go/contract/ragadmin_sources_update_test.go`, verifying that updates can mutate metadata fields aside from alias and that alias changes require remove-and-add flows (FR-003, FR-006).
-- [ ] T052 [P] [US2] Add failing `ragadmin` contract tests for removing sources and verifying quarantine in `tests/go/contract/ragadmin_sources_remove_test.go`.
-- [ ] T053 [P] [US2] Add failing backend integration tests for catalog lifecycle, SHA256 checksum persistence, deterministic `<alias>:<checksum>:<chunk_id>` document IDs, and alias collision handling in `tests/python/integration/test_source_catalog.py`.
-- [ ] T054 [P] [US2] Add failing reindex performance tests for SC-002 in `tests/python/performance/test_reindex_duration.py`.
+- [X] T050 [P] [US2] Add failing `ragadmin` contract tests for listing and adding sources in `tests/go/contract/ragadmin_sources_list_add_test.go`.
+- [X] T051 [P] [US2] Add failing `ragadmin` contract tests for updating source metadata in `tests/go/contract/ragadmin_sources_update_test.go`, verifying that updates can mutate metadata fields aside from alias and that alias changes require remove-and-add flows (FR-003, FR-006).
+- [X] T052 [P] [US2] Add failing `ragadmin` contract tests for removing sources and verifying quarantine in `tests/go/contract/ragadmin_sources_remove_test.go`.
+- [X] T053 [P] [US2] Add failing backend integration tests for catalog lifecycle, SHA256 checksum persistence, deterministic `<alias>:<checksum>:<chunk_id>` document IDs, and alias collision handling in `tests/python/integration/test_source_catalog.py`.
+- [X] T054 [P] [US2] Add failing reindex performance tests for SC-002 in `tests/python/performance/test_reindex_duration.py`.
 
 ### Implementation for User Story 2
 
