@@ -74,6 +74,8 @@ func newRootCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&rootOpts.output, "output", "", "Output format for tabular commands (table|json)")
 
 	cmd.SetContext(context.Background())
+	cmd.AddCommand(newInitCommand())
+	cmd.AddCommand(newHealthCommand())
 	cmd.AddCommand(newSourcesCommand())
 	cmd.AddCommand(newReindexCommand())
 	return cmd

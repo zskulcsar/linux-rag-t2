@@ -14,9 +14,9 @@ const (
 	sourcesPath      = "/v1/sources"
 	indexReindexPath = "/v1/index/reindex"
 
-	statusOK                  = 200
-	statusCreated             = 201
-	statusAccepted            = 202
+	statusOK       = 200
+	statusCreated  = 201
+	statusAccepted = 202
 )
 
 // SourceRecord mirrors catalog entries returned by the backend.
