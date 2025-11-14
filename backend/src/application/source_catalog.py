@@ -347,5 +347,68 @@ class SourceCatalogService:
 
         return ingestion_ports.SourceMutationResult(source=updated_record, job=None)
 
+    @trace_call
+    def remove_source(
+        self, alias: str, *, reason: str | None = None
+    ) -> ingestion_ports.SourceMutationResult:
+        """Quarantine a source and remove it from active snapshots.
+
+        Args:
+            alias: Source alias to quarantine.
+            reason: Optional human-readable explanation recorded in the notes.
+
+        Returns:
+            SourceMutationResult containing the quarantined :class:`SourceRecord`.
+
+        Raises:
+            ValueError: If the alias is unknown.
+
+        Example:
+            >>> service.remove_source('linuxwiki', reason='Obsolete content').source.status
+            <SourceStatus.QUARANTINED: 'quarantined'>
+        """
+
+        catalog = self._storage.load()
+        try:
+            current = next(record for record in catalog.sources if record.alias == alias)
+        except StopIteration as exc:  # pragma: no cover - defensive guard
+            raise ValueError(f"unknown source alias: {alias}") from exc
+
+        now = self._clock()
+        note_reason = reason or "Removed via ragadmin"
+        notes_value = (
+            f"{current.notes}\n{note_reason}" if current.notes else note_reason
+        )
+        updated_record = ingestion_ports.SourceRecord(
+            alias=current.alias,
+            type=current.type,
+            location=current.location,
+            language=current.language,
+            size_bytes=current.size_bytes,
+            last_updated=now,
+            status=ingestion_ports.SourceStatus.QUARANTINED,
+            checksum=current.checksum,
+            notes=notes_value,
+        )
+
+        updated_sources = []
+        for record in catalog.sources:
+            updated_sources.append(updated_record if record.alias == alias else record)
+        updated_sources.sort(key=lambda record: record.alias)
+
+        updated_snapshots = [
+            snapshot for snapshot in catalog.snapshots if snapshot.alias != alias
+        ]
+
+        updated_catalog = ingestion_ports.SourceCatalog(
+            version=catalog.version + 1,
+            updated_at=now,
+            sources=updated_sources,
+            snapshots=updated_snapshots,
+        )
+        self._storage.save(updated_catalog)
+
+        return ingestion_ports.SourceMutationResult(source=updated_record, job=None)
+
 
 __all__ = ["SourceCatalogService", "CatalogStorage", "ChecksumCalculator", "ChunkBuilder"]

@@ -3,6 +3,8 @@
 import datetime as dt
 from pathlib import Path
 
+import pytest
+
 from adapters.weaviate.client import Document
 from ports import ingestion as ingestion_ports
 
@@ -300,3 +302,76 @@ def test_catalog_service_update_without_location_preserves_checksum() -> None:
     assert result.source.notes == "Path missing on disk"
     assert not hasher.paths, "checksum recalculation should not occur"
     assert not chunk_builder.calls, "chunk builder should not run without new location"
+
+
+def test_catalog_service_remove_source_marks_quarantine() -> None:
+    """Removal MUST mark the source as quarantined and drop snapshots."""
+
+    existing_record = ingestion_ports.SourceRecord(
+        alias="linuxwiki",
+        type=ingestion_ports.SourceType.KIWIX,
+        location="/data/linuxwiki.zim",
+        language="en",
+        size_bytes=4096,
+        last_updated=_utc(2025, 1, 3, 8, 0),
+        status=ingestion_ports.SourceStatus.ACTIVE,
+        checksum="checksum-linuxwiki",
+        notes="Trusted snapshot",
+    )
+    existing_catalog = ingestion_ports.SourceCatalog(
+        version=10,
+        updated_at=_utc(2025, 1, 3, 8, 0),
+        sources=[existing_record],
+        snapshots=[
+            ingestion_ports.SourceSnapshot(
+                alias="linuxwiki", checksum="checksum-linuxwiki"
+            )
+        ],
+    )
+
+    storage = _RecordingStorage(initial_catalog=existing_catalog)
+    hasher = _DeterministicHasher("unused-checksum")
+    chunk_builder = _RecordingChunkBuilder(ingestion_ports.SourceType.KIWIX)
+    def clock(): _utc(2025, 1, 6, 14, 0)
+    service = _import_source_catalog_module().SourceCatalogService(
+        storage=storage,
+        checksum_calculator=hasher,
+        chunk_builder=chunk_builder,
+        clock=clock,
+    )
+
+    result = service.remove_source(
+        "linuxwiki", reason="Duplicate content detected in upload"
+    )
+
+    assert result.source.status is ingestion_ports.SourceStatus.QUARANTINED
+    assert "Duplicate content detected" in (result.source.notes or "")
+    assert result.source.last_updated == clock()
+    assert storage.saved_catalogs, "expected removal to persist catalog"
+    saved_catalog = storage.saved_catalogs[-1]
+    assert saved_catalog.version == existing_catalog.version + 1
+    assert not any(
+        snapshot.alias == "linuxwiki" for snapshot in saved_catalog.snapshots
+    ), "quarantined sources must be removed from active snapshots"
+    assert chunk_builder.calls == [], "removal should not enqueue chunk planning"
+    assert not hasher.paths, "removal should not recompute checksums"
+
+
+def test_catalog_service_remove_source_missing_alias_raises() -> None:
+    """Removal MUST raise ValueError when alias is unknown."""
+
+    empty_catalog = ingestion_ports.SourceCatalog(
+        version=1,
+        updated_at=_utc(2025, 1, 1, 0, 0),
+        sources=[],
+        snapshots=[],
+    )
+    storage = _RecordingStorage(initial_catalog=empty_catalog)
+    service = _import_source_catalog_module().SourceCatalogService(
+        storage=storage,
+        checksum_calculator=_DeterministicHasher("unused"),
+        chunk_builder=_RecordingChunkBuilder(ingestion_ports.SourceType.KIWIX),
+    )
+
+    with pytest.raises(ValueError):
+        service.remove_source("unknown-alias", reason="Clean up missing entry")
