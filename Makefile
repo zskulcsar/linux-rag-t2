@@ -16,6 +16,23 @@ GO_ENV := GOCACHE=$(CURDIR)/.gocache
 GO = GO111MODULE=on $(GO_ENV) go
 GO_MODULE_DIRS := cli/ragman cli/shared tests/go
 
+.PHONY: \
+	help \
+	venv \
+	clean \
+	fmt fmt-go fmt-py \
+	lint lint-go lint-py \
+	tc tc-go tc-py \
+	vc vc-go vc-py \
+	test test-py test-go \
+	test-unit test-unit-go test-unit-py \
+	test-contr test-contr-go test-contr-py \
+	test-int test-int-go test-int-py \
+	test-perf test-perf-go test-perf-py \
+	run-be \
+	pack pack-go pack-py \
+	install install-go install-py \
+	docs docs-serve
 
 ## Default
 help: ## List available make targets with descriptions.
@@ -136,15 +153,16 @@ test-perf-py: venv ## Run performance test suites for Python code
 	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest --cov=$(BE_SRC) tests/python/performance
 
 run-be: ## Runs the backend service with local defaults for development testing
-	@mkdir -p tmp/ragcli
+#	@mkdir -p tmp/ragcli
 	@PYTHONPATH=$(BE_SRC) \
 		uv run --project backend python -m main \
-			--config "$(CURDIR)/docs/install/config/ragcli-config.yaml" \
-			--socket "$(CURDIR)/tmp/ragcli/backend.sock" \
+			--config "~/.config/ragcli/config.yaml" \
+			--socket "/tmp/ragcli/backend.sock" \
 			--weaviate-url "http://localhost:8080" \
 			--ollama-url "http://localhost:11434" \
 			--phoenix-url "http://localhost:6006" \
-			--log-level "DEBUG"
+			--log-level "DEBUG" \
+			--trace
 
 ## Building & Packaging
 pack: pack-go pack-py ## Package Go and Python binaries for installation/development test

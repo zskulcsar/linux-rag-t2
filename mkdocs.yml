@@ -11,6 +11,7 @@ nav:
       - ragadmin: guides/cli/ragadmin.md
   - Backend Service:
       - Overview: guides/backend/overview.md
+  - Testing: testing/development.md
   - Installation: install/index.md
   - Design:
     - 001-rag-cli:
