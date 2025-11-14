@@ -8,7 +8,7 @@ backend service orchestrating Weaviate, Ollama, and Phoenix integrations.
 ## Project Structure
 
 - `cli/` – Go CLIs implemented with Cobra adhering to hexagonal architecture.
-- `services/rag_backend/` – Python service exposing the Unix-socket transport
+- `backend/src/` – Python service exposing the Unix-socket transport
   and domain orchestration.
 - `tests/` – Contract, integration, and unit test suites across Go and Python.
 - `specs/001-rag-cli/` – Approved specification, plan, tasks, and research

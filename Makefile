@@ -144,8 +144,16 @@ run-be: ## Runs the backend service with local defaults for development testing
 pack: pack-go pack-py ## Package Go and Python binaries for installation/development test
 
 pack-go: ## Package Go binaries for installation/development test
-	@$(GO) build -o dist/ragman ./cli/ragman
-	@$(GO) build -o dist/ragadmin ./cli/ragadmin
+	@if [ -f cli/ragman/main.go ]; then \
+		$(GO) build -o dist/ragman ./cli/ragman; \
+	else \
+		echo "Warning: no sources for ragman; skipping build."; \
+	fi
+	@if [ -f cli/ragadmin/main.go ]; then \
+		$(GO) build -o dist/ragadmin ./cli/ragadmin; \
+	else \
+		echo "Warning: no sources for ragadmin; skipping build."; \
+	fi
 
 pack-py: venv ## Package Python binaries for installation/development test
 # TODO: fix this
