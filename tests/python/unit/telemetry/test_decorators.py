@@ -53,3 +53,38 @@ def test_trace_call_records_errors() -> None:
     assert logger.records[0]["message"].endswith(":: enter")
     assert logger.records[1]["level"] == "error"
     assert logger.records[1]["kwargs"]["error"] == "boom"
+
+
+@pytest.mark.asyncio
+async def test_trace_call_wraps_async_functions() -> None:
+    """Ensure async callables log entry and exit when wrapped."""
+
+    logger = CaptureLogger()
+
+    @trace_call(logger=logger)
+    async def sample_async(a: int) -> int:
+        return a + 1
+
+    result = await sample_async(2)
+    assert result == 3
+
+    entry, exit_record = logger.records
+    assert entry["message"].endswith("sample_async :: enter")
+    assert exit_record["message"].endswith("sample_async :: exit")
+
+
+@pytest.mark.asyncio
+async def test_trace_call_async_records_errors() -> None:
+    """Ensure async wrapper logs error entries when exceptions bubble."""
+
+    logger = CaptureLogger()
+
+    @trace_call(logger=logger)
+    async def boom() -> None:
+        raise RuntimeError("kaboom")
+
+    with pytest.raises(RuntimeError):
+        await boom()
+
+    assert logger.records[1]["level"] == "error"
+    assert logger.records[1]["kwargs"]["error"] == "kaboom"

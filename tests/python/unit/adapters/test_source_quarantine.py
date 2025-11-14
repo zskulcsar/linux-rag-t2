@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 
+from adapters.storage import quarantine as quarantine_module
 from adapters.storage.catalog import CatalogStorage
 from adapters.storage.quarantine import SourceQuarantineManager
 from ports.ingestion import (
@@ -119,3 +120,37 @@ def test_quarantine_manager_rejects_unknown_alias(
 
     with pytest.raises(ValueError):
         manager.quarantine(alias="missing", reason="not found")
+
+
+def test_quarantine_manager_uses_default_clock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ensure default clock injection supplies timestamps when no override provided."""
+
+    sentinel = _utc(2025, 1, 2, 12, 0)
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
+    monkeypatch.setattr(
+        "adapters.storage.quarantine._default_clock", lambda: sentinel
+    )
+    storage = CatalogStorage()
+    catalog = _catalog(updated_at=_utc(2025, 1, 2, 9, 0))
+    storage.save(catalog)
+
+    audit = _AuditRecorder()
+    manager = SourceQuarantineManager(
+        catalog_storage=storage,
+        audit_logger=audit,
+    )
+    manager.quarantine(alias="man-pages", reason="Automated remediation")
+
+    updated = storage.load()
+    record = next(entry for entry in updated.sources if entry.alias == "man-pages")
+    assert record.last_updated == sentinel
+    assert audit.entries[0]["timestamp"] == sentinel.isoformat()
+
+
+def test_quarantine_default_clock_returns_aware_timestamp() -> None:
+    """Ensure the fallback clock helper returns a timezone-aware timestamp."""
+
+    timestamp = quarantine_module._default_clock()
+    assert timestamp.tzinfo is not None

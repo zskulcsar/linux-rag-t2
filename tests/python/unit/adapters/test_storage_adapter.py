@@ -130,3 +130,17 @@ def test_audit_logger_appends_json_lines(
         payload = json.loads(line)
         assert payload["action"] == "source_quarantine"
         assert "trace_id" in payload
+
+
+def test_catalog_storage_returns_empty_when_missing_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ensure load() returns an empty catalog when no file exists yet."""
+
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
+    storage = CatalogStorage()
+    catalog = storage.load()
+
+    assert catalog.version == 0
+    assert catalog.sources == []
+    assert catalog.snapshots == []
