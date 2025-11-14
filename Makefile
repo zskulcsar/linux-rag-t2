@@ -29,7 +29,7 @@ venv: ## Create the python virtual environment and download all dependencies
 	@uv pip install --directory $(PY_ROOT) --python .venv --upgrade pip
 	@uv sync --directory $(PY_ROOT)
 
-clean: ## Removes all generated and downloaded artifacts; returns the repo to it's cloned state (without reversing file modifications)
+clean: ## Removes generated artifacts; set DEEP_CLEAN=1 to also wipe ~/.cache/{uv,pip}
 	@rm -rf \
 		$(DIST_DIR) \
 		$(CURDIR)/bin \
@@ -48,6 +48,12 @@ clean: ## Removes all generated and downloaded artifacts; returns the repo to it
 		$(CURDIR)/backend/*.egg-info
 	@rm -rf build dist site .uv-cache *.egg-info
 	@find . -type d -name "__pycache__" -prune -exec rm -rf {} +
+ifeq ($(DEEP_CLEAN),1)
+	@echo "Running deep clean: removing ~/.cache/uv and ~/.cache/pip"
+	@rm -rf $(HOME)/.cache/uv $(HOME)/.cache/pip
+else
+	@echo "Deep clean skipped. Set DEEP_CLEAN=1 to also remove ~/.cache/uv and ~/.cache/pip if you hit stubborn test/build issues."
+endif
 
 ## Basic code checkers
 fmt: fmt-go fmt-py ## Format Go and Python sources
