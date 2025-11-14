@@ -5,7 +5,7 @@ import datetime as dt
 import json
 import re
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping, Sequence
 
 from telemetry import trace_call
 from .catalog import _default_data_dir
@@ -101,6 +101,70 @@ class AuditLogger:
 
         self.append(entry)
 
+    @trace_call
+    def log_admin_init(
+        self,
+        *,
+        status: str,
+        trace_id: str | None,
+        created_directories: Sequence[str] | None = None,
+        seeded_sources: Sequence[Any] | None = None,
+        dependency_checks: Sequence[Mapping[str, Any]] | None = None,
+    ) -> None:
+        """Record the outcome of an admin init request.
+
+        Args:
+            status: Result status such as ``success`` or ``failure``.
+            trace_id: Correlation identifier propagated from the transport.
+            created_directories: Absolute paths created during init.
+            seeded_sources: Iterable describing seeded sources; items may be
+                aliases or dictionaries containing an ``alias`` field.
+            dependency_checks: Dependency readiness payloads mirrored from the
+                backend response.
+        """
+
+        trace = _require_trace_id(trace_id)
+        entry = {
+            "timestamp": self._clock().isoformat(),
+            "actor": _MUTATION_ACTOR,
+            "action": "admin_init",
+            "status": status,
+            "trace_id": trace,
+            "created_directories": [
+                str(path) for path in created_directories or []
+            ],
+            "seeded_sources": _normalize_seeded_sources(seeded_sources),
+            "dependency_checks": _materialize_dicts(dependency_checks),
+        }
+        self.append(entry)
+
+    @trace_call
+    def log_admin_health(
+        self,
+        *,
+        overall_status: str,
+        trace_id: str | None,
+        results: Sequence[Mapping[str, Any]] | None = None,
+    ) -> None:
+        """Record an admin health snapshot.
+
+        Args:
+            overall_status: Aggregated pass/warn/fail status.
+            trace_id: Correlation identifier propagated from the request.
+            results: Per-component health check payloads.
+        """
+
+        trace = _require_trace_id(trace_id)
+        entry = {
+            "timestamp": self._clock().isoformat(),
+            "actor": _MUTATION_ACTOR,
+            "action": "admin_health",
+            "overall_status": overall_status,
+            "trace_id": trace,
+            "results": _materialize_dicts(results),
+        }
+        self.append(entry)
+
 
 def _normalize_language_code(language: str) -> str:
     """Normalize and validate ISO language codes.
@@ -121,6 +185,46 @@ def _normalize_language_code(language: str) -> str:
     if not _LANGUAGE_PATTERN.fullmatch(candidate):
         raise ValueError(f"language '{language}' is not a valid ISO code")
     return candidate
+
+
+def _require_trace_id(trace_id: str | None) -> str:
+    """Ensure trace IDs are populated for admin audit entries."""
+
+    candidate = (trace_id or "").strip()
+    if not candidate:
+        raise ValueError("trace_id must be provided for admin audit entries")
+    return candidate
+
+
+def _normalize_seeded_sources(values: Sequence[Any] | None) -> list[str]:
+    """Convert seeded source payloads into a list of aliases."""
+
+    normalized: list[str] = []
+    for value in values or []:
+        if isinstance(value, str):
+            normalized.append(value)
+        elif isinstance(value, Mapping):
+            alias = value.get("alias")
+            normalized.append(str(alias) if alias is not None else json.dumps(value))
+        else:
+            normalized.append(str(value))
+    return normalized
+
+
+def _materialize_dicts(
+    values: Sequence[Mapping[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    """Clone mapping sequences into plain dictionaries for JSON encoding."""
+
+    materialized: list[dict[str, Any]] = []
+    for value in values or []:
+        if isinstance(value, dict):
+            materialized.append(value)
+        elif isinstance(value, Mapping):
+            materialized.append(dict(value))
+        else:
+            materialized.append({"value": value})
+    return materialized
 
 
 __all__ = ["AuditLogger"]

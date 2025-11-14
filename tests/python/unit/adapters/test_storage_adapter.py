@@ -176,6 +176,81 @@ def test_audit_logger_rejects_malformed_language_codes(
         )
 
 
+def test_audit_logger_records_admin_init_entries(tmp_path: Path) -> None:
+    """Ensure admin init events capture trace IDs and metadata."""
+
+    log_path = tmp_path / "audit.log"
+    logger = AuditLogger(log_path=log_path, clock=lambda: _utc(2025, 1, 5, 8, 0, 0))
+
+    logger.log_admin_init(
+        status="success",
+        trace_id="trace-init-123",
+        created_directories=["/tmp/ragcli/config", "/tmp/ragcli/data"],
+        seeded_sources=["man-pages", "info-pages"],
+        dependency_checks=[{"component": "ollama", "status": "pass"}],
+    )
+
+    contents = log_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(contents) == 1
+    entry = json.loads(contents[0])
+    assert entry["action"] == "admin_init"
+    assert entry["trace_id"] == "trace-init-123"
+    assert entry["created_directories"] == [
+        "/tmp/ragcli/config",
+        "/tmp/ragcli/data",
+    ]
+    assert entry["seeded_sources"] == ["man-pages", "info-pages"]
+    assert entry["dependency_checks"][0]["component"] == "ollama"
+
+
+def test_audit_logger_records_health_entries_with_results(tmp_path: Path) -> None:
+    """Ensure admin health events persist per-component data."""
+
+    log_path = tmp_path / "audit.log"
+    logger = AuditLogger(log_path=log_path, clock=lambda: _utc(2025, 1, 5, 9, 30, 0))
+
+    logger.log_admin_health(
+        overall_status="warn",
+        trace_id="trace-health-abc",
+        results=[
+            {
+                "component": "disk_capacity",
+                "status": "warn",
+                "message": "9% free space remaining",
+                "remediation": "Delete temporary files.",
+            }
+        ],
+    )
+
+    entry = json.loads(log_path.read_text(encoding="utf-8"))
+    assert entry["action"] == "admin_health"
+    assert entry["overall_status"] == "warn"
+    assert entry["trace_id"] == "trace-health-abc"
+    assert entry["results"][0]["component"] == "disk_capacity"
+
+
+def test_audit_logger_requires_trace_ids_for_admin_entries(tmp_path: Path) -> None:
+    """Ensure admin logs reject missing trace identifiers."""
+
+    logger = AuditLogger(log_path=tmp_path / "audit.log")
+
+    with pytest.raises(ValueError):
+        logger.log_admin_init(
+            status="success",
+            trace_id="",
+            created_directories=[],
+            seeded_sources=[],
+            dependency_checks=None,
+        )
+
+    with pytest.raises(ValueError):
+        logger.log_admin_health(
+            overall_status="pass",
+            trace_id=None,
+            results=[],
+        )
+
+
 def test_catalog_storage_returns_empty_when_missing_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
