@@ -103,7 +103,7 @@ test-unit-go: ## Run unit test suites for Go code
 	$(GO) test -v ./tests/go/unit/... 
 
 test-unit-py: venv ## Run unit test suites for Python code
-	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest tests/python/unit
+	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest --cov=$(BE_SRC) tests/python/unit
 
 test-contr: test-contr-go test-contr-py ## Run contract test suites for Go and Python code
 
@@ -111,7 +111,7 @@ test-contr-go: ## Run contract test suites for Go code
 	@$(GO) test -v ./tests/go/contract/...
 
 test-contr-py: venv ## Run contract test suites for Python code
-	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest tests/python/contract
+	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest --cov=$(BE_SRC)/adapters/transport tests/python/contract
 
 test-int: test-int-go test-int-py ## Run integration test suites for Go and Python code
 
@@ -119,7 +119,7 @@ test-int-go: ## Not implemented yet! Run integration test suites for Go code
 	@echo "No implemented yet!"
 
 test-int-py: venv ## Run integration test suites for Python code
-	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest tests/python/integration
+	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest --cov=$(BE_SRC) tests/python/integration
 
 test-perf: test-perf-go test-perf-py ## Run performance test suites for Go and Python code
 
@@ -127,7 +127,7 @@ test-perf-go: ## Not implemented! Run performance test suites for Go code
 	@echo "No implemented yet!"
 
 test-perf-py: venv ## Run performance test suites for Python code
-	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest tests/python/performance
+	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest --cov=$(BE_SRC) tests/python/performance
 
 run-be: ## Runs the backend service with local defaults for development testing
 	@mkdir -p tmp/ragcli
