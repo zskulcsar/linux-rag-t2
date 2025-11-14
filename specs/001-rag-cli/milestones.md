@@ -35,9 +35,9 @@
 - [X] Execute shared IPC suites (`GOCACHE=$(pwd)/.gocache go test ./tests/go/unit/ipc ./tests/go/contract`) confirming green results before documenting completion.
 
 ## Milestone 6 – `ragadmin` CLI (Plan step 6)
-- [ ] Scaffold Cobra root and subcommands (init, sources, reindex, health).
-- [ ] Implement presentation formatting (table/json) with structured logs.
-- [ ] Add CLI contract tests invoking fixture backend responses.
+- [X] Scaffold Cobra root and subcommands (init, sources, reindex, health).
+- [X] Implement presentation formatting (table/json) with structured logs.
+- [X] Add CLI contract tests invoking fixture backend responses.
 
 ## Milestone 7 – `ragman` CLI (Plan step 7)
 - [X] Implement query command with confidence + citation rendering.

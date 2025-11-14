@@ -2,6 +2,7 @@
 
 import datetime as dt
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -84,6 +85,32 @@ class _RecordingChunkBuilder:
             self.generated_ids.append(document.document_id)
             documents.append(document)
         return documents
+
+
+class _AuditRecorder:
+    def __init__(self) -> None:
+        self.entries: list[dict[str, Any]] = []
+
+    def log_mutation(
+        self,
+        *,
+        action: str,
+        alias: str,
+        status: str,
+        language: str,
+        trace_id: str | None = None,
+        details: str | None = None,
+    ) -> None:
+        self.entries.append(
+            {
+                "action": action,
+                "alias": alias,
+                "status": status,
+                "language": language,
+                "trace_id": trace_id,
+                "details": details,
+            }
+        )
 
 
 def test_catalog_service_adds_source_and_persists_checksum(tmp_path: Path) -> None:
@@ -303,6 +330,40 @@ def test_catalog_service_update_without_location_preserves_checksum() -> None:
     assert not hasher.paths, "checksum recalculation should not occur"
     assert not chunk_builder.calls, "chunk builder should not run without new location"
 
+
+def test_catalog_service_emits_audit_entries_for_mutations(tmp_path: Path) -> None:
+    """Ensure catalog mutations emit audit entries with language metadata."""
+
+    module = _import_source_catalog_module()
+    storage = _RecordingStorage()
+    hasher = _DeterministicHasher("abc123")
+    chunk_builder = _RecordingChunkBuilder(ingestion_ports.SourceType.KIWIX)
+    audit = _AuditRecorder()
+    def clock(): _utc(2025, 1, 5, 7, 45)
+    service = module.SourceCatalogService(
+        storage=storage,
+        checksum_calculator=hasher,
+        chunk_builder=chunk_builder,
+        clock=clock,
+        audit_logger=audit,
+    )
+
+    artifact = tmp_path / "linuxwiki_fr.zim"
+    artifact.write_bytes(b"content")
+    request = ingestion_ports.SourceCreateRequest(
+        type=ingestion_ports.SourceType.KIWIX,
+        location=str(artifact),
+        language="fr",
+        notes=None,
+    )
+
+    service.create_source(request=request)
+    assert audit.entries, "expected audit entry for source creation"
+    saved_alias = storage.saved_catalogs[-1].sources[-1].alias
+    entry = audit.entries[-1]
+    assert entry["action"] == "source_add"
+    assert entry["alias"] == saved_alias
+    assert entry["language"] == "fr"
 
 def test_catalog_service_remove_source_marks_quarantine() -> None:
     """Removal MUST mark the source as quarantined and drop snapshots."""

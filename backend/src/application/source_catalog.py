@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 from typing import Protocol
 
+from adapters.storage.audit_log import AuditLogger
 from adapters.weaviate.client import Document
 from ports import ingestion as ingestion_ports
 from telemetry import trace_call, trace_section
@@ -128,11 +129,13 @@ class SourceCatalogService:
         checksum_calculator: ChecksumCalculator,
         chunk_builder: ChunkBuilder,
         clock: Callable[[], dt.datetime] | None = None,
+        audit_logger: AuditLogger | None = None,
     ) -> None:
         self._storage = storage
         self._checksum_calculator = checksum_calculator
         self._chunk_builder = chunk_builder
         self._clock = clock or _default_clock
+        self._audit = audit_logger
 
     @trace_call
     def list_sources(self) -> ingestion_ports.SourceCatalog:
@@ -227,6 +230,13 @@ class SourceCatalogService:
                 checksum=checksum,
                 document_count=len(documents),
             )
+
+        self._log_mutation(
+            action="source_add",
+            alias=alias,
+            language=record.language,
+            details=f"location={record.location}",
+        )
 
         return ingestion_ports.SourceMutationResult(source=record, job=None)
 
@@ -345,6 +355,25 @@ class SourceCatalogService:
                     document_count=len(documents),
                 )
 
+        updated_fields = []
+        if request.location:
+            updated_fields.append("location")
+        if request.language is not None:
+            updated_fields.append("language")
+        if request.status is not None:
+            updated_fields.append("status")
+        if request.notes is not None:
+            updated_fields.append("notes")
+        detail_value = (
+            f"updated_fields={','.join(updated_fields)}" if updated_fields else None
+        )
+        self._log_mutation(
+            action="source_update",
+            alias=alias,
+            language=updated_record.language,
+            details=detail_value,
+        )
+
         return ingestion_ports.SourceMutationResult(source=updated_record, job=None)
 
     @trace_call
@@ -408,7 +437,37 @@ class SourceCatalogService:
         )
         self._storage.save(updated_catalog)
 
+        removal_detail = f"reason={reason}" if reason else "reason=unspecified"
+        self._log_mutation(
+            action="source_remove",
+            alias=alias,
+            language=updated_record.language,
+            details=removal_detail,
+        )
+
         return ingestion_ports.SourceMutationResult(source=updated_record, job=None)
+
+
+    def _log_mutation(
+        self,
+        *,
+        action: str,
+        alias: str,
+        language: str,
+        details: str | None = None,
+    ) -> None:
+        """Emit an audit entry when the logger dependency is configured."""
+
+        if self._audit is None:
+            return
+
+        self._audit.log_mutation(
+            action=action,
+            alias=alias,
+            status="success",
+            language=language,
+            details=details,
+        )
 
 
 __all__ = ["SourceCatalogService", "CatalogStorage", "ChecksumCalculator", "ChunkBuilder"]

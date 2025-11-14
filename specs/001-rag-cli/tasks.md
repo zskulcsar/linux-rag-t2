@@ -135,8 +135,8 @@
 - [X] T057 [US2] Implement source removal and quarantine flows in `backend/src/application/source_catalog.py`.
 - [X] T058 [US2] Implement `ragadmin` sources spf13/cobra commands with table/JSON output in `cli/ragadmin/cmd/sources.go`, writing audit log entries as JSON lines.
 - [X] T059 [US2] Implement `ragadmin reindex` spf13/cobra command with progress feedback (stage plus optional percent) and timing output in `cli/ragadmin/cmd/reindex.go`.
-- [ ] T060 [US2] Wire audit logging and language validation for mutations in `backend/src/adapters/storage/audit_log.py`.
-- [ ] T061 [US2] Record Milestone 6 completion in `specs/001-rag-cli/milestones.md` after CRUD tests pass.
+- [X] T060 [US2] Wire audit logging and language validation for mutations in `backend/src/adapters/storage/audit_log.py`.
+- [X] T061 [US2] Record Milestone 6 completion in `specs/001-rag-cli/milestones.md` after CRUD tests pass.
 
 ---
 

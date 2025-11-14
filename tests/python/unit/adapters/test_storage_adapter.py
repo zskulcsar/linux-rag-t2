@@ -132,6 +132,51 @@ def test_audit_logger_appends_json_lines(
         assert "trace_id" in payload
 
 
+def test_audit_logger_adds_language_warning_for_non_english_mutations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ensure audit logger annotates non-English mutations with warnings."""
+
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
+    logger = AuditLogger()
+
+    logger.log_mutation(
+        action="source_add",
+        alias="linuxwiki",
+        status="success",
+        language="fr",
+        trace_id="trace-789",
+        details="location=/data/linuxwiki_fr.zim",
+    )
+
+    log_path = tmp_path / "xdg-data" / "ragcli" / "audit.log"
+    contents = log_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(contents) == 1
+    entry = json.loads(contents[0])
+    assert entry["action"] == "source_add"
+    assert entry["target"] == "linuxwiki"
+    assert entry["language"] == "fr"
+    assert entry["warning"] == "non_english_language:fr"
+    assert entry["status"] == "success"
+
+
+def test_audit_logger_rejects_malformed_language_codes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ensure invalid language codes are rejected during mutation logging."""
+
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
+    logger = AuditLogger()
+
+    with pytest.raises(ValueError):
+        logger.log_mutation(
+            action="source_add",
+            alias="linuxwiki",
+            status="success",
+            language="123-invalid",
+        )
+
+
 def test_catalog_storage_returns_empty_when_missing_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
