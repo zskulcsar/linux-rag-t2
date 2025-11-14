@@ -3,8 +3,6 @@
 import datetime as dt
 from pathlib import Path
 
-import pytest
-
 from adapters.weaviate.client import Document
 from ports import ingestion as ingestion_ports
 
@@ -93,7 +91,7 @@ def test_catalog_service_adds_source_and_persists_checksum(tmp_path: Path) -> No
     storage = _RecordingStorage()
     hasher = _DeterministicHasher("abc123deadbeefabc123deadbeefabc123deadbeefabc123deadbeef")
     chunk_builder = _RecordingChunkBuilder(ingestion_ports.SourceType.KIWIX)
-    clock = lambda: _utc(2025, 1, 2, 9, 0)
+    def clock(): _utc(2025, 1, 2, 9, 0)
     service = module.SourceCatalogService(
         storage=storage,
         checksum_calculator=hasher,
@@ -187,3 +185,118 @@ def test_catalog_service_appends_suffix_for_alias_collisions(tmp_path: Path) -> 
         f"linuxwiki-2:{result.source.checksum}:1",
     ]
     assert result.source.size_bytes == artifact.stat().st_size
+
+
+def test_catalog_service_updates_metadata_and_replans_chunks(tmp_path: Path) -> None:
+    """Updates MUST refresh checksums, size, and snapshots when location changes."""
+
+    existing_record = ingestion_ports.SourceRecord(
+        alias="linuxwiki",
+        type=ingestion_ports.SourceType.KIWIX,
+        location="/data/linuxwiki_v1.zim",
+        language="en",
+        size_bytes=1024,
+        last_updated=_utc(2025, 1, 3, 9, 0),
+        status=ingestion_ports.SourceStatus.QUARANTINED,
+        checksum="oldsum",
+        notes="Corrupted archive",
+    )
+    existing_catalog = ingestion_ports.SourceCatalog(
+        version=5,
+        updated_at=_utc(2025, 1, 3, 9, 0),
+        sources=[existing_record],
+        snapshots=[ingestion_ports.SourceSnapshot(alias="linuxwiki", checksum="oldsum")],
+    )
+
+    storage = _RecordingStorage(initial_catalog=existing_catalog)
+    hasher = _DeterministicHasher("newchecksumabcd")
+    chunk_builder = _RecordingChunkBuilder(ingestion_ports.SourceType.KIWIX)
+    def clock(): _utc(2025, 1, 4, 10, 30)
+    service = _import_source_catalog_module().SourceCatalogService(
+        storage=storage,
+        checksum_calculator=hasher,
+        chunk_builder=chunk_builder,
+        clock=clock,
+    )
+
+    artifact = tmp_path / "linuxwiki_v2.zim"
+    artifact.write_bytes(b"linuxwiki v2 payload")
+
+    result = service.update_source(
+        "linuxwiki",
+        ingestion_ports.SourceUpdateRequest(
+            location=str(artifact),
+            language="en",
+            status=ingestion_ports.SourceStatus.ACTIVE,
+            notes="Remediated archive",
+        ),
+    )
+
+    assert result.source.location == str(artifact)
+    assert result.source.status is ingestion_ports.SourceStatus.ACTIVE
+    assert result.source.checksum == "newchecksumabcd"
+    assert result.source.size_bytes == artifact.stat().st_size
+    assert result.source.last_updated == clock()
+    assert result.source.notes == "Remediated archive"
+    assert storage.saved_catalogs, "expected catalog save after update"
+    saved_catalog = storage.saved_catalogs[-1]
+    assert saved_catalog.version == existing_catalog.version + 1
+    snapshot = next(
+        snap for snap in saved_catalog.snapshots if snap.alias == "linuxwiki"
+    )
+    assert snapshot.checksum == "newchecksumabcd"
+    assert chunk_builder.calls and chunk_builder.calls[-1][0] == "linuxwiki"
+    assert chunk_builder.generated_ids == [
+        "linuxwiki:newchecksumabcd:0",
+        "linuxwiki:newchecksumabcd:1",
+    ]
+
+
+def test_catalog_service_update_without_location_preserves_checksum() -> None:
+    """Metadata-only updates MUST avoid recomputing checksums or chunk plans."""
+
+    existing_record = ingestion_ports.SourceRecord(
+        alias="man-pages",
+        type=ingestion_ports.SourceType.MAN,
+        location="/usr/share/man",
+        language="en",
+        size_bytes=2048,
+        last_updated=_utc(2025, 1, 2, 12, 0),
+        status=ingestion_ports.SourceStatus.ACTIVE,
+        checksum="mansum",
+        notes="baseline",
+    )
+    existing_catalog = ingestion_ports.SourceCatalog(
+        version=7,
+        updated_at=_utc(2025, 1, 2, 12, 0),
+        sources=[existing_record],
+        snapshots=[ingestion_ports.SourceSnapshot(alias="man-pages", checksum="mansum")],
+    )
+
+    storage = _RecordingStorage(initial_catalog=existing_catalog)
+    hasher = _DeterministicHasher("mansum-updated")
+    chunk_builder = _RecordingChunkBuilder(ingestion_ports.SourceType.MAN)
+    def clock(): _utc(2025, 1, 5, 8, 45)
+    service = _import_source_catalog_module().SourceCatalogService(
+        storage=storage,
+        checksum_calculator=hasher,
+        chunk_builder=chunk_builder,
+        clock=clock,
+    )
+
+    result = service.update_source(
+        "man-pages",
+        ingestion_ports.SourceUpdateRequest(
+            language="en",
+            status=ingestion_ports.SourceStatus.QUARANTINED,
+            notes="Path missing on disk",
+        ),
+    )
+
+    assert result.source.location == existing_record.location
+    assert result.source.checksum == "mansum"
+    assert result.source.size_bytes == existing_record.size_bytes
+    assert result.source.status is ingestion_ports.SourceStatus.QUARANTINED
+    assert result.source.notes == "Path missing on disk"
+    assert not hasher.paths, "checksum recalculation should not occur"
+    assert not chunk_builder.calls, "chunk builder should not run without new location"

@@ -230,5 +230,122 @@ class SourceCatalogService:
 
         return ingestion_ports.SourceMutationResult(source=record, job=None)
 
+    @trace_call
+    def update_source(
+        self, alias: str, request: ingestion_ports.SourceUpdateRequest
+    ) -> ingestion_ports.SourceMutationResult:
+        """Update metadata for an existing knowledge source.
+
+        Args:
+            alias: Unique alias identifying the source to update.
+            request: Mutation payload describing updated fields. Omitted fields
+                retain their current values.
+
+        Returns:
+            SourceMutationResult containing the refreshed :class:`SourceRecord`.
+
+        Raises:
+            ValueError: If the alias does not exist in the catalog.
+
+        Example:
+            >>> service.update_source(
+            ...     \"linuxwiki\",
+            ...     ingestion_ports.SourceUpdateRequest(notes=\"Restored\"),
+            ... ).source.notes
+            'Restored'
+        """
+
+        catalog = self._storage.load()
+        try:
+            current = next(record for record in catalog.sources if record.alias == alias)
+        except StopIteration as exc:  # pragma: no cover - defensive guard
+            raise ValueError(f"unknown source alias: {alias}") from exc
+
+        now = self._clock()
+
+        location_path: Path | None = None
+        new_checksum = current.checksum
+        size_bytes = current.size_bytes
+        location_value = current.location
+
+        if request.location:
+            location_path = _resolve_location(request.location)
+            new_checksum = self._checksum_calculator(location_path)
+            size_bytes = _stat_size(location_path)
+            location_value = str(location_path)
+
+        language_value = (
+            _default_language(request.language)
+            if request.language is not None
+            else current.language
+        )
+        status_value = request.status if request.status is not None else current.status
+        notes_value = request.notes if request.notes is not None else current.notes
+
+        updated_record = ingestion_ports.SourceRecord(
+            alias=current.alias,
+            type=current.type,
+            location=location_value,
+            language=language_value,
+            size_bytes=size_bytes,
+            last_updated=now,
+            status=status_value,
+            checksum=new_checksum,
+            notes=notes_value,
+        )
+
+        updated_sources = []
+        for record in catalog.sources:
+            if record.alias == alias:
+                updated_sources.append(updated_record)
+            else:
+                updated_sources.append(record)
+        updated_sources.sort(key=lambda record: record.alias)
+
+        updated_snapshots: list[ingestion_ports.SourceSnapshot] = []
+        replaced = False
+        snapshot_checksum = new_checksum or current.checksum or ""
+        for snapshot in catalog.snapshots:
+            if snapshot.alias == alias:
+                updated_snapshots.append(
+                    ingestion_ports.SourceSnapshot(
+                        alias=alias, checksum=snapshot_checksum
+                    )
+                )
+                replaced = True
+            else:
+                updated_snapshots.append(snapshot)
+        if not replaced:
+            updated_snapshots.append(
+                ingestion_ports.SourceSnapshot(
+                    alias=alias, checksum=snapshot_checksum
+                )
+            )
+
+        updated_catalog = ingestion_ports.SourceCatalog(
+            version=catalog.version + 1,
+            updated_at=now,
+            sources=updated_sources,
+            snapshots=updated_snapshots,
+        )
+        self._storage.save(updated_catalog)
+
+        if location_path is not None:
+            with trace_section(
+                "application.catalog.chunk_plan",
+                metadata={"alias": alias},
+            ) as section:
+                documents = self._chunk_builder(
+                    alias=alias, checksum=new_checksum or "", location=location_path
+                )
+                section.debug(
+                    "chunks_planned",
+                    alias=alias,
+                    checksum=new_checksum,
+                    document_count=len(documents),
+                )
+
+        return ingestion_ports.SourceMutationResult(source=updated_record, job=None)
+
 
 __all__ = ["SourceCatalogService", "CatalogStorage", "ChecksumCalculator", "ChunkBuilder"]
