@@ -178,7 +178,7 @@ install-go: ## Install compiled Go binaries. Location can be set with `DESTDIR=/
 install-py: venv ## Install compiled Python binaries
         
 ## Documentation
-docs: docs-py ## Build project documentation site using `mkdocs`
+docs: ## Build project documentation site using `mkdocs`
 	@if [ -f "$(MKDOCS_CONFIG)" ]; then \
 		ln -sf $(CURDIR)/specs $(CURDIR)/docs; \
 		mkdir -p $(MKDOCS_SITE_DIR); \
@@ -186,9 +186,6 @@ docs: docs-py ## Build project documentation site using `mkdocs`
 	else \
 		echo "Skipping documentation build; $(MKDOCS_CONFIG) not found."; \
 	fi
-
-docs-py: venv ## Generate Markdown documentation for Python code.
-	@uv run python scripts/docs/generate_backend_docs.py;
 
 docs-serve: ## Serve project documentation locally for preview using `mkdocs`
 	@uv run mkdocs serve --config-file $(MKDOCS_CONFIG);

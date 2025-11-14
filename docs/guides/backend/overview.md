@@ -1,67 +1,45 @@
-"""Generate backend documentation Markdown consumed by MkDocs."""
-
-from __future__ import annotations
-
-import textwrap
-from pathlib import Path
-
-import tomllib
-
-
-ROOT = Path(__file__).resolve().parents[2]
-DOCS_DIR = ROOT / "docs" / "guides" / "backend"
-DOCS_DIR.mkdir(parents=True, exist_ok=True)
-
-PYPROJECT = ROOT / "backend" / "pyproject.toml"
-
-project_meta = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))
-
-project = project_meta.get("project", {})
-dependencies = project.get("dependencies", [])
-dev_deps = project_meta.get("dependency-groups", {}).get("dev", [])
-
-dependency_table = "\n".join(
-    f"| `{dep}` |" for dep in sorted(dependencies)
-) or "| _None declared_ |"
-
-dev_dependency_table = "\n".join(
-    f"| `{dep}` |" for dep in sorted(dev_deps)
-) or "| _None declared_ |"
-
-data_model_path = ROOT / "specs" / "001-rag-cli" / "data-model.md"
-contracts_path = ROOT / "specs" / "001-rag-cli" / "contracts" / "backend-openapi.yaml"
-
-## TODO: source this text from a markdown template instead of embedding here
-content = f"""# Backend Service Overview
+# Backend Service Overview
 
 The Python backend (`backend/src`) exposes the Unix-socket transport
 consumed by the Go CLIs and orchestrates retrieval, ingestion, and health
 evaluation workflows. It adheres to the hexagonal architecture decisions
 captured in `specs/001-rag-cli/plan.md` and the data contracts codified in
-`{contracts_path.relative_to(ROOT)}`.
+`specs/001-rag-cli/contracts/backend-openapi.yaml`.
 
 ## Runtime Metadata
 
-- **Name**: `{project.get('name', 'rag-backend')}`
-- **Version**: `{project.get('version', '0.0.0')}`
-- **Python Requirement**: `{project.get('requires-python', '>=3.12')}`
+- **Name**: `rag-backend`
+- **Version**: `0.1.0`
+- **Python Requirement**: `>=3.12`
 
 ## Core Dependencies
 
 | Package |
 |---------|
-{dependency_table}
+| `arize-phoenix` |
+| `pyyaml>=6.0` |
+| `structlog` |
+| `weaviate-client` |
 
 ## Development Dependencies
 
 | Package |
 |---------|
-{dev_dependency_table}
+| `build>=1.2.2` |
+| `mkdocs-autoapi>=0.4.1` |
+| `mkdocs-material>=9.6.23` |
+| `mkdocs>=1.6.1` |
+| `mkdocstrings-python>=1.19.0` |
+| `mypy>=1.18.2` |
+| `pytest-asyncio>=0.23` |
+| `pytest>=8.0` |
+| `ruff>=0.14.4` |
+| `types-pyyaml>=6.0.12.20250915` |
 
 ## Key Documents
 
-- **Data Model**: `{data_model_path.relative_to(ROOT)}`
-- **Transport Contract**: `{contracts_path.relative_to(ROOT)}`
+- **Data Model**: `specs/001-rag-cli/data-model.md`
+- **Transport Contract**: `specs/001-rag-cli/contracts/backend-openapi.yaml`
 - **Research Notes**: `specs/001-rag-cli/research.md`
 - **Tasks & Milestones**: `specs/001-rag-cli/tasks.md`
 
@@ -83,11 +61,13 @@ backend/src/
 
 ## Testing Strategy
 
-- `uv run pytest tests/python/unit` for domain and port validation.
-- `uv run pytest tests/python/integration` for adapter behaviour with mocks.
-- `uv run pytest tests/python/contract` to ensure transport compliance.
-- `uv run pytest tests/python/performance` to ensure performance compliance.
-- `PYTHONPATH=backend/src uv run --directory backend mypy backend/src` under strict settings (Constitution I).
+Use the Make targets defined in the repo to exercise each layer:
+
+- `make test-unit-py` – Python unit suite (domain, ports, telemetry, launcher helpers) with coverage.
+- `make test-contr-py` – Python contract tests validating the Unix-socket transport handlers.
+- `make test-int-py` – Python integration suite for adapters/offline guard workflows (requires local Weaviate/Ollama mocks).
+- `make test-perf-py` – Python performance harness for ingestion/query SLAs (optional; heavier dependencies).
+- `make lint-py` / `make tc-py` – Ruff formatting/linting and strict mypy (`PYTHONPATH=backend/src`) per Constitution I.
 
 ## Observability
 
@@ -101,7 +81,7 @@ log entries and Phoenix traces.
 - XDG-compliant directories determine config/data/runtime socket paths.
 - Launch the backend with `PYTHONPATH=backend/src uv run --directory backend python -m main` (or `make run-be`)
   and provide the required flags:
-  - `--socket` (Unix socket path, usually `${{XDG_RUNTIME_DIR:-/tmp}}/ragcli/backend.sock`)
+  - `--socket` (Unix socket path, usually `${XDG_RUNTIME_DIR:-/tmp}/ragcli/backend.sock`)
   - `--weaviate-url` (HTTP endpoint for the local Weaviate instance)
   - `--ollama-url` (HTTP endpoint for the Ollama runtime)
   - `--phoenix-url` (HTTP endpoint for the Phoenix UI)
@@ -118,7 +98,3 @@ Phase 2 tasks (T013–T025). Future documentation updates should capture:
 1. Concrete module APIs once the domain and ports are implemented.
 2. Example transport payloads for `/v1/query`, `/v1/sources`, and health routes.
 3. Observability dashboards and Phoenix workflow instructions.
-"""
-
-target = DOCS_DIR / "overview.md"
-target.write_text(textwrap.dedent(content), encoding="utf-8")
