@@ -13,6 +13,10 @@ import (
 const (
 	sourcesPath      = "/v1/sources"
 	indexReindexPath = "/v1/index/reindex"
+
+	statusOK                  = 200
+	statusCreated             = 201
+	statusAccepted            = 202
 )
 
 // SourceRecord mirrors catalog entries returned by the backend.
@@ -115,7 +119,7 @@ func (c *Client) ListSources(ctx context.Context, req SourceListRequest) (Source
 	if err != nil {
 		return SourceListResponse{}, err
 	}
-	if frame.Status != 200 {
+	if frame.Status != statusOK {
 		return SourceListResponse{}, fmt.Errorf("ipc: list sources unexpected status %d", frame.Status)
 	}
 	return decodeSourceListResponse(frame.Body)
@@ -141,7 +145,7 @@ func (c *Client) CreateSource(ctx context.Context, req SourceCreateRequest) (Sou
 	if err != nil {
 		return SourceMutationResponse{}, err
 	}
-	if frame.Status != 201 {
+	if frame.Status != statusCreated {
 		return SourceMutationResponse{}, fmt.Errorf("ipc: create source unexpected status %d", frame.Status)
 	}
 	return decodeSourceMutationResponse(frame.Body)
@@ -162,7 +166,7 @@ func (c *Client) UpdateSource(ctx context.Context, alias string, req SourceUpdat
 	if err != nil {
 		return SourceMutationResponse{}, err
 	}
-	if frame.Status != 200 {
+	if frame.Status != statusOK {
 		return SourceMutationResponse{}, fmt.Errorf("ipc: update source unexpected status %d", frame.Status)
 	}
 	return decodeSourceMutationResponse(frame.Body)
@@ -187,7 +191,7 @@ func (c *Client) RemoveSource(ctx context.Context, alias string, req SourceRemov
 	if err != nil {
 		return SourceMutationResponse{}, err
 	}
-	if frame.Status != 202 {
+	if frame.Status != statusAccepted {
 		return SourceMutationResponse{}, fmt.Errorf("ipc: remove source unexpected status %d", frame.Status)
 	}
 	return decodeSourceMutationResponse(frame.Body)
