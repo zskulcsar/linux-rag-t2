@@ -75,6 +75,7 @@ func newRootCommand() *cobra.Command {
 
 	cmd.SetContext(context.Background())
 	cmd.AddCommand(newSourcesCommand())
+	cmd.AddCommand(newReindexCommand())
 	return cmd
 }
 

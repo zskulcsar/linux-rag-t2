@@ -10,7 +10,10 @@ import (
 	"strings"
 )
 
-const sourcesPath = "/v1/sources"
+const (
+	sourcesPath      = "/v1/sources"
+	indexReindexPath = "/v1/index/reindex"
+)
 
 // SourceRecord mirrors catalog entries returned by the backend.
 type SourceRecord struct {
@@ -27,14 +30,17 @@ type SourceRecord struct {
 
 // IngestionJob represents ingestion metadata returned from mutations.
 type IngestionJob struct {
-	JobID              string `json:"job_id"`
-	SourceAlias        string `json:"source_alias,omitempty"`
-	Status             string `json:"status"`
-	RequestedAt        string `json:"requested_at"`
-	StartedAt          string `json:"started_at,omitempty"`
-	CompletedAt        string `json:"completed_at,omitempty"`
-	DocumentsProcessed int    `json:"documents_processed,omitempty"`
-	Trigger            string `json:"trigger"`
+	JobID              string   `json:"job_id"`
+	SourceAlias        string   `json:"source_alias,omitempty"`
+	Status             string   `json:"status"`
+	RequestedAt        string   `json:"requested_at"`
+	StartedAt          string   `json:"started_at,omitempty"`
+	CompletedAt        string   `json:"completed_at,omitempty"`
+	DocumentsProcessed int      `json:"documents_processed,omitempty"`
+	Stage              string   `json:"stage"`
+	PercentComplete    *float64 `json:"percent_complete"`
+	ErrorMessage       string   `json:"error_message,omitempty"`
+	Trigger            string   `json:"trigger"`
 }
 
 // QuarantineInfo describes quarantine state returned by removal operations.
@@ -75,6 +81,12 @@ type SourceUpdateRequest struct {
 type SourceRemoveRequest struct {
 	TraceID string `json:"trace_id"`
 	Reason  string `json:"reason"`
+}
+
+// ReindexRequest triggers an index rebuild operation.
+type ReindexRequest struct {
+	TraceID string `json:"trace_id"`
+	Trigger string `json:"trigger"`
 }
 
 // SourceListResponse captures catalog listing payloads.
@@ -181,6 +193,28 @@ func (c *Client) RemoveSource(ctx context.Context, alias string, req SourceRemov
 	return decodeSourceMutationResponse(frame.Body)
 }
 
+// StartReindex triggers an index rebuild and returns the job metadata.
+func (c *Client) StartReindex(ctx context.Context, req ReindexRequest) (IngestionJob, error) {
+	req.TraceID = ensureTraceID(req.TraceID)
+	trigger := strings.TrimSpace(req.Trigger)
+	if trigger == "" {
+		trigger = "manual"
+	}
+	req.Trigger = trigger
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	frame, err := c.call(ctx, indexReindexPath, req)
+	if err != nil {
+		return IngestionJob{}, err
+	}
+	if frame.Status != 202 {
+		return IngestionJob{}, fmt.Errorf("ipc: start reindex unexpected status %d", frame.Status)
+	}
+	return decodeIngestionJob(frame.Body)
+}
+
 func decodeSourceListResponse(payload []byte) (SourceListResponse, error) {
 	var resp SourceListResponse
 	if err := json.Unmarshal(payload, &resp); err != nil {
@@ -198,6 +232,16 @@ func decodeSourceMutationResponse(payload []byte) (SourceMutationResponse, error
 		return SourceMutationResponse{}, fmt.Errorf("ipc: decode source mutation: %w", err)
 	}
 	return resp, nil
+}
+
+func decodeIngestionJob(payload []byte) (IngestionJob, error) {
+	var resp struct {
+		Job IngestionJob `json:"job"`
+	}
+	if err := json.Unmarshal(payload, &resp); err != nil {
+		return IngestionJob{}, fmt.Errorf("ipc: decode ingestion job: %w", err)
+	}
+	return resp.Job, nil
 }
 
 func buildSourceAliasPath(alias string) string {
