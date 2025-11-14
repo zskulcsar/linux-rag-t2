@@ -130,7 +130,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T055 [US2] Implement source catalog service for list/add flows with validation in `backend/src/application/source_catalog.py`.
+- [X] T055 [US2] Implement source catalog service for list/add flows with validation in `backend/src/application/source_catalog.py`.
 - [ ] T056 [US2] Implement source update workflows enforcing metadata validation in `backend/src/application/source_catalog.py`.
 - [ ] T057 [US2] Implement source removal and quarantine flows in `backend/src/application/source_catalog.py`.
 - [ ] T058 [US2] Implement `ragadmin` sources spf13/cobra commands with table/JSON output in `cli/ragadmin/cmd/sources.go`, writing audit log entries as JSON lines.

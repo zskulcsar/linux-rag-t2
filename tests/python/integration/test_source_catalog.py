@@ -101,9 +101,11 @@ def test_catalog_service_adds_source_and_persists_checksum(tmp_path: Path) -> No
         clock=clock,
     )
 
+    artifact = tmp_path / "linuxwiki_en.zim"
+    artifact.write_bytes(b"offline-linuxwiki")
     request = ingestion_ports.SourceCreateRequest(
         type=ingestion_ports.SourceType.KIWIX,
-        location=str(tmp_path / "linuxwiki_en.zim"),
+        location=str(artifact),
         language="en",
         notes="Offline Linux wiki snapshot",
     )
@@ -118,7 +120,8 @@ def test_catalog_service_adds_source_and_persists_checksum(tmp_path: Path) -> No
     assert saved_source.checksum == "abc123deadbeefabc123deadbeefabc123deadbeefabc123deadbeef"
     assert catalog.snapshots[-1].checksum == saved_source.checksum
     assert saved_source.status is ingestion_ports.SourceStatus.PENDING_VALIDATION
-    assert hasher.paths and Path(hasher.paths[-1]).name == "linuxwiki_en.zim"
+    assert saved_source.size_bytes == artifact.stat().st_size
+    assert hasher.paths and hasher.paths[-1] == artifact
 
     listed = service.list_sources()
     assert any(src.alias == saved_source.alias for src in listed.sources)
@@ -164,9 +167,11 @@ def test_catalog_service_appends_suffix_for_alias_collisions(tmp_path: Path) -> 
         clock=lambda: _utc(2025, 1, 4, 7, 45),
     )
 
+    artifact = tmp_path / "linuxwiki.zim"
+    artifact.write_bytes(b"linuxwiki-v2")
     request = ingestion_ports.SourceCreateRequest(
         type=ingestion_ports.SourceType.KIWIX,
-        location=str(tmp_path / "linuxwiki.zim"),
+        location=str(artifact),
         language="en",
     )
 
@@ -181,3 +186,4 @@ def test_catalog_service_appends_suffix_for_alias_collisions(tmp_path: Path) -> 
         f"linuxwiki-2:{result.source.checksum}:0",
         f"linuxwiki-2:{result.source.checksum}:1",
     ]
+    assert result.source.size_bytes == artifact.stat().st_size
