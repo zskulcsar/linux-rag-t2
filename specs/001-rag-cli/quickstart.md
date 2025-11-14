@@ -89,9 +89,9 @@
 
 ## Testing & Validation
 1. Run backend unit tests with coverage:
-   ```bash
-   uv run pytest --cov=services/rag_backend
-   ```
+  ```bash
+  uv run pytest --cov=backend/src
+  ```
 2. Run Go tests (CLIs and shared packages):
    ```bash
    go test ./cli/...

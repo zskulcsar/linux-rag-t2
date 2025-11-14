@@ -23,7 +23,7 @@ Deliver two standalone Go CLIs (`ragman`, `ragadmin`) that communicate with a Py
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- Monorepo layout: Establish `cli/ragman` and `cli/ragadmin` Go modules plus `services/rag_backend` Python package so each artifact builds/tests independently and respects monorepo boundaries (aligned with `specs/001-rag-cli/spec.md` – Project Structure).
+- Monorepo layout: Establish `cli/ragman` and `cli/ragadmin` Go modules plus the `backend/src` Python package so each artifact builds/tests independently and respects monorepo boundaries (aligned with `specs/001-rag-cli/spec.md` – Project Structure).
 - Hexagonal boundaries: Define domain ports for query execution, ingestion, health reporting, and admin workflows; CLIs remain adapters over the Unix-socket transport while backend adapters encapsulate Ollama/Weaviate/Phoenix integrations (`research.md` – CLI Architecture & Backend Data).
 - File sizing & focus: Cobra commands live in one file per command with shared helpers under `cli/internal`; Python service splits domain, ports, and adapters into focused modules, adding refactors if files exceed agreed complexity (`plan.md` – Project Structure tree).
 - Simplicity (KISS): Stick with newline-delimited JSON over Unix sockets and avoid introducing REST/gRPC layers or orchestration tooling beyond uv, Ollama, and Weaviate (`research.md` – IPC Protocol & Transport); data model trimmed to remove speculative fields (see `data-model.md`).
@@ -69,8 +69,10 @@ cli/
 └── shared/
     └── ipc/                 # Socket client, framing, logging helpers
 
-services/
-└── rag_backend/
+backend/
+├── pyproject.toml           # uv-managed backend package metadata
+├── uv.lock
+└── src/
     ├── domain/              # Core business logic (query, catalog, health)
     ├── ports/               # Interfaces for CLI transport, Ollama, Weaviate, Phoenix
     ├── adapters/
@@ -100,7 +102,7 @@ docs/
         └── ragadmin.md
 ```
 
-**Structure Decision**: Adopt dedicated Go CLI modules under `cli/`, a Python service under `services/rag_backend/`, mirrored test directories per language, and supporting documentation under `docs/` to preserve independent builds per module (see tree above and references in `research.md` – Filesystem & Deployment Layout).
+**Structure Decision**: Adopt dedicated Go CLI modules under `cli/`, a Python service under `backend/src/`, mirrored test directories per language, and supporting documentation under `docs/` to preserve independent builds per module (see tree above and references in `research.md` – Filesystem & Deployment Layout).
 
 ## Core Implementation Plan
 
@@ -108,7 +110,7 @@ docs/
    • Owner: Backend engineer (platform)
    • Effort: 3 engineering days (includes contract test harness)
    • Inputs: Spec FR-001/FR-005, `contracts/backend-openapi.yaml`, `research.md` (IPC)
-2. **Model domain services and ports** – Implement core use cases (query orchestration, catalog management, health checks) in `services/rag_backend/domain/` with interfaces under `services/rag_backend/ports/`, aligning entities and state transitions with `specs/001-rag-cli/data-model.md`.
+2. **Model domain services and ports** – Implement core use cases (query orchestration, catalog management, health checks) in `backend/src/domain/` with interfaces under `backend/src/ports/`, aligning entities and state transitions with `specs/001-rag-cli/data-model.md`.
    • Owner: Backend engineer (domain)
    • Effort: 4 engineering days
    • Inputs: `data-model.md`, Spec Functional Requirements FR-001–FR-011
@@ -120,7 +122,7 @@ docs/
    • Owner: Backend + Go engineers (shared)
    • Effort: 2 engineering days
    • Inputs: Spec FR-010, Constitution V, `research.md` (Filesystems & Deployment Layout)
-5. **Expose backend transport API** – Implement the Unix socket adapter in `services/rag_backend/adapters/transport/` so each port maps to the endpoints defined in `contracts/backend-openapi.yaml`, including error semantics for stale indexes (FR-007), structured `summary`/`steps`/`references` payloads, the fixed low-confidence guidance, and init verification (FR-005).
+5. **Expose backend transport API** – Implement the Unix socket adapter in `backend/src/adapters/transport/` so each port maps to the endpoints defined in `contracts/backend-openapi.yaml`, including error semantics for stale indexes (FR-007), structured `summary`/`steps`/`references` payloads, the fixed low-confidence guidance, and init verification (FR-005).
    • Owner: Backend engineer (platform)
    • Effort: 3 engineering days
    • Inputs: `contracts/backend-openapi.yaml`, Spec Edge Cases, `research.md` (External Dependency Verification)
@@ -147,12 +149,12 @@ docs/
 
 ## Verification & Handover Checklist
 
-- **Hexagonal boundaries** – Confirm all transport, storage, and LLM interactions occur via `services/rag_backend/ports/` and adapters; review unit tests for each port to ensure framework-free domain logic (Constitution IV).
+- **Hexagonal boundaries** – Confirm all transport, storage, and LLM interactions occur via `backend/src/ports/` and adapters; review unit tests for each port to ensure framework-free domain logic (Constitution IV).
 - **Observability readiness** – Validate Phoenix tracing/logging by running `uv run pytest tests/python/integration/test_observability.py` (to be authored) and checking structured JSON logs from both CLIs and backend, matching the mandated format (Constitution V). Cross-reference instrumentation decisions in `specs/001-rag-cli/research.md`.
 - **Configuration defaults** – Verify `${XDG_CONFIG_HOME}/ragcli/config.yaml` is generated with the agreed schema and overrides presenter and confidence defaults.
 - **Reference formatting** – Ensure backend responses populate `references` with the required `label` and optional `url`/`notes`, and confirm CLI renderers surface labels (with hyperlinks when URLs exist).
 - **Accuracy validation** – Execute the accuracy harness and confirm responses meet or exceed the ≥90 % threshold defined by SC-001.
-- **Testing gates** – Execute `uv run pytest --cov=services/rag_backend` and `go test ./...` with coverage thresholds ≥80% (service) and ≥90% (libraries) per Constitution III, ensuring contract tests cover `contracts/backend-openapi.yaml`.
+- **Testing gates** – Execute `uv run pytest --cov=backend/src` and `go test ./...` with coverage thresholds ≥80% (service) and ≥90% (libraries) per Constitution III, ensuring contract tests cover `contracts/backend-openapi.yaml`.
 - **Semantic chunking** – Confirm chunk size ≤2 000 tokens, SHA256 checksums, and `embeddinggemma:latest`/`gemma3:1b` usage via ingestion and adapter tests.
 - **Health thresholds** – Validate disk/index/service thresholds and exponential backoff logic through unit tests of the dedicated helper utilities.
 - **Performance validation** – Run latency and reindex performance suites (tasks T042, T054, T073) to confirm SC-001 and SC-002 thresholds.

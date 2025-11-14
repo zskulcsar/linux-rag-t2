@@ -18,12 +18,12 @@
 
 **Purpose**: Initialize repository structure, toolchains, and package scaffolding needed before any feature work.
 
-- [X] T001 Scaffold feature directories under `cli/ragman/`, `cli/ragadmin/`, `cli/shared/`, and `services/rag_backend/` per the approved project structure.
+- [X] T001 Scaffold feature directories under `cli/ragman/`, `cli/ragadmin/`, `cli/shared/`, and `backend/src/` per the approved project structure.
 - [X] T002 Initialize the Go workspace, linking CLI modules in `go.work` with relative paths to `cli/ragman`, `cli/ragadmin`, and `cli/shared`.
 - [X] T003 Create Go module metadata for `ragman` in `cli/ragman/go.mod` pinned to Go 1.23 with `github.com/spf13/cobra/v1` dependency.
 - [X] T004 Create Go module metadata for `ragadmin` in `cli/ragadmin/go.mod` pinned to Go 1.23 with `github.com/spf13/cobra/v1` dependency.
 - [X] T005 Create shared Go module metadata for IPC utilities in `cli/shared/go.mod` with replace directives for local CLI modules.
-- [X] T006 Bootstrap the Python backend package by adding `services/rag_backend/pyproject.toml` (uv managed) and `services/rag_backend/__init__.py`.
+- [X] T006 Bootstrap the Python backend package by adding `backend/pyproject.toml` (uv managed) and `backend/src/__init__.py`.
 - [X] T007 Create language-specific test scaffolding under `tests/go/{unit,contract}/` and `tests/python/{unit,integration,contract,performance}/`.
 
 ---
@@ -36,7 +36,7 @@
 
 - [X] T008 [P] Author failing transport handshake contract tests in `tests/python/contract/test_transport_server.py`.
 - [X] T009 [P] Author failing Go IPC framing tests for `/v1/query` in `tests/go/contract/transport_client_test.go`.
-- [X] T010 Implement newline-delimited JSON Unix socket server skeleton with correlation IDs in `services/rag_backend/adapters/transport/server.py`.
+- [X] T010 Implement newline-delimited JSON Unix socket server skeleton with correlation IDs in `backend/src/adapters/transport/server.py`.
 - [X] T011 Implement Go IPC client framing with validation and logging hooks in `cli/shared/ipc/client.go`.
 - [X] T012 Record Milestone 1 completion in `specs/001-rag-cli/milestones.md` once handshake tests pass.
 
@@ -44,8 +44,8 @@
 
 - [X] T013 [P] Add failing port interface tests for query, ingestion, and health flows in `tests/python/unit/ports/test_port_contracts.py`.
 - [X] T014 [P] Add failing domain service tests covering `KnowledgeSource`, `IngestionJob`, and `ContentIndexVersion` transitions in `tests/python/unit/domain/test_services.py`.
-- [X] T015 Define query, ingestion, and health port protocols in `services/rag_backend/ports/query.py`, `services/rag_backend/ports/ingestion.py`, and `services/rag_backend/ports/health.py`.
-- [X] T016 Implement domain services covering retrieval, catalog management, and health evaluation in `services/rag_backend/domain/query_service.py`, `services/rag_backend/domain/source_service.py`, and `services/rag_backend/domain/health_service.py`.
+- [X] T015 Define query, ingestion, and health port protocols in `backend/src/ports/query.py`, `backend/src/ports/ingestion.py`, and `backend/src/ports/health.py`.
+- [X] T016 Implement domain services covering retrieval, catalog management, and health evaluation in `backend/src/domain/query_service.py`, `backend/src/domain/source_service.py`, and `backend/src/domain/health_service.py`.
 - [X] T017 Record Milestone 2 completion in `specs/001-rag-cli/milestones.md` after port and domain tests succeed.
 
 ### Milestone 3 – Infrastructure adapters & resilience
@@ -54,18 +54,18 @@
 - [X] T019 [P] Add failing storage and audit logging tests safeguarding the `SourceCatalog` persistence in `tests/python/unit/adapters/test_storage_adapter.py`.
 - [X] T020 [P] Add failing ingestion resume tests simulating mid-run failures in `tests/python/integration/test_ingestion_recovery.py`.
 - [X] T021 [P] Add failing corrupt source quarantine tests in `tests/python/unit/adapters/test_source_quarantine.py`.
-- [X] T022 Implement Weaviate and Ollama adapters with latency metrics in `services/rag_backend/adapters/weaviate/client.py` and `services/rag_backend/adapters/ollama/client.py`. Implement the Weaviate adapter around a single `Document` class with deterministic IDs (`<alias>:<checksum>:<chunk_id>`), required alias/type/language filters, and structured logs/metrics for per-alias ingestion and query latency.
-- [X] T023 Implement catalog storage and audit logging adapters honoring XDG paths in `services/rag_backend/adapters/storage/catalog.py` and `services/rag_backend/adapters/storage/audit_log.py`.
-- [X] T024 Implement Phoenix/structlog instrumentation helpers in `services/rag_backend/adapters/observability/telemetry.py`.
-- [X] T025 Implement resumable ingestion recovery for interrupted jobs in `services/rag_backend/domain/job_recovery.py`.
-- [X] T026 Implement corrupt source quarantine workflow updates in `services/rag_backend/domain/source_service.py`.
+- [X] T022 Implement Weaviate and Ollama adapters with latency metrics in `backend/src/adapters/weaviate/client.py` and `backend/src/adapters/ollama/client.py`. Implement the Weaviate adapter around a single `Document` class with deterministic IDs (`<alias>:<checksum>:<chunk_id>`), required alias/type/language filters, and structured logs/metrics for per-alias ingestion and query latency.
+- [X] T023 Implement catalog storage and audit logging adapters honoring XDG paths in `backend/src/adapters/storage/catalog.py` and `backend/src/adapters/storage/audit_log.py`.
+- [X] T024 Implement Phoenix/structlog instrumentation helpers in `backend/src/adapters/observability/telemetry.py`.
+- [X] T025 Implement resumable ingestion recovery for interrupted jobs in `backend/src/domain/job_recovery.py`.
+- [X] T026 Implement corrupt source quarantine workflow updates in `backend/src/domain/source_service.py`.
 - [X] T027 Record Milestone 3 completion in `specs/001-rag-cli/milestones.md` after adapter and resilience tests pass.
 
 ### Milestone 3A – Offline guarantee
 
 - [X] T028 [P] Add failing backend offline compliance tests that block outbound HTTP in `tests/python/integration/test_offline_guards.py`.
 - [X] T029 [P] Add failing CLI offline compliance tests covering `ragman` and `ragadmin` flows in `tests/go/contract/offline_guard_test.go`.
-- [X] T030 Implement backend offline enforcement and safe adapter guards in `services/rag_backend/application/offline_guard.py`.
+- [X] T030 Implement backend offline enforcement and safe adapter guards in `backend/src/application/offline_guard.py`.
 - [X] T031 Implement shared Go IPC offline enforcement and structured logging in `cli/shared/ipc/client.go`.
 - [X] T032 Record offline milestone completion in `specs/001-rag-cli/milestones.md` after offline test pass.
 
@@ -73,8 +73,8 @@
 
 - [X] T033 [P] Add failing transport endpoint tests for `/v1/query`, `/v1/sources`, `/v1/index/reindex`, and `/v1/admin/*` in `tests/python/contract/test_transport_endpoints.py`.
 - [X] T034 [P] Add failing stale-index rejection tests for `/v1/query` returning 409 in `tests/python/contract/test_transport_stale_index.py`.
-- [X] T035 Map domain ports to socket handlers with standardized errors in `services/rag_backend/adapters/transport/handlers.py`.
-- [X] T036 Implement `/v1/admin/init` verification and stale-index rejection logic in `services/rag_backend/adapters/transport/handlers.py`.
+- [X] T035 Map domain ports to socket handlers with standardized errors in `backend/src/adapters/transport/handlers.py`.
+- [X] T036 Implement `/v1/admin/init` verification and stale-index rejection logic in `backend/src/adapters/transport/handlers.py`.
 - [X] T037 Record Milestone 4 completion in `specs/001-rag-cli/milestones.md` after endpoint tests pass.
 
 ### Milestone 5 – Shared Go IPC client
@@ -130,12 +130,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T055 [US2] Implement source catalog service for list/add flows with validation in `services/rag_backend/application/source_catalog.py`.
-- [ ] T056 [US2] Implement source update workflows enforcing metadata validation in `services/rag_backend/application/source_catalog.py`.
-- [ ] T057 [US2] Implement source removal and quarantine flows in `services/rag_backend/application/source_catalog.py`.
+- [ ] T055 [US2] Implement source catalog service for list/add flows with validation in `backend/src/application/source_catalog.py`.
+- [ ] T056 [US2] Implement source update workflows enforcing metadata validation in `backend/src/application/source_catalog.py`.
+- [ ] T057 [US2] Implement source removal and quarantine flows in `backend/src/application/source_catalog.py`.
 - [ ] T058 [US2] Implement `ragadmin` sources spf13/cobra commands with table/JSON output in `cli/ragadmin/cmd/sources.go`, writing audit log entries as JSON lines.
 - [ ] T059 [US2] Implement `ragadmin reindex` spf13/cobra command with progress feedback (stage plus optional percent) and timing output in `cli/ragadmin/cmd/reindex.go`.
-- [ ] T060 [US2] Wire audit logging and language validation for mutations in `services/rag_backend/adapters/storage/audit_log.py`.
+- [ ] T060 [US2] Wire audit logging and language validation for mutations in `backend/src/adapters/storage/audit_log.py`.
 - [ ] T061 [US2] Record Milestone 6 completion in `specs/001-rag-cli/milestones.md` after CRUD tests pass.
 
 ---
@@ -155,10 +155,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T066 [US3] Implement init orchestration verifying Ollama/Weaviate readiness and seeding sources in `services/rag_backend/application/init_service.py`. Seed the presentation config file with the default minimum confidence when it is missing and register default `man-pages`/`info-pages` entries.
-- [ ] T067 [US3] Implement health evaluation aggregator producing remediation guidance and disk checks in `services/rag_backend/application/health_service.py`.
+- [ ] T066 [US3] Implement init orchestration verifying Ollama/Weaviate readiness and seeding sources in `backend/src/application/init_service.py`. Seed the presentation config file with the default minimum confidence when it is missing and register default `man-pages`/`info-pages` entries.
+- [ ] T067 [US3] Implement health evaluation aggregator producing remediation guidance and disk checks in `backend/src/application/health_service.py`.
 - [ ] T068 [US3] Implement `ragadmin init` and `ragadmin health` spf13/cobra commands with structured logging in `cli/ragadmin/cmd/init.go` and `cli/ragadmin/cmd/health.go`, delegating threshold logic to dedicated helpers and ensuring `${XDG_DATA_HOME}/ragcli/kiwix/` exists.
-- [ ] T069 [US3] Persist init and health audit entries with trace IDs in `services/rag_backend/adapters/storage/audit_log.py`.
+- [ ] T069 [US3] Persist init and health audit entries with trace IDs in `backend/src/adapters/storage/audit_log.py`
 
 ---
 
