@@ -67,7 +67,9 @@ def test_record_progress_requires_running_job() -> None:
 def test_record_progress_handles_empty_documents() -> None:
     job = _job(status=models.IngestionStatus.RUNNING)
     service = job_recovery.JobRecoveryService(clock=lambda: _utc(2025, 1, 2, 9, 10))
-    checkpoint = service.record_progress(job=job, processed_document_ids=set(), document_ids=())
+    checkpoint = service.record_progress(
+        job=job, processed_document_ids=set(), document_ids=()
+    )
     assert checkpoint.processed_document_ids == ()
     assert checkpoint.percent_complete == 0.0
 
@@ -85,7 +87,9 @@ def test_plan_resume_requires_checkpoint_and_valid_status() -> None:
         captured_at=_utc(2025, 1, 2, 9, 0),
     )
     with pytest.raises(ValueError):
-        service.plan_resume(job=cancelled_job, checkpoint=checkpoint, document_ids=("doc-1",))
+        service.plan_resume(
+            job=cancelled_job, checkpoint=checkpoint, document_ids=("doc-1",)
+        )
 
 
 def test_plan_resume_builds_remaining_document_plan() -> None:

@@ -197,7 +197,9 @@ async def _handle_connection(
                 writer,
                 status=400,
                 correlation_id=_normalize_correlation_id(
-                    request.get("correlation_id") if isinstance(request, dict) else None,
+                    request.get("correlation_id")
+                    if isinstance(request, dict)
+                    else None,
                     correlation_id,
                 ),
                 code="HANDSHAKE_ERROR",

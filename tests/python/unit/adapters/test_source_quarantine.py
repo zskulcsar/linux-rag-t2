@@ -129,9 +129,7 @@ def test_quarantine_manager_uses_default_clock(
 
     sentinel = _utc(2025, 1, 2, 12, 0)
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
-    monkeypatch.setattr(
-        "adapters.storage.quarantine._default_clock", lambda: sentinel
-    )
+    monkeypatch.setattr("adapters.storage.quarantine._default_clock", lambda: sentinel)
     storage = CatalogStorage()
     catalog = _catalog(updated_at=_utc(2025, 1, 2, 9, 0))
     storage.save(catalog)

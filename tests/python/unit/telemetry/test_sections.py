@@ -57,7 +57,9 @@ async def test_async_trace_section_records_lifecycle() -> None:
     """Ensure the async helper mirrors the synchronous logging behavior."""
 
     logger = CaptureLogger()
-    async with async_trace_section(name="ingest", logger=logger, metadata={"alias": "docs"}) as section:
+    async with async_trace_section(
+        name="ingest", logger=logger, metadata={"alias": "docs"}
+    ) as section:
         section.debug("checkpoint", chunk_id=1)
 
     assert logger.records[0]["message"] == "ingest :: start"

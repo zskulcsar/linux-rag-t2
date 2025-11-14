@@ -161,7 +161,9 @@ def test_configure_phoenix_missing_dependency(monkeypatch: pytest.MonkeyPatch) -
         telemetry.configure_phoenix(service_name="rag-backend")
 
 
-def test_configure_phoenix_missing_otel_attribute(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_configure_phoenix_missing_otel_attribute(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Ensure a phoenix module without otel attribute raises a RuntimeError."""
 
     monkeypatch.setitem(sys.modules, "phoenix", SimpleNamespace())

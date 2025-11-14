@@ -254,7 +254,9 @@ def test_index_service_marks_ready_and_detects_staleness() -> None:
         service.mark_index_ready(version=ready, document_count=1, size_bytes=1)
 
 
-def test_health_service_registers_checks_and_aggregates(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_health_service_registers_checks_and_aggregates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Ensure HealthService uses the default clock and aggregates WARN status."""
 
     generated_at = _utc(dt.datetime(2025, 1, 5, 12, 0, 0))
@@ -414,7 +416,9 @@ def test_query_service_default_clock_and_non_ready_freshness(
     """Ensure default clock path executes and non-ready indexes are returned untouched."""
 
     sentinel = _utc(dt.datetime(2025, 1, 6, 12, 0, 0))
-    monkeypatch.setattr(query_service, "_default_clock", lambda: sentinel, raising=False)
+    monkeypatch.setattr(
+        query_service, "_default_clock", lambda: sentinel, raising=False
+    )
     service = query_service.QueryService()
 
     version = models.ContentIndexVersion(
@@ -432,12 +436,15 @@ def test_query_service_default_clock_and_non_ready_freshness(
     assert ready.built_at == sentinel
 
     non_ready_version = replace(ready, status=models.IndexStatus.BUILDING)
-    assert service.enforce_index_freshness(version=non_ready_version) is non_ready_version
+    assert (
+        service.enforce_index_freshness(version=non_ready_version) is non_ready_version
+    )
 
     ready_without_expiry = replace(ready, freshness_expires_at=None)
-    assert service.enforce_index_freshness(
-        version=ready_without_expiry
-    ) is ready_without_expiry
+    assert (
+        service.enforce_index_freshness(version=ready_without_expiry)
+        is ready_without_expiry
+    )
 
     still_fresh = service.enforce_index_freshness(
         version=ready, reference_time=sentinel + dt.timedelta(days=1)

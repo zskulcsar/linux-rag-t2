@@ -58,7 +58,14 @@ class TraceController:
     logger: Any = field(
         default_factory=lambda: get_logger("rag_backend.telemetry.trace_controller")
     )
-    include_modules: tuple[str, ...] = ("adapters", "application", "domain", "ports", "telemetry", "main")
+    include_modules: tuple[str, ...] = (
+        "adapters",
+        "application",
+        "domain",
+        "ports",
+        "telemetry",
+        "main",
+    )
     exclude_modules: tuple[str, ...] = ("telemetry",)
     _enabled: bool = field(init=False, default=False)
     _previous_trace: TraceFunction | None = field(init=False, default=None)
@@ -110,9 +117,7 @@ class TraceController:
 
         return self._enabled
 
-    def _trace(
-        self, frame: FrameType, event: str, arg: Any
-    ) -> TraceFunction | None:
+    def _trace(self, frame: FrameType, event: str, arg: Any) -> TraceFunction | None:
         """Trace hook invoked by the Python interpreter.
 
         Args:

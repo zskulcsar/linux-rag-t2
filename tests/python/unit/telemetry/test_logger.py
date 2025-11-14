@@ -22,7 +22,9 @@ class DummyStdLogger:
         self.log(logging.DEBUG, message, *args, **kwargs)
 
 
-def test_get_logger_falls_back_when_structlog_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_logger_falls_back_when_structlog_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Ensure get_logger returns the fallback implementation when structlog is unavailable."""
 
     monkeypatch.setitem(sys.modules, "structlog", None)
@@ -50,7 +52,9 @@ def test_get_logger_falls_back_when_structlog_missing(monkeypatch: pytest.Monkey
     logger.warning("Heads up")
     logger.error("Boom", code=500)
 
-    info_records = [record for record in fallback_logger.records if record[0] == logging.INFO]
+    info_records = [
+        record for record in fallback_logger.records if record[0] == logging.INFO
+    ]
     assert info_records, "expected INFO logs to be recorded"
     assert "context={'request_id': 'abc123', 'extra': 'payload'}" in info_records[0][1]
     # Ensure other convenience methods also execute without error.

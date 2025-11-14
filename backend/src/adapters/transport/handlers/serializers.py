@@ -35,9 +35,7 @@ def serialize_catalog(catalog: SourceCatalog) -> dict[str, Any]:
         "catalog_version": catalog.version,
         "updated_at": catalog.updated_at.isoformat(),
         "sources": [serialize_source_record(source) for source in catalog.sources],
-        "snapshots": [
-            _serialize_snapshot(snapshot) for snapshot in catalog.snapshots
-        ],
+        "snapshots": [_serialize_snapshot(snapshot) for snapshot in catalog.snapshots],
     }
 
 

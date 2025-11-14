@@ -108,7 +108,8 @@ def test_coalesce_value_precedence() -> None:
         == "/tmp/cli.sock"
     )
     assert (
-        _coalesce_value(name="socket", cli_value=None, config=config) == "/tmp/config.sock"
+        _coalesce_value(name="socket", cli_value=None, config=config)
+        == "/tmp/config.sock"
     )
     assert (
         _coalesce_value(name="log_level", cli_value=None, config={}, default="INFO")
@@ -122,7 +123,9 @@ def test_coalesce_bool_handles_cli_config_and_strings() -> None:
     config = {"trace": "yes"}
     assert _coalesce_bool(name="trace", cli_value=None, config=config) is True
     assert _coalesce_bool(name="trace", cli_value=False, config=config) is False
-    assert _coalesce_bool(name="trace", cli_value=None, config={"trace": "off"}) is False
+    assert (
+        _coalesce_bool(name="trace", cli_value=None, config={"trace": "off"}) is False
+    )
     assert _coalesce_bool(name="trace", cli_value=None, config={}, default=True) is True
     with pytest.raises(LauncherConfigError):
         _coalesce_bool(name="trace", cli_value=None, config={"trace": "maybe"})
@@ -176,7 +179,9 @@ def test_build_launcher_config_merges_cli_and_file(tmp_path: Path) -> None:
 
 def test_build_launcher_config_requires_required_settings(tmp_path: Path) -> None:
     config_path = tmp_path / "ragcli.yaml"
-    config_path.write_text("backend:\n  weaviate_url: http://localhost:8080\n", encoding="utf-8")
+    config_path.write_text(
+        "backend:\n  weaviate_url: http://localhost:8080\n", encoding="utf-8"
+    )
     args = _args(config=str(config_path))
     with pytest.raises(LauncherConfigError):
         build_launcher_config(args)

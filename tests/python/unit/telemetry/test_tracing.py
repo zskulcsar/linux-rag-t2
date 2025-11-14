@@ -4,7 +4,6 @@ import inspect
 import sys
 import threading
 
-import pytest
 
 from telemetry.tracing import TraceController, _default_filter
 
