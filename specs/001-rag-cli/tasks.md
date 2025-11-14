@@ -155,7 +155,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T066 [US3] Implement init orchestration verifying Ollama/Weaviate readiness and seeding sources in `backend/src/application/init_service.py`. Seed the presentation config file with the default minimum confidence when it is missing and register default `man-pages`/`info-pages` entries.
+- [X] T066 [US3] Implement init orchestration verifying Ollama/Weaviate readiness and seeding sources in `backend/src/application/init_service.py`. Seed the presentation config file with the default minimum confidence when it is missing and register default `man-pages`/`info-pages` entries.
 - [ ] T067 [US3] Implement health evaluation aggregator producing remediation guidance and disk checks in `backend/src/application/health_service.py`.
 - [ ] T068 [US3] Implement `ragadmin init` and `ragadmin health` spf13/cobra commands with structured logging in `cli/ragadmin/cmd/init.go` and `cli/ragadmin/cmd/health.go`, delegating threshold logic to dedicated helpers and ensuring `${XDG_DATA_HOME}/ragcli/kiwix/` exists.
 - [ ] T069 [US3] Persist init and health audit entries with trace IDs in `backend/src/adapters/storage/audit_log.py`
