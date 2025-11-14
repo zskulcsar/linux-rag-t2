@@ -148,10 +148,10 @@
 
 ### Tests for User Story 3 (MANDATORY) ⚠️
 
-- [ ] T062 [P] [US3] Add failing integration tests for init bootstrapping and health diagnostics in `tests/python/integration/test_init_health.py`.
-- [ ] T063 [P] [US3] Add failing `ragadmin` contract tests for init and health output in `tests/go/contract/ragadmin_health_test.go`, covering disk free thresholds, 30-day index freshness, exponential retry/backoff, and minimal remediation strings.
-- [ ] T064 [P] [US3] Add failing disk capacity threshold tests in `tests/python/integration/test_disk_capacity.py`.
-- [ ] T065 [P] [US3] Add failing missing or corrupt source detection tests in `tests/python/integration/test_source_health_failures.py`.
+- [X] T062 [P] [US3] Add failing integration tests for init bootstrapping and health diagnostics in `tests/python/integration/test_init_health.py`.
+- [X] T063 [P] [US3] Add failing `ragadmin` contract tests for init and health output in `tests/go/contract/ragadmin_health_test.go`, covering disk free thresholds, 30-day index freshness, exponential retry/backoff, and minimal remediation strings.
+- [X] T064 [P] [US3] Add failing disk capacity threshold tests in `tests/python/integration/test_disk_capacity.py`.
+- [X] T065 [P] [US3] Add failing missing or corrupt source detection tests in `tests/python/integration/test_source_health_failures.py`.
 
 ### Implementation for User Story 3
 
