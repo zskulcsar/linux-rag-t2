@@ -1,6 +1,5 @@
 """Quarantine operations for corrupted knowledge sources."""
 
-from __future__ import annotations
 
 import datetime as dt
 from dataclasses import replace

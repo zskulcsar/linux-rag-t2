@@ -1,6 +1,5 @@
 """Routing logic for Unix transport requests."""
 
-from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass, field

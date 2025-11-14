@@ -1,6 +1,5 @@
 """Domain services for query-related operations."""
 
-from __future__ import annotations
 
 import datetime as dt
 from dataclasses import replace

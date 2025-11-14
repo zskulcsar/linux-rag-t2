@@ -1,6 +1,5 @@
 """Reindex duration performance helpers for SC-002 budgets."""
 
-from __future__ import annotations
 
 from collections.abc import Sequence
 import datetime as dt

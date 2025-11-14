@@ -1,6 +1,5 @@
 """Utilities for instrumenting callable entry/exit logging."""
 
-from __future__ import annotations
 
 import inspect
 from functools import wraps

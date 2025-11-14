@@ -1,6 +1,5 @@
 """Domain services for managing knowledge sources and ingestion jobs."""
 
-from __future__ import annotations
 
 import datetime as dt
 from dataclasses import replace

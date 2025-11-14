@@ -1,6 +1,5 @@
 """Unit tests for observability telemetry helpers."""
 
-from __future__ import annotations
 
 import logging
 import sys

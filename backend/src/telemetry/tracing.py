@@ -1,6 +1,5 @@
 """Tracing utilities for optional deep observability mode."""
 
-from __future__ import annotations
 
 import inspect
 import sys

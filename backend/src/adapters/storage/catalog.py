@@ -1,6 +1,5 @@
 """Filesystem-backed storage for the source catalog."""
 
-from __future__ import annotations
 
 import json
 import os

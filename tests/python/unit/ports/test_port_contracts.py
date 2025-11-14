@@ -6,7 +6,6 @@ tasks must satisfy these contracts without altering the shapes asserted
 below.
 """
 
-from __future__ import annotations
 
 import dataclasses
 import importlib

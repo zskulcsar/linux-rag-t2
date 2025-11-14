@@ -1,6 +1,5 @@
 """Ollama adapter for embedding generation."""
 
-from __future__ import annotations
 
 import time
 from collections.abc import Sequence

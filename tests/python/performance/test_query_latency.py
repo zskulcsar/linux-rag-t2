@@ -1,6 +1,5 @@
 """Performance contracts for ragman query latency (SC-001)."""
 
-from __future__ import annotations
 
 
 def _import_query_metrics():

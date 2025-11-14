@@ -1,6 +1,5 @@
 """Unit tests safeguarding catalog storage and audit logging adapters."""
 
-from __future__ import annotations
 
 import datetime as dt
 import json

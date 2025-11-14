@@ -1,6 +1,5 @@
 """Health evaluation services coordinating component checks."""
 
-from __future__ import annotations
 
 import datetime as dt
 from typing import Callable, Iterable, List

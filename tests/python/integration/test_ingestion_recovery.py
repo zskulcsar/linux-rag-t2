@@ -1,6 +1,5 @@
 """Integration tests for ingestion recovery planning."""
 
-from __future__ import annotations
 
 import datetime as dt
 import uuid

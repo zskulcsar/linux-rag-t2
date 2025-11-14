@@ -1,6 +1,5 @@
 """Contract tests for the ragman query orchestration pipeline."""
 
-from __future__ import annotations
 
 import datetime as dt
 

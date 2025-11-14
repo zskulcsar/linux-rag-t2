@@ -1,6 +1,5 @@
 """Pytest configuration ensuring project packages resolve during test runs."""
 
-from __future__ import annotations
 
 import sys
 from pathlib import Path

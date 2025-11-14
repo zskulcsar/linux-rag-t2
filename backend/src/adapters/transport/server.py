@@ -1,6 +1,5 @@
 """Async Unix socket server implementation for CLI transport requests."""
 
-from __future__ import annotations
 
 import asyncio
 import functools

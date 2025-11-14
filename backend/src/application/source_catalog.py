@@ -1,6 +1,5 @@
 """Application service for managing the source catalog life cycle."""
 
-from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 import datetime as dt

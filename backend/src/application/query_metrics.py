@@ -1,6 +1,5 @@
 """Latency metrics helpers for ragman query performance budgets."""
 
-from __future__ import annotations
 
 from collections.abc import Sequence
 import datetime as dt
