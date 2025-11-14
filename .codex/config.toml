@@ -1,3 +1,5 @@
+model = "gpt-5-codex"
+model_reasoning_effort = "medium"
 [projects."/home/zsoltk/git/linux-rag-t2"]
 trust_level = "trusted"
 
