@@ -160,24 +160,29 @@
 - [X] T068 [US3] Implement `ragadmin init` and `ragadmin health` spf13/cobra commands with structured logging in `cli/ragadmin/cmd/init.go` and `cli/ragadmin/cmd/health.go`, delegating threshold logic to dedicated helpers and ensuring `${XDG_DATA_HOME}/ragcli/kiwix/` exists.
 - [X] T069 [US3] Persist init and health audit entries with trace IDs in `backend/src/adapters/storage/audit_log.py`
 
+### Backend Readiness Fixes
+
+- [ ] T070 [US3] Replace the bootstrap transport stubs in `backend/src/adapters/transport/handlers/factory.py` with the real query, ingestion, and health services so the running backend talks to Weaviate, Ollama, and Phoenix.
+- [ ] T071 [US3] Add a `/v1/admin/health` handler in `backend/src/adapters/transport/handlers/router.py` that invokes `HealthPort`, emits audit entries, and serializes component results for the CLI.
+
 ---
 
 ## Final Phase: Polish & Cross-Cutting Concerns
 
 **Purpose**: Finalize observability, offline/performance validation, documentation, and integration coverage across stories ahead of release.
 
-- [ ] T070 [P] Add end-to-end CLI↔backend contract suite covering FR-001–FR-011 in `tests/python/contract/test_end_to_end.py`.
-- [ ] T071 [P] Add observability assertions for Phoenix traces and structured logs in `tests/python/integration/test_observability.py`.
-- [ ] T072 Record Milestone 8 completion in `specs/001-rag-cli/milestones.md` after end-to-end suites pass.
-- [ ] T073 Run offline validation suite with network-disabled runs in `tests/system/test_offline_validation.sh`.
-- [ ] T074 Run performance validation suite confirming SC-001 and SC-002 in `tests/system/test_performance_validation.py`.
-- [ ] T075 Update ragman CLI usage guide with new workflows in `docs/guides/cli/ragman.md`.
-- [ ] T076 Update ragadmin CLI usage guide with new workflows in `docs/guides/cli/ragadmin.md`.
-- [ ] T077 Update Unix socket ADR with finalized port mappings in `docs/adr/0001-unix-socket-ipc.md`.
-- [ ] T078 Document Quickstart validation results and troubleshooting notes in `specs/001-rag-cli/quickstart.md`.
-- [ ] T079 Add failing Go unit tests for audit log JSON writer and config loader helpers in `tests/go/unit/system_defaults_test.go`.
-- [ ] T080 Add failing Go unit tests for health retry/backoff utilities in `tests/go/unit/health_retry_test.go`.
-- [ ] T081 [P] Add failing accuracy evaluation harness covering SC-001 in `tests/system/test_accuracy_eval.py`. Define a labeled corpus of representative queries with expected summaries, invoke `ragman query` through the CLI contract harness, compare structured responses against the ground truth, and assert the run achieves ≥90 % accuracy while capturing detailed mismatch diagnostics for remediation.
+- [ ] T072 [P] Add end-to-end CLI↔backend contract suite covering FR-001–FR-011 in `tests/python/contract/test_end_to_end.py`.
+- [ ] T073 [P] Add observability assertions for Phoenix traces and structured logs in `tests/python/integration/test_observability.py`.
+- [ ] T074 Record Milestone 8 completion in `specs/001-rag-cli/milestones.md` after end-to-end suites pass.
+- [ ] T075 Run offline validation suite with network-disabled runs in `tests/system/test_offline_validation.sh`.
+- [ ] T076 Run performance validation suite confirming SC-001 and SC-002 in `tests/system/test_performance_validation.py`.
+- [ ] T077 Update ragman CLI usage guide with new workflows in `docs/guides/cli/ragman.md`.
+- [ ] T078 Update ragadmin CLI usage guide with new workflows in `docs/guides/cli/ragadmin.md`.
+- [ ] T079 Update Unix socket ADR with finalized port mappings in `docs/adr/0001-unix-socket-ipc.md`.
+- [ ] T080 Document Quickstart validation results and troubleshooting notes in `specs/001-rag-cli/quickstart.md`.
+- [ ] T081 Add failing Go unit tests for audit log JSON writer and config loader helpers in `tests/go/unit/system_defaults_test.go`.
+- [ ] T082 Add failing Go unit tests for health retry/backoff utilities in `tests/go/unit/health_retry_test.go`.
+- [ ] T083 [P] Add failing accuracy evaluation harness covering SC-001 in `tests/system/test_accuracy_eval.py`. Define a labeled corpus of representative queries with expected summaries, invoke `ragman query` through the CLI contract harness, compare structured responses against the ground truth, and assert the run achieves ≥90 % accuracy while capturing detailed mismatch diagnostics for remediation.
 
 ---
 
@@ -186,7 +191,7 @@
 - **Story sequencing**: Complete Phases 1–2 first, then deliver User Story 1 (US1) → User Story 2 (US2) → User Story 3 (US3) to align with MVP-first delivery while respecting milestone readiness.
 - **Transport dependency**: T033–T040 must pass before wiring CLI commands (T047, T058, T068) to guarantee contract-stable transports.
 - **Catalog dependency**: T055–T057 must complete before health orchestration (T067) to ensure accurate metadata.
-- **Observability & offline dependency**: T024, T028–T032, and T070–T074 must succeed prior to final validation to satisfy constitution mandates and that telemetry and offline guarantees are enforceable.
+- **Observability & offline dependency**: T024, T028–T032, and T072–T076 must succeed prior to final validation to satisfy constitution mandates and that telemetry and offline guarantees are enforceable.
 
 ---
 
