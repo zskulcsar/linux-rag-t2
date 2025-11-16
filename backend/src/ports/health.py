@@ -22,6 +22,7 @@ class HealthComponent(str, enum.Enum):
     DISK_CAPACITY = "disk_capacity"
     OLLAMA = "ollama"
     WEAVIATE = "weaviate"
+    PHOENIX = "phoenix"
 
 
 @dataclass(frozen=True, slots=True)

@@ -35,7 +35,12 @@ class ChunkBuilder(Protocol):
     """Protocol describing semantic chunk construction for ingestion."""
 
     def __call__(
-        self, *, alias: str, checksum: str, location: Path
+        self,
+        *,
+        alias: str,
+        checksum: str,
+        location: Path,
+        source_type: ingestion_ports.SourceType,
     ) -> Sequence[Document]:  # pragma: no cover - protocol
         ...
 
@@ -221,7 +226,10 @@ class SourceCatalogService:
             metadata={"alias": alias},
         ) as section:
             documents = self._chunk_builder(
-                alias=alias, checksum=checksum, location=location_path
+                alias=alias,
+                checksum=checksum,
+                location=location_path,
+                source_type=record.type,
             )
             section.debug(
                 "chunks_planned",
@@ -345,7 +353,10 @@ class SourceCatalogService:
                 metadata={"alias": alias},
             ) as section:
                 documents = self._chunk_builder(
-                    alias=alias, checksum=new_checksum or "", location=location_path
+                    alias=alias,
+                    checksum=new_checksum or "",
+                    location=location_path,
+                    source_type=updated_record.type,
                 )
                 section.debug(
                     "chunks_planned",

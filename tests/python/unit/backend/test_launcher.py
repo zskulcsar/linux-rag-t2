@@ -4,16 +4,15 @@
 import argparse
 import logging
 import sys
-import types
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 
-def _install_stub_modules() -> None:
-    transport_mod = types.ModuleType("adapters.transport")
+@pytest.fixture(autouse=True)
+def _stub_launcher_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
+    import main
 
     class _AsyncNullContext:
         async def __aenter__(self):
@@ -22,24 +21,12 @@ def _install_stub_modules() -> None:
         async def __aexit__(self, exc_type, exc, tb):
             return False
 
-    def _transport_server(*args, **kwargs):
-        return _AsyncNullContext()
-
-    transport_mod.create_default_handlers = lambda: {}
-    transport_mod.transport_server = _transport_server
-    sys.modules.setdefault("adapters.transport", transport_mod)
-
-    offline_mod = types.ModuleType("application.offline_guard")
-
-    @contextmanager
-    def offline_mode():
-        yield
-
-    offline_mod.offline_mode = offline_mode
-    sys.modules.setdefault("application.offline_guard", offline_mod)
-
-
-_install_stub_modules()
+    monkeypatch.setattr(main, "create_default_handlers", lambda: {})
+    monkeypatch.setattr(
+        main,
+        "transport_server",
+        lambda *args, **kwargs: _AsyncNullContext(),
+    )
 
 from main import (  # noqa: E402
     LauncherConfig,

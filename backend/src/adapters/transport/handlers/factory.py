@@ -1,142 +1,68 @@
-"""Factory helpers and bootstrap ports for transport handlers."""
+"""Factory helpers that wire transport handlers to the real services."""
 
+from adapters.storage.audit_log import AuditLogger
+from adapters.storage.catalog import CatalogStorage
+from application.source_catalog import SourceCatalogService
 
-import datetime as dt
-from typing import Callable
-
-from ports import (
-    HealthPort,
-    HealthReport,
-    HealthStatus,
-    IngestionPort,
-    IngestionTrigger,
-    QueryPort,
-    QueryRequest,
-    QueryResponse,
-    Reference,
-    SourceCatalog,
-    SourceRecord,
-    SourceSnapshot,
+from .builders import (
+    _build_completion_adapter,
+    _build_embedding_adapter,
+    _build_query_runner,
+    _build_weaviate_adapter,
+    _calculate_checksum,
 )
-from ports.ingestion import IngestionJob, IngestionStatus, SourceStatus, SourceType
-from ports.query import Citation
-
+from .chunking import _chunk_builder_factory
+from .common import LOGGER, _clock
+from .config import (
+    _BackendSettings,
+    _configure_observability,
+    _load_backend_settings,
+    _resolve_data_dir,
+    _seed_bootstrap_catalog,
+)
+from .health import _build_health_port
+from .ports import CatalogIngestionPort, QueryRunnerPort
 from .router import TransportHandlers
 
 
-class _StaticQueryPort(QueryPort):
-    """Static query port used for bootstrap tests prior to real wiring."""
-
-    def query(self, request: QueryRequest) -> QueryResponse:
-        references = [
-            Reference(label="chmod(1)"),
-            Reference(label="chown(1)", notes="Ownership management guidance"),
-        ]
-        citations = [
-            Citation(alias="man-pages", document_ref="chmod.1"),
-        ]
-        return QueryResponse(
-            summary="Use chmod to modify file permission bits.",
-            steps=[
-                "Invoke chmod with the desired octal mode (e.g., chmod 755 <file>).",
-                "Verify the updated permissions with ls -l.",
-            ],
-            references=references,
-            citations=citations,
-            confidence=0.82,
-            trace_id=request.trace_id or "bootstrap-trace",
-            latency_ms=128,
-            retrieval_latency_ms=48,
-            llm_latency_ms=72,
-            index_version="bootstrap-index",
-            no_answer=False,
-        )
-
-
-class _StaticIngestionPort(IngestionPort):
-    """Static ingestion port providing deterministic catalog metadata."""
-
-    def __init__(self, *, clock: Callable[[], dt.datetime] | None = None) -> None:
-        self._clock = clock or (lambda: dt.datetime.now(dt.timezone.utc))
-
-    def list_sources(self) -> SourceCatalog:
-        now = self._clock()
-        sources = [
-            SourceRecord(
-                alias="man-pages",
-                type=SourceType.MAN,
-                location="/usr/share/man",
-                language="en",
-                size_bytes=1024 * 1024 * 350,
-                last_updated=now,
-                status=SourceStatus.ACTIVE,
-                checksum="sha256:bootstrap-man",
-            ),
-            SourceRecord(
-                alias="info-pages",
-                type=SourceType.INFO,
-                location="/usr/share/info",
-                language="en",
-                size_bytes=1024 * 1024 * 120,
-                last_updated=now,
-                status=SourceStatus.ACTIVE,
-                checksum="sha256:bootstrap-info",
-            ),
-        ]
-        snapshots = [
-            SourceSnapshot(alias="man-pages", checksum="sha256:bootstrap-man"),
-            SourceSnapshot(alias="info-pages", checksum="sha256:bootstrap-info"),
-        ]
-        return SourceCatalog(
-            version=1, updated_at=now, sources=sources, snapshots=snapshots
-        )
-
-    def create_source(self, request):  # pragma: no cover - placeholders
-        raise NotImplementedError
-
-    def update_source(self, alias, request):  # pragma: no cover
-        raise NotImplementedError
-
-    def remove_source(self, alias):  # pragma: no cover
-        raise NotImplementedError
-
-    def start_reindex(self, trigger: IngestionTrigger) -> IngestionJob:
-        now = self._clock()
-        return IngestionJob(
-            job_id="bootstrap-job",
-            source_alias="*",
-            status=IngestionStatus.QUEUED,
-            requested_at=now,
-            started_at=None,
-            completed_at=None,
-            documents_processed=0,
-            stage="queued",
-            percent_complete=0.0,
-            error_message=None,
-            trigger=trigger,
-        )
-
-
-class _StaticHealthPort(HealthPort):
-    """Static health port stub for bootstrap flows."""
-
-    def evaluate(self) -> HealthReport:
-        now = dt.datetime.now(dt.timezone.utc)
-        return HealthReport(status=HealthStatus.PASS, generated_at=now, checks=[])
-
-
 def create_default_handlers() -> TransportHandlers:
-    """Create transport handlers backed by static bootstrap ports."""
+    """Create transport handlers backed by catalog services and health diagnostics."""
 
-    def clock() -> dt.datetime:
-        return dt.datetime.now(dt.timezone.utc)
+    settings = _load_backend_settings()
+    _configure_observability(settings)
+
+    storage = CatalogStorage(base_dir=_resolve_data_dir())
+    _seed_bootstrap_catalog(storage)
+    embedding_adapter = _build_embedding_adapter(settings)
+    vector_adapter = _build_weaviate_adapter(settings)
+    chunk_builder = _chunk_builder_factory(
+        embedding_adapter=embedding_adapter,
+        vector_adapter=vector_adapter,
+    )
+    completion_adapter = _build_completion_adapter(settings)
+    query_runner = _build_query_runner(
+        catalog_loader=storage.load,
+        vector_adapter=vector_adapter,
+        llm_adapter=completion_adapter,
+    )
+    audit_logger = AuditLogger()
+    catalog_service = SourceCatalogService(
+        storage=storage,
+        checksum_calculator=_calculate_checksum,
+        chunk_builder=chunk_builder,
+        audit_logger=audit_logger,
+    )
+
+    ingestion_port = CatalogIngestionPort(service=catalog_service, storage=storage)
+    query_port = QueryRunnerPort(query_runner)
+    health_port = _build_health_port(storage=storage, settings=settings)
 
     return TransportHandlers(
-        query_port=_StaticQueryPort(),
-        ingestion_port=_StaticIngestionPort(clock=clock),
-        health_port=_StaticHealthPort(),
-        _clock=clock,
+        query_port=query_port,
+        ingestion_port=ingestion_port,
+        health_port=health_port,
+        _clock=_clock,
     )
 
 
-__all__ = ["create_default_handlers"]
+__all__ = ["create_default_handlers", "_chunk_builder_factory"]

@@ -70,7 +70,17 @@ class _RecordingChunkBuilder:
         self.calls: list[tuple[str, str, Path]] = []
         self.generated_ids: list[str] = []
 
-    def __call__(self, *, alias: str, checksum: str, location: Path) -> list[Document]:
+    def __call__(
+        self,
+        *,
+        alias: str,
+        checksum: str,
+        location: Path,
+        source_type: ingestion_ports.SourceType,
+    ) -> list[Document]:
+        assert (
+            source_type == self.source_type
+        ), "chunk builder must receive the source type for serialization"
         self.calls.append((alias, checksum, location))
         documents: list[Document] = []
         for chunk_id in range(2):

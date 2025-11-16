@@ -261,6 +261,7 @@ def test_health_port_contract_shapes() -> None:
         "disk_capacity",
         "ollama",
         "weaviate",
+        "phoenix",
     }
 
     assert dataclasses.is_dataclass(health_check)

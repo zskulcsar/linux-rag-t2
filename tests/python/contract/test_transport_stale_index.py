@@ -21,6 +21,11 @@ HANDSHAKE_REQUEST = {
 }
 
 
+@pytest.fixture(autouse=True)
+def _fake_services(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RAG_BACKEND_FAKE_SERVICES", "1")
+
+
 async def _write_frame(writer: asyncio.StreamWriter, message: dict) -> None:
     """Send a framed JSON message using <len>\n<payload>\n semantics."""
 
