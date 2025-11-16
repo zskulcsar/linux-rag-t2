@@ -4,6 +4,8 @@
 import datetime as dt
 from typing import Callable, Iterable, List
 
+from common.clock import utc_now
+
 from ports.health import (
     HealthCheck,
     HealthPort,
@@ -15,24 +17,14 @@ CheckFactory = Callable[[], HealthCheck]
 Clock = Callable[[], dt.datetime]
 
 
-def _default_clock() -> dt.datetime:
-    """Return the current UTC timestamp.
-
-    Returns:
-        A timezone-aware datetime representing now in UTC.
-    """
-
-    return dt.datetime.now(dt.timezone.utc)
-
-
 class HealthService(HealthPort):
     """Aggregate health check factories into a single :class:`HealthPort`.
 
-    Args:
-        check_factories: Iterable of callables that produce :class:`HealthCheck`
+        Args:
+            check_factories: Iterable of callables that produce :class:`HealthCheck`
             instances when invoked.
         clock: Callable supplying the current UTC timestamp. Defaults to
-            :func:`datetime.datetime.now` with a UTC timezone.
+            :func:`common.clock.utc_now`.
     """
 
     def __init__(
@@ -43,11 +35,11 @@ class HealthService(HealthPort):
         Args:
             check_factories: Iterable of factories that yield health checks when called.
             clock: Callable returning the current UTC time. Defaults to
-                :func:`_default_clock` when ``None``.
+                :func:`common.clock.utc_now` when ``None``.
         """
 
         self._check_factories: List[CheckFactory] = list(check_factories)
-        self._clock = clock or _default_clock
+        self._clock = clock or utc_now
 
     def register(self, factory: CheckFactory) -> None:
         """Register an additional health check factory.

@@ -5,17 +5,13 @@ from collections.abc import Sequence
 import datetime as dt
 from typing import Any, Callable
 
+from common.clock import utc_now
+
 from telemetry import trace_call
 
 DEFAULT_REINDEX_BUDGET_MS = 600_000.0
 
 Clock = Callable[[], dt.datetime]
-
-
-def _default_clock() -> dt.datetime:
-    """Return the current UTC timestamp."""
-
-    return dt.datetime.now(dt.timezone.utc)
 
 
 def _normalise_history(history: Sequence[int | float]) -> list[float]:
@@ -141,7 +137,7 @@ def describe(
     status = "pass" if percentile <= threshold else "fail"
     over_budget = max(0.0, percentile - threshold)
     percent_util = (percentile / threshold * 100.0) if threshold > 0 else 0.0
-    timestamp = (clock or _default_clock)()
+    timestamp = (clock or utc_now)()
 
     return {
         "status": status,

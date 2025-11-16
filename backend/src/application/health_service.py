@@ -10,6 +10,8 @@ import datetime as dt
 from dataclasses import dataclass
 from typing import Any
 
+from common.clock import utc_now
+
 from ports import ingestion as ingestion_ports
 from ports.health import (
     HealthCheck,
@@ -27,12 +29,6 @@ Clock = Callable[[], dt.datetime]
 DEFAULT_DISK_WARN_RATIO = 0.10
 DEFAULT_DISK_FAIL_RATIO = 0.08
 DEFAULT_INDEX_WARN_AGE = dt.timedelta(days=30)
-
-
-def _default_clock() -> dt.datetime:
-    """Return the current UTC timestamp."""
-
-    return dt.datetime.now(dt.timezone.utc)
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,7 +86,7 @@ class HealthDiagnostics:
         self._catalog_loader = catalog_loader
         self._disk_probe = disk_probe
         self._dependency_checks = list(dependency_checks or [])
-        self._clock = clock or _default_clock
+        self._clock = clock or utc_now
         self._disk_warn_ratio = max(0.0, min(1.0, disk_warn_ratio))
         self._disk_fail_ratio = max(0.0, min(self._disk_warn_ratio, disk_fail_ratio))
         self._index_warn_age = max(dt.timedelta(), index_warn_age)

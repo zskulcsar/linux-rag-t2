@@ -5,18 +5,10 @@ import datetime as dt
 from dataclasses import dataclass, replace
 from typing import Callable, Iterable, Sequence
 
+from common.clock import utc_now
+
 from domain import models
 from telemetry import trace_call, trace_section
-
-
-def _default_clock() -> dt.datetime:
-    """Return the current UTC timestamp.
-
-    Returns:
-        A timezone-aware datetime representing now in UTC.
-    """
-
-    return dt.datetime.now(dt.timezone.utc)
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,7 +65,7 @@ class JobRecoveryService:
             clock: Optional callable returning the current UTC time.
         """
 
-        self._clock = clock or _default_clock
+        self._clock = clock or utc_now
 
     @trace_call
     def record_progress(

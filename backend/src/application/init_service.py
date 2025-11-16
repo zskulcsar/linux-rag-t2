@@ -71,6 +71,8 @@ from dataclasses import FrozenInstanceError, dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from common.clock import utc_now
+
 from ports import ingestion as ingestion_ports
 from telemetry import trace_call, trace_section
 
@@ -85,12 +87,6 @@ _SEED_ALIAS_BY_TYPE = {
     ingestion_ports.SourceType.MAN: "man-pages",
     ingestion_ports.SourceType.INFO: "info-pages",
 }
-
-
-def _default_clock() -> dt.datetime:
-    """Return the current UTC timestamp."""
-
-    return dt.datetime.now(dt.timezone.utc)
 
 
 class ConfigWriter(Protocol):
@@ -204,7 +200,7 @@ class InitService:
         self._ingestion_port = ingestion_port
         self._dependency_checks = list(dependency_checks or [])
         self._default_sources = list(default_sources or [])
-        self._clock = clock or _default_clock
+        self._clock = clock or utc_now
 
     @trace_call
     def bootstrap(self) -> InitSummary:

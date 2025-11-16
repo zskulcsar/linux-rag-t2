@@ -5,19 +5,11 @@ import datetime as dt
 from dataclasses import replace
 from typing import Callable
 
+from common.clock import utc_now
+
 from . import models
 
 Clock = Callable[[], dt.datetime]
-
-
-def _default_clock() -> dt.datetime:
-    """Return the current UTC timestamp.
-
-    Returns:
-        A timezone-aware datetime representing now in UTC.
-    """
-
-    return dt.datetime.now(dt.timezone.utc)
 
 
 class SourceService:
@@ -25,7 +17,7 @@ class SourceService:
 
     Args:
         clock: Callable supplying the current UTC timestamp. Defaults to
-            :func:`datetime.datetime.now` with a UTC timezone.
+            :func:`common.clock.utc_now`.
     """
 
     def __init__(self, clock: Clock | None = None) -> None:
@@ -33,10 +25,10 @@ class SourceService:
 
         Args:
             clock: Callable returning the current UTC time. When ``None``, the
-                service uses :func:`_default_clock`.
+                service uses :func:`common.clock.utc_now`.
         """
 
-        self._clock = clock or _default_clock
+        self._clock = clock or utc_now
 
     def mark_source_validated(
         self,

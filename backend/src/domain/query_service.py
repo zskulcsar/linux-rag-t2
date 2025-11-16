@@ -5,19 +5,11 @@ import datetime as dt
 from dataclasses import replace
 from typing import Callable
 
+from common.clock import utc_now
+
 from . import models
 
 Clock = Callable[[], dt.datetime]
-
-
-def _default_clock() -> dt.datetime:
-    """Return the current UTC timestamp.
-
-    Returns:
-        A timezone-aware datetime representing now in UTC.
-    """
-
-    return dt.datetime.now(dt.timezone.utc)
 
 
 class QueryService:
@@ -25,7 +17,7 @@ class QueryService:
 
     Args:
         clock: Callable that returns the current UTC timestamp. Defaults to
-            :func:`datetime.datetime.now` with a UTC timezone.
+            :func:`common.clock.utc_now`.
         freshness_ttl: Duration that a built index remains fresh before being
             marked stale. Defaults to seven days.
     """
@@ -37,12 +29,12 @@ class QueryService:
 
         Args:
             clock: Callable returning the current UTC time. When ``None``, the
-                service uses :func:`_default_clock`.
+                service uses :func:`common.clock.utc_now`.
             freshness_ttl: Duration that an index remains fresh. Defaults to a
                 seven-day interval when unspecified.
         """
 
-        self._clock = clock or _default_clock
+        self._clock = clock or utc_now
         self._freshness_ttl = freshness_ttl or dt.timedelta(days=7)
 
     def mark_index_ready(

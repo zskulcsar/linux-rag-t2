@@ -5,6 +5,8 @@ import datetime as dt
 from dataclasses import replace
 from typing import Callable
 
+from common.clock import utc_now
+
 from adapters.storage.catalog import CatalogStorage
 from ports.ingestion import SourceStatus
 from telemetry import trace_call, trace_section
@@ -17,12 +19,6 @@ class AuditSinkProtocol:
         self, entry: dict[str, str]
     ) -> None:  # pragma: no cover - structural protocol
         ...
-
-
-def _default_clock() -> dt.datetime:
-    """Return the current UTC time."""
-
-    return dt.datetime.now(dt.timezone.utc)
 
 
 class SourceQuarantineManager:
@@ -51,7 +47,7 @@ class SourceQuarantineManager:
 
         self._storage = catalog_storage
         self._audit = audit_logger
-        self._clock = clock or _default_clock
+        self._clock = clock or utc_now
 
     @trace_call
     def quarantine(self, *, alias: str, reason: str) -> None:

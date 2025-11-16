@@ -8,6 +8,8 @@ import re
 from pathlib import Path
 from typing import Protocol
 
+from common.clock import utc_now
+
 from adapters.storage.audit_log import AuditLogger
 from adapters.weaviate.client import Document
 from ports import ingestion as ingestion_ports
@@ -43,11 +45,6 @@ class ChunkBuilder(Protocol):
         source_type: ingestion_ports.SourceType,
     ) -> Sequence[Document]:  # pragma: no cover - protocol
         ...
-
-
-def _default_clock() -> dt.datetime:
-    return dt.datetime.now(dt.timezone.utc)
-
 
 def _default_language(language: str | None) -> str:
     candidate = (language or DEFAULT_LANGUAGE).strip().lower()
@@ -138,7 +135,7 @@ class SourceCatalogService:
         self._storage = storage
         self._checksum_calculator = checksum_calculator
         self._chunk_builder = chunk_builder
-        self._clock = clock or _default_clock
+        self._clock = clock or utc_now
         self._audit = audit_logger
 
     @trace_call

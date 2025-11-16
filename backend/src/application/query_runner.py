@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from common.clock import utc_now
+
 from ports import query as query_ports
 from telemetry import trace_call, trace_section
 
@@ -17,12 +19,6 @@ CONTEXT_TRUNCATION_MESSAGE = (
     "Please narrow your question or increase the --context-tokens limit."
 )
 _FATAL_CONTEXT_OVERFLOW_FACTOR = 2
-
-
-def _default_clock() -> dt.datetime:
-    """Return the current UTC time."""
-
-    return dt.datetime.now(dt.timezone.utc)
 
 
 def _default_config_path() -> Path:
@@ -97,7 +93,7 @@ class QueryRunner:
         query_port: Port implementation responsible for retrieving and generating
             answers.
         clock: Callable returning the current UTC timestamp, used for telemetry
-            metadata. Defaults to :func:`datetime.datetime.now`.
+            metadata. Defaults to :func:`common.clock.utc_now`.
         confidence_threshold: Optional override for the minimum confidence. When
             omitted, the runner attempts to load the value from the ragcli
             presentation config and falls back to ``0.35`` if unavailable.
@@ -114,7 +110,7 @@ class QueryRunner:
         presentation_config_path: Path | None = None,
     ) -> None:
         self._query_port = query_port
-        self._clock = clock or _default_clock
+        self._clock = clock or utc_now
         self._presentation_config_path = (
             presentation_config_path or _default_config_path()
         )
