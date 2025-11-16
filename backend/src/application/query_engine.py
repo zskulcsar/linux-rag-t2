@@ -109,9 +109,7 @@ class RetrievalLLMQueryPort(query_ports.QueryPort):
         steps: list[str] = _ensure_steps(parsed.get("steps"))
 
         summary_value = parsed.get("summary")
-        summary_text = (
-            summary_value.strip() if isinstance(summary_value, str) else ""
-        )
+        summary_text = summary_value.strip() if isinstance(summary_value, str) else ""
         if not summary_text:
             summary_text = (
                 f"Consult the retrieved manuals for guidance on '{request.question}'."
@@ -119,9 +117,7 @@ class RetrievalLLMQueryPort(query_ports.QueryPort):
 
         answer_value = parsed.get("answer")
         answer_text = (
-            answer_value.strip()
-            if isinstance(answer_value, str)
-            else summary_text
+            answer_value.strip() if isinstance(answer_value, str) else summary_text
         )
 
         response = query_ports.QueryResponse(
@@ -171,7 +167,9 @@ class RetrievalLLMQueryPort(query_ports.QueryPort):
                 )
         return contexts
 
-    def _render_prompt(self, *, question: str, contexts: Sequence[_ContextSnippet]) -> str:
+    def _render_prompt(
+        self, *, question: str, contexts: Sequence[_ContextSnippet]
+    ) -> str:
         context_blocks = []
         for snippet in contexts:
             context_blocks.append(

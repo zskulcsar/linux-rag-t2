@@ -1,6 +1,5 @@
 """Integration contract for the backend launcher entrypoint."""
 
-
 import asyncio
 import os
 from pathlib import Path

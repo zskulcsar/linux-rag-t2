@@ -1,4 +1,3 @@
-
 import pytest
 
 from telemetry.sections import TraceSection, async_trace_section

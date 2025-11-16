@@ -1,6 +1,5 @@
 """Observability helpers for structlog and Phoenix instrumentation."""
 
-
 import logging
 from typing import Any, Iterable
 

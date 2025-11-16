@@ -1,6 +1,5 @@
 """Domain service contract tests for state transitions."""
 
-
 import datetime as dt
 from dataclasses import replace
 import uuid

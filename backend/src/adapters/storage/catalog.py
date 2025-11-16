@@ -1,6 +1,5 @@
 """Filesystem-backed storage for the source catalog."""
 
-
 import json
 import os
 from dataclasses import asdict

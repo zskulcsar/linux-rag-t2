@@ -1,6 +1,5 @@
 """Audit logging helpers."""
 
-
 import datetime as dt
 import json
 import re
@@ -130,9 +129,7 @@ class AuditLogger:
             "action": "admin_init",
             "status": status,
             "trace_id": trace,
-            "created_directories": [
-                str(path) for path in created_directories or []
-            ],
+            "created_directories": [str(path) for path in created_directories or []],
             "seeded_sources": _normalize_seeded_sources(seeded_sources),
             "dependency_checks": _materialize_dicts(dependency_checks),
         }

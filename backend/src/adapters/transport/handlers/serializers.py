@@ -1,6 +1,5 @@
 """Serialization helpers for transport payloads."""
 
-
 import dataclasses
 from typing import Any
 

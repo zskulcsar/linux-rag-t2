@@ -12,7 +12,6 @@ clients. A simple example invocation mirrors the quickstart instructions::
         --phoenix-url http://127.0.0.1:6006
 """
 
-
 import argparse
 import asyncio
 import functools

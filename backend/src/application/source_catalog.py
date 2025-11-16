@@ -1,6 +1,5 @@
 """Application service for managing the source catalog life cycle."""
 
-
 from collections.abc import Callable, Sequence
 import datetime as dt
 import itertools
@@ -45,6 +44,7 @@ class ChunkBuilder(Protocol):
         source_type: ingestion_ports.SourceType,
     ) -> Sequence[Document]:  # pragma: no cover - protocol
         ...
+
 
 def _default_language(language: str | None) -> str:
     candidate = (language or DEFAULT_LANGUAGE).strip().lower()
@@ -204,9 +204,7 @@ class SourceCatalogService:
             notes=request.notes,
         )
 
-        updated_sources = sorted(
-            catalog.sources + [record], key=lambda src: src.alias
-        )
+        updated_sources = sorted(catalog.sources + [record], key=lambda src: src.alias)
         updated_snapshots = catalog.snapshots + [
             ingestion_ports.SourceSnapshot(alias=alias, checksum=checksum)
         ]
@@ -271,7 +269,9 @@ class SourceCatalogService:
 
         catalog = self._storage.load()
         try:
-            current = next(record for record in catalog.sources if record.alias == alias)
+            current = next(
+                record for record in catalog.sources if record.alias == alias
+            )
         except StopIteration as exc:  # pragma: no cover - defensive guard
             raise ValueError(f"unknown source alias: {alias}") from exc
 
@@ -331,9 +331,7 @@ class SourceCatalogService:
                 updated_snapshots.append(snapshot)
         if not replaced:
             updated_snapshots.append(
-                ingestion_ports.SourceSnapshot(
-                    alias=alias, checksum=snapshot_checksum
-                )
+                ingestion_ports.SourceSnapshot(alias=alias, checksum=snapshot_checksum)
             )
 
         updated_catalog = ingestion_ports.SourceCatalog(
@@ -406,7 +404,9 @@ class SourceCatalogService:
 
         catalog = self._storage.load()
         try:
-            current = next(record for record in catalog.sources if record.alias == alias)
+            current = next(
+                record for record in catalog.sources if record.alias == alias
+            )
         except StopIteration as exc:  # pragma: no cover - defensive guard
             raise ValueError(f"unknown source alias: {alias}") from exc
 
@@ -454,7 +454,6 @@ class SourceCatalogService:
 
         return ingestion_ports.SourceMutationResult(source=updated_record, job=None)
 
-
     def _log_mutation(
         self,
         *,
@@ -477,4 +476,9 @@ class SourceCatalogService:
         )
 
 
-__all__ = ["SourceCatalogService", "CatalogStorage", "ChecksumCalculator", "ChunkBuilder"]
+__all__ = [
+    "SourceCatalogService",
+    "CatalogStorage",
+    "ChecksumCalculator",
+    "ChunkBuilder",
+]

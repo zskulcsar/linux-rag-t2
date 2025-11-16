@@ -65,9 +65,7 @@ class _FakeWeaviateQueryBuilder:
             if len(results) >= self._limit:
                 break
 
-        return {
-            "data": {"Get": {self._class_name: [dict(item) for item in results]}}
-        }
+        return {"data": {"Get": {self._class_name: [dict(item) for item in results]}}}
 
 
 class _FakeWeaviateQuery:

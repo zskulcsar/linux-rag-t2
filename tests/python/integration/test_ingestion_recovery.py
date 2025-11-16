@@ -1,6 +1,5 @@
 """Integration tests for ingestion recovery planning."""
 
-
 import datetime as dt
 import uuid
 from dataclasses import replace

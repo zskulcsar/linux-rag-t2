@@ -1,6 +1,5 @@
 """Pytest configuration ensuring project packages resolve during test runs."""
 
-
 import sys
 from pathlib import Path
 

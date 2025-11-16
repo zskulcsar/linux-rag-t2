@@ -1,6 +1,5 @@
 """Latency metrics helpers for ragman query performance budgets."""
 
-
 from collections.abc import Sequence
 import datetime as dt
 from typing import Any, Callable

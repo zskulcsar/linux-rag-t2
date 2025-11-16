@@ -1,6 +1,5 @@
 """Ingestion recovery helpers for resuming interrupted jobs."""
 
-
 import datetime as dt
 from dataclasses import dataclass, replace
 from typing import Callable, Iterable, Sequence

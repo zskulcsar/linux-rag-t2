@@ -1,6 +1,5 @@
 """Context managers for instrumenting critical code sections."""
 
-
 import time
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 from typing import Any

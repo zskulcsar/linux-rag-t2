@@ -1,4 +1,3 @@
-
 import pytest
 
 from telemetry.decorators import trace_call

@@ -1,6 +1,5 @@
 """Health evaluation services coordinating component checks."""
 
-
 import datetime as dt
 from typing import Callable, Iterable, List
 
@@ -20,11 +19,11 @@ Clock = Callable[[], dt.datetime]
 class HealthService(HealthPort):
     """Aggregate health check factories into a single :class:`HealthPort`.
 
-        Args:
-            check_factories: Iterable of callables that produce :class:`HealthCheck`
-            instances when invoked.
-        clock: Callable supplying the current UTC timestamp. Defaults to
-            :func:`common.clock.utc_now`.
+    Args:
+        check_factories: Iterable of callables that produce :class:`HealthCheck`
+        instances when invoked.
+    clock: Callable supplying the current UTC timestamp. Defaults to
+        :func:`common.clock.utc_now`.
     """
 
     def __init__(

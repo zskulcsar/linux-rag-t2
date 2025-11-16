@@ -111,7 +111,9 @@ class HealthDiagnostics:
             ]
             checks.extend(self._run_dependency_checks())
             status = self._aggregate_status(checks)
-            return HealthReport(status=status, checks=checks, generated_at=self._clock())
+            return HealthReport(
+                status=status, checks=checks, generated_at=self._clock()
+            )
 
     def _run_dependency_checks(self) -> list[HealthCheck]:
         results: list[HealthCheck] = []
@@ -130,7 +132,10 @@ class HealthDiagnostics:
                 status=HealthStatus.FAIL,
                 message=message,
                 remediation="Verify mount points and ensure the ragcli data volume is accessible.",
-                metrics={"total_bytes": stats.total_bytes, "available_bytes": stats.available_bytes},
+                metrics={
+                    "total_bytes": stats.total_bytes,
+                    "available_bytes": stats.available_bytes,
+                },
             )
 
         available = min(stats.available_bytes, stats.total_bytes)
@@ -173,9 +178,7 @@ class HealthDiagnostics:
         if age >= self._index_warn_age:
             status = HealthStatus.WARN
             remediation = "Run ragadmin reindex to refresh the knowledge index."
-            message = (
-                f"Active index is {int(age.days)} days old; refresh recommended."
-            )
+            message = f"Active index is {int(age.days)} days old; refresh recommended."
         else:
             status = HealthStatus.PASS
             remediation = None
@@ -223,18 +226,18 @@ class HealthDiagnostics:
 
         if failing_aliases:
             health_status = HealthStatus.FAIL
-            message = (
-                "Sources require remediation: "
-                + ", ".join(sorted(failing_aliases))
+            message = "Sources require remediation: " + ", ".join(
+                sorted(failing_aliases)
             )
             remediation = "Inspect ragadmin sources list/update/remove to resolve quarantined entries."
         elif pending_aliases:
             health_status = HealthStatus.WARN
-            message = (
-                "Sources pending validation: "
-                + ", ".join(sorted(pending_aliases))
+            message = "Sources pending validation: " + ", ".join(
+                sorted(pending_aliases)
             )
-            remediation = "Run ragadmin reindex or complete validation for pending sources."
+            remediation = (
+                "Run ragadmin reindex or complete validation for pending sources."
+            )
         elif not catalog.sources:
             health_status = HealthStatus.FAIL
             message = "No sources registered; ingestion must succeed before querying."

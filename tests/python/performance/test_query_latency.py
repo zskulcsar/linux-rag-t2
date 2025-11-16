@@ -1,7 +1,6 @@
 """Performance contracts for ragman query latency (SC-001)."""
 
 
-
 def _import_query_metrics():
     try:
         from application import query_metrics  # type: ignore import-not-found

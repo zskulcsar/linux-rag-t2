@@ -1,6 +1,5 @@
 """Tracing utilities for optional deep observability mode."""
 
-
 import inspect
 import sys
 import threading

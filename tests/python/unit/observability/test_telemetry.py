@@ -1,6 +1,5 @@
 """Unit tests for observability telemetry helpers."""
 
-
 import logging
 import sys
 from types import SimpleNamespace

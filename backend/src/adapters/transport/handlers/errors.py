@@ -1,6 +1,5 @@
 """Transport-layer error types shared across handler modules."""
 
-
 from typing import Any
 
 

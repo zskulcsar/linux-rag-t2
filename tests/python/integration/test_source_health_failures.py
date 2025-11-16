@@ -22,7 +22,9 @@ def _import_health_service_module():
     return health_service
 
 
-def _utc(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> dt.datetime:
+def _utc(
+    year: int, month: int, day: int, hour: int = 0, minute: int = 0
+) -> dt.datetime:
     return dt.datetime(year, month, day, hour, minute, tzinfo=dt.timezone.utc)
 
 
@@ -49,7 +51,9 @@ def _healthy_catalog() -> ingestion_ports.SourceCatalog:
                 checksum="sha256:man",
             )
         ],
-        snapshots=[ingestion_ports.SourceSnapshot(alias="man-pages", checksum="sha256:man")],
+        snapshots=[
+            ingestion_ports.SourceSnapshot(alias="man-pages", checksum="sha256:man")
+        ],
     )
 
 
@@ -74,7 +78,9 @@ def test_health_diagnostics_flags_quarantined_sources() -> None:
 
     diagnostics = health_service.HealthDiagnostics(
         catalog_loader=lambda: catalog,
-        disk_probe=lambda: type("Disk", (), {"total_bytes": 1_000_000, "available_bytes": 900_000})(),
+        disk_probe=lambda: type(
+            "Disk", (), {"total_bytes": 1_000_000, "available_bytes": 900_000}
+        )(),
         dependency_checks=[],
         clock=lambda: _utc(2025, 1, 5, 9, 0),
     )

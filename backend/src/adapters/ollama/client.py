@@ -1,6 +1,5 @@
 """Ollama adapter for embedding generation."""
 
-
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass

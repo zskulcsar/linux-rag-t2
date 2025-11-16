@@ -1,6 +1,5 @@
 """Utilities for instrumenting callable entry/exit logging."""
 
-
 import inspect
 from functools import wraps
 from typing import Any, Callable, TypeVar, overload, cast

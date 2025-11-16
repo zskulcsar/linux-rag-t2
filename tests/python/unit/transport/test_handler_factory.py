@@ -148,7 +148,9 @@ def test_chunk_builder_embeds_and_ingests(tmp_path: Path) -> None:
     assert embedding.calls, "expected embeddings to be requested"
     assert vector.calls, "expected ingestion to receive the documents"
     ingested = vector.calls[-1]
-    assert all(doc.embedding is not None for doc in ingested), "embeddings must be attached"
+    assert all(doc.embedding is not None for doc in ingested), (
+        "embeddings must be attached"
+    )
 
 
 def test_chunk_builder_handles_missing_source_gracefully(tmp_path: Path) -> None:

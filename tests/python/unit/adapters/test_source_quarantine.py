@@ -1,6 +1,5 @@
 """Unit tests for the source quarantine adapter."""
 
-
 import datetime as dt
 from dataclasses import dataclass, field
 from typing import Any

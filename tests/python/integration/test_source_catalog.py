@@ -27,7 +27,9 @@ def _import_source_catalog_module():
     return source_catalog
 
 
-def _utc(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> dt.datetime:
+def _utc(
+    year: int, month: int, day: int, hour: int = 0, minute: int = 0
+) -> dt.datetime:
     return dt.datetime(year, month, day, hour, minute, tzinfo=dt.timezone.utc)
 
 
@@ -78,9 +80,9 @@ class _RecordingChunkBuilder:
         location: Path,
         source_type: ingestion_ports.SourceType,
     ) -> list[Document]:
-        assert (
-            source_type == self.source_type
-        ), "chunk builder must receive the source type for serialization"
+        assert source_type == self.source_type, (
+            "chunk builder must receive the source type for serialization"
+        )
         self.calls.append((alias, checksum, location))
         documents: list[Document] = []
         for chunk_id in range(2):
@@ -128,9 +130,14 @@ def test_catalog_service_adds_source_and_persists_checksum(tmp_path: Path) -> No
 
     module = _import_source_catalog_module()
     storage = _RecordingStorage()
-    hasher = _DeterministicHasher("abc123deadbeefabc123deadbeefabc123deadbeefabc123deadbeef")
+    hasher = _DeterministicHasher(
+        "abc123deadbeefabc123deadbeefabc123deadbeefabc123deadbeef"
+    )
     chunk_builder = _RecordingChunkBuilder(ingestion_ports.SourceType.KIWIX)
-    def clock(): _utc(2025, 1, 2, 9, 0)
+
+    def clock():
+        _utc(2025, 1, 2, 9, 0)
+
     service = module.SourceCatalogService(
         storage=storage,
         checksum_calculator=hasher,
@@ -154,7 +161,10 @@ def test_catalog_service_adds_source_and_persists_checksum(tmp_path: Path) -> No
     catalog = storage.saved_catalogs[-1]
     saved_source = catalog.sources[-1]
     assert saved_source.alias == result.source.alias
-    assert saved_source.checksum == "abc123deadbeefabc123deadbeefabc123deadbeefabc123deadbeef"
+    assert (
+        saved_source.checksum
+        == "abc123deadbeefabc123deadbeefabc123deadbeefabc123deadbeef"
+    )
     assert catalog.snapshots[-1].checksum == saved_source.checksum
     assert saved_source.status is ingestion_ports.SourceStatus.PENDING_VALIDATION
     assert saved_source.size_bytes == artifact.stat().st_size
@@ -195,7 +205,9 @@ def test_catalog_service_appends_suffix_for_alias_collisions(tmp_path: Path) -> 
 
     module = _import_source_catalog_module()
     storage = _RecordingStorage(initial_catalog=existing_catalog)
-    hasher = _DeterministicHasher("def4567890abcdefdef4567890abcdefdef4567890abcdefdef4567890abcd")
+    hasher = _DeterministicHasher(
+        "def4567890abcdefdef4567890abcdefdef4567890abcdefdef4567890abcd"
+    )
     chunk_builder = _RecordingChunkBuilder(ingestion_ports.SourceType.KIWIX)
     service = module.SourceCatalogService(
         storage=storage,
@@ -244,13 +256,18 @@ def test_catalog_service_updates_metadata_and_replans_chunks(tmp_path: Path) -> 
         version=5,
         updated_at=_utc(2025, 1, 3, 9, 0),
         sources=[existing_record],
-        snapshots=[ingestion_ports.SourceSnapshot(alias="linuxwiki", checksum="oldsum")],
+        snapshots=[
+            ingestion_ports.SourceSnapshot(alias="linuxwiki", checksum="oldsum")
+        ],
     )
 
     storage = _RecordingStorage(initial_catalog=existing_catalog)
     hasher = _DeterministicHasher("newchecksumabcd")
     chunk_builder = _RecordingChunkBuilder(ingestion_ports.SourceType.KIWIX)
-    def clock(): _utc(2025, 1, 4, 10, 30)
+
+    def clock():
+        _utc(2025, 1, 4, 10, 30)
+
     service = _import_source_catalog_module().SourceCatalogService(
         storage=storage,
         checksum_calculator=hasher,
@@ -309,13 +326,18 @@ def test_catalog_service_update_without_location_preserves_checksum() -> None:
         version=7,
         updated_at=_utc(2025, 1, 2, 12, 0),
         sources=[existing_record],
-        snapshots=[ingestion_ports.SourceSnapshot(alias="man-pages", checksum="mansum")],
+        snapshots=[
+            ingestion_ports.SourceSnapshot(alias="man-pages", checksum="mansum")
+        ],
     )
 
     storage = _RecordingStorage(initial_catalog=existing_catalog)
     hasher = _DeterministicHasher("mansum-updated")
     chunk_builder = _RecordingChunkBuilder(ingestion_ports.SourceType.MAN)
-    def clock(): _utc(2025, 1, 5, 8, 45)
+
+    def clock():
+        _utc(2025, 1, 5, 8, 45)
+
     service = _import_source_catalog_module().SourceCatalogService(
         storage=storage,
         checksum_calculator=hasher,
@@ -349,7 +371,10 @@ def test_catalog_service_emits_audit_entries_for_mutations(tmp_path: Path) -> No
     hasher = _DeterministicHasher("abc123")
     chunk_builder = _RecordingChunkBuilder(ingestion_ports.SourceType.KIWIX)
     audit = _AuditRecorder()
-    def clock(): _utc(2025, 1, 5, 7, 45)
+
+    def clock():
+        _utc(2025, 1, 5, 7, 45)
+
     service = module.SourceCatalogService(
         storage=storage,
         checksum_calculator=hasher,
@@ -374,6 +399,7 @@ def test_catalog_service_emits_audit_entries_for_mutations(tmp_path: Path) -> No
     assert entry["action"] == "source_add"
     assert entry["alias"] == saved_alias
     assert entry["language"] == "fr"
+
 
 def test_catalog_service_remove_source_marks_quarantine() -> None:
     """Removal MUST mark the source as quarantined and drop snapshots."""
@@ -403,7 +429,10 @@ def test_catalog_service_remove_source_marks_quarantine() -> None:
     storage = _RecordingStorage(initial_catalog=existing_catalog)
     hasher = _DeterministicHasher("unused-checksum")
     chunk_builder = _RecordingChunkBuilder(ingestion_ports.SourceType.KIWIX)
-    def clock(): _utc(2025, 1, 6, 14, 0)
+
+    def clock():
+        _utc(2025, 1, 6, 14, 0)
+
     service = _import_source_catalog_module().SourceCatalogService(
         storage=storage,
         checksum_calculator=hasher,

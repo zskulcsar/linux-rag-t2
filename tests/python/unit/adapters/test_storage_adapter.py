@@ -1,6 +1,5 @@
 """Unit tests safeguarding catalog storage and audit logging adapters."""
 
-
 import datetime as dt
 import json
 from pathlib import Path

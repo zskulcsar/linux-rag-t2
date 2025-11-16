@@ -1,6 +1,5 @@
 """Unit tests for JobRecoveryService checkpoint and resume helpers."""
 
-
 import datetime as dt
 import uuid
 

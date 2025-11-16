@@ -43,7 +43,9 @@ def _import_health_service_module():
     return health_service
 
 
-def _utc(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> dt.datetime:
+def _utc(
+    year: int, month: int, day: int, hour: int = 0, minute: int = 0
+) -> dt.datetime:
     return dt.datetime(year, month, day, hour, minute, tzinfo=dt.timezone.utc)
 
 
@@ -154,7 +156,9 @@ def test_init_service_bootstraps_directories_and_seeds_sources(tmp_path: Path) -
                 checksum="sha256:man",
             )
         ],
-        snapshots=[ingestion_ports.SourceSnapshot(alias="man-pages", checksum="sha256:man")],
+        snapshots=[
+            ingestion_ports.SourceSnapshot(alias="man-pages", checksum="sha256:man")
+        ],
     )
     ingestion_port = _RecordingIngestionPort(catalog=catalog)
     dependency_checks = [
@@ -191,7 +195,8 @@ def test_init_service_bootstraps_directories_and_seeds_sources(tmp_path: Path) -
     assert runtime_dir in created_dirs
     assert config_writer.writes, "expected default config to be written"
     assert any(
-        Path(req.location).stem == "info-pages" for req in ingestion_port.created_requests
+        Path(req.location).stem == "info-pages"
+        for req in ingestion_port.created_requests
     ), "missing seed call for info-pages"
 
     seeded_sources = _as_dict(summary, "seeded_sources")
@@ -205,7 +210,9 @@ def test_init_service_bootstraps_directories_and_seeds_sources(tmp_path: Path) -
     assert _as_dict(summary, "catalog_version") >= 5
 
 
-def test_health_diagnostics_merges_dependency_checks_with_system_probes(tmp_path: Path) -> None:
+def test_health_diagnostics_merges_dependency_checks_with_system_probes(
+    tmp_path: Path,
+) -> None:
     """HealthDiagnostics MUST combine disk, catalog, and dependency checks into one report."""
 
     health_service = _import_health_service_module()
@@ -256,13 +263,17 @@ def test_health_diagnostics_merges_dependency_checks_with_system_probes(tmp_path
 
     diagnostics = health_service.HealthDiagnostics(
         catalog_loader=lambda: catalog,
-        disk_probe=lambda: _DiskStats(total_bytes=1_000_000_000, available_bytes=600_000_000),
+        disk_probe=lambda: _DiskStats(
+            total_bytes=1_000_000_000, available_bytes=600_000_000
+        ),
         dependency_checks=dependencies,
         clock=lambda: _utc(2025, 1, 4, 12, 0),
     )
 
     report = diagnostics.evaluate()
-    assert report.status is HealthStatus.WARN, "warn dependency should elevate overall status"
+    assert report.status is HealthStatus.WARN, (
+        "warn dependency should elevate overall status"
+    )
 
     disk_check = _find_check(report, HealthComponent.DISK_CAPACITY)
     assert disk_check.status is HealthStatus.PASS

@@ -1,6 +1,5 @@
 """Weaviate vector adapter handling ingestion flows."""
 
-
 import time
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass

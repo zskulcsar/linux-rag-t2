@@ -39,15 +39,15 @@ def load_handler_settings_from_env() -> HandlerSettings:
     """Return handler settings constructed from environment variables."""
 
     return HandlerSettings(
-        weaviate_url=os.environ.get("RAG_BACKEND_WEAVIATE_URL", "http://127.0.0.1:8080"),
+        weaviate_url=os.environ.get(
+            "RAG_BACKEND_WEAVIATE_URL", "http://127.0.0.1:8080"
+        ),
         ollama_url=os.environ.get("RAG_BACKEND_OLLAMA_URL", "http://127.0.0.1:11434"),
         phoenix_url=os.environ.get("RAG_BACKEND_PHOENIX_URL"),
         embedding_model=os.environ.get(
             "RAG_BACKEND_EMBED_MODEL", "embeddinggemma:latest"
         ),
-        completion_model=os.environ.get(
-            "RAG_BACKEND_COMPLETION_MODEL", "gemma3:1b"
-        ),
+        completion_model=os.environ.get("RAG_BACKEND_COMPLETION_MODEL", "gemma3:1b"),
         data_dir=_default_data_dir(),
         disable_bootstrap=os.environ.get("RAG_BACKEND_DISABLE_BOOTSTRAP") == "1",
     )

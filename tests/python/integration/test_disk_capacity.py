@@ -25,7 +25,9 @@ def _import_health_service_module():
     return health_service
 
 
-def _utc(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> dt.datetime:
+def _utc(
+    year: int, month: int, day: int, hour: int = 0, minute: int = 0
+) -> dt.datetime:
     return dt.datetime(year, month, day, hour, minute, tzinfo=dt.timezone.utc)
 
 
@@ -62,7 +64,9 @@ class _CatalogFactory:
                     checksum="sha256:man",
                 )
             ],
-            snapshots=[ingestion_ports.SourceSnapshot(alias="man-pages", checksum="sha256:man")],
+            snapshots=[
+                ingestion_ports.SourceSnapshot(alias="man-pages", checksum="sha256:man")
+            ],
         )
 
 
@@ -74,7 +78,9 @@ class _CatalogFactory:
         (0.07, HealthStatus.FAIL),
     ],
 )
-def test_disk_capacity_thresholds(available_ratio: float, expected: HealthStatus) -> None:
+def test_disk_capacity_thresholds(
+    available_ratio: float, expected: HealthStatus
+) -> None:
     """Health diagnostics MUST warn/fail when disk free space dips below documented thresholds."""
 
     health_service = _import_health_service_module()
@@ -84,7 +90,9 @@ def test_disk_capacity_thresholds(available_ratio: float, expected: HealthStatus
 
     diagnostics = health_service.HealthDiagnostics(
         catalog_loader=lambda: catalog,
-        disk_probe=lambda: _DiskStats(total_bytes=total_bytes, available_bytes=available_bytes),
+        disk_probe=lambda: _DiskStats(
+            total_bytes=total_bytes, available_bytes=available_bytes
+        ),
         dependency_checks=[],
         clock=lambda: _utc(2025, 1, 5, 12, 0),
     )

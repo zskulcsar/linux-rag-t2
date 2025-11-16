@@ -6,7 +6,6 @@ tasks must satisfy these contracts without altering the shapes asserted
 below.
 """
 
-
 import dataclasses
 import importlib
 import inspect

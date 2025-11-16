@@ -1,6 +1,5 @@
 """Context budget and truncation behaviour for query execution."""
 
-
 import datetime as dt
 
 import pytest

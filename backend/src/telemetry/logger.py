@@ -1,6 +1,5 @@
 """Logging helper providing a structlog-compatible interface with fallback."""
 
-
 import logging
 from types import ModuleType
 from typing import Any

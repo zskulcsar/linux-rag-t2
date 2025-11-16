@@ -1,6 +1,5 @@
 """Reindex duration performance helpers for SC-002 budgets."""
 
-
 from collections.abc import Sequence
 import datetime as dt
 from typing import Any, Callable

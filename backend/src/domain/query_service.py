@@ -1,6 +1,5 @@
 """Domain services for query-related operations."""
 
-
 import datetime as dt
 from dataclasses import replace
 from typing import Callable

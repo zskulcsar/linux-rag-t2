@@ -1,6 +1,5 @@
 """Unit tests for backend launcher helpers (main module)."""
 
-
 import argparse
 import logging
 from pathlib import Path
@@ -26,6 +25,7 @@ def _stub_launcher_dependencies(monkeypatch: pytest.MonkeyPatch) -> None:
         "transport_server",
         lambda *args, **kwargs: _AsyncNullContext(),
     )
+
 
 from main import (  # noqa: E402
     LauncherConfig,

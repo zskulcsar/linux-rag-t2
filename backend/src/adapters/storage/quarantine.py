@@ -1,6 +1,5 @@
 """Quarantine operations for corrupted knowledge sources."""
 
-
 import datetime as dt
 from dataclasses import replace
 from typing import Callable

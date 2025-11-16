@@ -1,6 +1,5 @@
 """Async Unix socket server implementation for CLI transport requests."""
 
-
 import asyncio
 import functools
 import json

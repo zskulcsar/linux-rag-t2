@@ -1,6 +1,5 @@
 """Contract tests for the ragman query orchestration pipeline."""
 
-
 import datetime as dt
 
 import pytest
