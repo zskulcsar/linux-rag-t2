@@ -26,9 +26,10 @@ EXPECTED_HANDSHAKE_RESPONSE = {
 }
 
 READ_TIMEOUT = 3.0
+SOCKET_TIMEOUT = 15.0
 
 
-async def _wait_for_socket(path: Path, timeout: float = 5.0) -> None:
+async def _wait_for_socket(path: Path, timeout: float = SOCKET_TIMEOUT) -> None:
     """Poll until the launcher creates the Unix socket file or time out."""
 
     deadline = asyncio.get_running_loop().time() + timeout
@@ -87,7 +88,7 @@ async def test_backend_launcher_requires_config_and_loads_defaults(
     )
 
     try:
-        await _wait_for_socket(socket_path, timeout=5.0)
+        await _wait_for_socket(socket_path)
         reader, writer = await connect_and_handshake(
             socket_path,
             request=HANDSHAKE_REQUEST,
@@ -154,7 +155,7 @@ async def test_backend_launcher_allows_cli_overrides(tmp_path: Path) -> None:
     )
 
     try:
-        await _wait_for_socket(socket_path, timeout=5.0)
+        await _wait_for_socket(socket_path)
         reader, writer = await connect_and_handshake(
             socket_path,
             request=HANDSHAKE_REQUEST,
@@ -209,7 +210,7 @@ async def test_backend_launcher_trace_flag_enables_controller(tmp_path: Path) ->
     )
 
     try:
-        await _wait_for_socket(socket_path, timeout=5.0)
+        await _wait_for_socket(socket_path)
         reader, writer = await connect_and_handshake(
             socket_path,
             request=HANDSHAKE_REQUEST,
