@@ -4,6 +4,10 @@ import dataclasses
 from typing import Any
 
 from ports import (
+    HealthCheck,
+    HealthComponent,
+    HealthReport,
+    HealthStatus,
     IngestionJob,
     QueryResponse,
     SourceCatalog,
@@ -79,8 +83,66 @@ def _serialize_snapshot(snapshot: SourceSnapshot) -> dict[str, Any]:
     return {"alias": snapshot.alias, "checksum": snapshot.checksum}
 
 
+def serialize_health_report(report: HealthReport) -> dict[str, Any]:
+    """Serialize a :class:`HealthReport` into the transport payload schema.
+
+    Args:
+        report: Aggregated health report produced by :class:`HealthPort`.
+
+    Returns:
+        Mapping describing the overall status, generation timestamp, and per
+        component results that clients can render.
+
+    Example:
+        >>> summary = serialize_health_report(  # doctest: +SKIP
+        ...     HealthReport(
+        ...         status=HealthStatus.PASS,
+        ...         checks=[
+        ...             HealthCheck(
+        ...                 component="disk_capacity",
+        ...                 status=HealthStatus.PASS,
+        ...                 message="Healthy",
+        ...             )
+        ...         ],
+        ...     )
+        ... )
+        >>> summary["overall_status"]  # doctest: +SKIP
+        'pass'
+    """
+
+    return {
+        "overall_status": _status_string(report.status),
+        "generated_at": report.generated_at.isoformat(),
+        "results": [_serialize_health_check(check) for check in report.checks],
+    }
+
+
+def _serialize_health_check(check: HealthCheck) -> dict[str, Any]:
+    component = check.component
+    if isinstance(component, HealthComponent):
+        component_name = component.value
+    else:
+        component_name = str(component)
+    payload: dict[str, Any] = {
+        "component": component_name,
+        "status": _status_string(check.status),
+        "message": check.message,
+        "timestamp": check.timestamp.isoformat(),
+    }
+    if check.remediation:
+        payload["remediation"] = check.remediation
+    if check.metrics:
+        payload["metrics"] = dict(check.metrics)
+    return payload
+
+
+def _status_string(value: HealthStatus | str) -> str:
+    return value.value if hasattr(value, "value") else str(value)
+
+
 __all__ = [
     "serialize_catalog",
+    "serialize_health_report",
     "serialize_ingestion_job",
     "serialize_query_response",
     "serialize_source_record",

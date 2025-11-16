@@ -163,7 +163,7 @@
 ### Backend Readiness Fixes
 
 - [X] T070 [US3] Replace the bootstrap transport stubs in `backend/src/adapters/transport/handlers/factory.py` with the real query, ingestion, and health services so the running backend talks to Weaviate, Ollama, and Phoenix.
-- [ ] T071 [US3] Add a `/v1/admin/health` handler in `backend/src/adapters/transport/handlers/router.py` that invokes `HealthPort`, emits audit entries, and serializes component results for the CLI.
+- [X] T071 [US3] Add a `/v1/admin/health` handler in `backend/src/adapters/transport/handlers/router.py` that invokes `HealthPort`, emits audit entries, and serializes component results for the CLI.
 
 ---
 

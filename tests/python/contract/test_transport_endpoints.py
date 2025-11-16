@@ -189,6 +189,47 @@ async def test_admin_init_endpoint_reports_dependency_checks(tmp_path: Path) -> 
 
 
 @pytest.mark.asyncio
+async def test_admin_health_endpoint_returns_component_results(tmp_path: Path) -> None:
+    """`/v1/admin/health` should return component health results and trace IDs."""
+
+    socket_path = tmp_path / "backend.sock"
+    correlation_id = "contract-admin-health"
+    trace_id = "contract-health-trace"
+
+    async with server.transport_server(socket_path=socket_path):
+        reader, writer = await connect_and_handshake(
+            socket_path, request=HANDSHAKE_REQUEST
+        )
+
+        request = {
+            "type": "request",
+            "path": "/v1/admin/health",
+            "correlation_id": correlation_id,
+            "body": {"trace_id": trace_id},
+        }
+
+        try:
+            await asyncio.wait_for(write_frame(writer, request), timeout=1)
+            response = await asyncio.wait_for(read_frame(reader), timeout=1)
+        finally:
+            await close_writer(writer)
+
+    assert response["type"] == "response"
+    assert response["status"] == 200
+    assert response["correlation_id"] == correlation_id
+
+    body = response["body"]
+    assert isinstance(body, dict)
+    assert body.get("trace_id") == trace_id
+    assert body.get("overall_status") in {"pass", "warn", "fail"}
+
+    results = body.get("results")
+    assert isinstance(results, list) and results, "expected component results"
+    components = {result.get("component") for result in results if isinstance(result, dict)}
+    assert {"disk_capacity", "index_freshness", "source_access"}.issubset(components)
+    assert "ollama" in components and "weaviate" in components
+
+@pytest.mark.asyncio
 async def test_admin_init_rejects_when_index_missing(
     tmp_path: Path, make_transport_handlers
 ) -> None:

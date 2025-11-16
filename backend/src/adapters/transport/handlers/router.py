@@ -1,9 +1,11 @@
 """Routing logic for Unix transport requests."""
 
 import datetime as dt
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict
 
+from adapters.storage.audit_log import AuditLogger
 from ports import (
     HealthPort,
     IngestionPort,
@@ -19,6 +21,7 @@ from telemetry import trace_call, trace_section
 from .errors import IndexUnavailableError, TransportError
 from .serializers import (
     serialize_catalog,
+    serialize_health_report,
     serialize_ingestion_job,
     serialize_query_response,
     serialize_source_record,
@@ -32,6 +35,7 @@ class TransportHandlers:
     query_port: QueryPort
     ingestion_port: IngestionPort
     health_port: HealthPort | None = None
+    audit_logger: AuditLogger | None = None
     _clock: Callable[[], dt.datetime] = field(
         default=lambda: dt.datetime.now(dt.timezone.utc)
     )
@@ -59,6 +63,8 @@ class TransportHandlers:
             return self._handle_reindex(body)
         if path == "/v1/admin/init":
             return self._handle_admin_init()
+        if path == "/v1/admin/health":
+            return self._handle_admin_health(body)
         raise TransportError(
             status=404,
             code="NOT_FOUND",
@@ -180,6 +186,55 @@ class TransportHandlers:
                 },
             )
 
+    @trace_call
+    def _handle_admin_health(self, body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+        """Return aggregated health diagnostics for admin workflows.
+
+        Args:
+            body: Request payload that may contain a ``trace_id`` field.
+
+        Returns:
+            Tuple of HTTP-like status and serialized health summary payload.
+
+        Raises:
+            TransportError: When no health port has been configured.
+
+        Example:
+            >>> handlers = TransportHandlers(  # doctest: +SKIP
+            ...     query_port=..., ingestion_port=..., health_port=...
+            ... )
+            >>> status, payload = handlers._handle_admin_health({"trace_id": "trace"})  # doctest: +SKIP
+            >>> status  # doctest: +SKIP
+            200
+        """
+
+        body = body or {}
+
+        if self.health_port is None:
+            raise TransportError(
+                status=503,
+                code="HEALTH_UNAVAILABLE",
+                message="Health diagnostics are unavailable on this backend.",
+            )
+
+        trace_id = _extract_trace_id(body)
+        report = self.health_port.evaluate()
+        payload = serialize_health_report(report)
+        payload["trace_id"] = trace_id
+        metadata = {
+            "overall_status": payload["overall_status"],
+            "trace_id": trace_id,
+            "result_count": len(payload["results"]),
+        }
+        with trace_section("transport.admin_health.report", metadata=metadata):
+            if self.audit_logger:
+                self.audit_logger.log_admin_health(
+                    overall_status=payload["overall_status"],
+                    trace_id=trace_id,
+                    results=payload["results"],
+                )
+        return 200, payload
+
 
 def _ensure_index_current(catalog: SourceCatalog) -> None:
     """Validate that the catalog index snapshots match active source metadata."""
@@ -238,6 +293,17 @@ def _is_active_source(source: SourceRecord) -> bool:
         else SourceStatus(str(source.status))
     )
     return status is SourceStatus.ACTIVE
+
+
+def _extract_trace_id(body: dict[str, Any]) -> str:
+    """Return a sanitized trace ID from the request body or generate one."""
+
+    candidate = body.get("trace_id") if isinstance(body, dict) else None
+    if isinstance(candidate, str):
+        trimmed = candidate.strip()
+        if trimmed:
+            return trimmed
+    return uuid.uuid4().hex
 
 
 __all__ = ["TransportHandlers"]

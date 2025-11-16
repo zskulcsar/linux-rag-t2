@@ -67,6 +67,7 @@ def create_default_handlers(
         query_port=query_port,
         ingestion_port=ingestion_port,
         health_port=health_port,
+        audit_logger=audit_logger,
         _clock=_clock,
     )
 
