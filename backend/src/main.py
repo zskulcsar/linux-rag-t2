@@ -29,6 +29,10 @@ from adapters.transport import (
     create_default_handlers,
     transport_server,
 )
+from application.handler_settings import (
+    HandlerSettings,
+    handler_settings_from_launcher,
+)
 from application import offline_guard
 from telemetry import TraceController
 from telemetry.logger import get_logger
@@ -199,29 +203,30 @@ async def _wait_for_shutdown(signals: Iterable[int], *, logger) -> None:
                 pass
 
 
-async def _run_server(config: LauncherConfig) -> None:
+async def _run_server(config: LauncherConfig, settings: HandlerSettings) -> None:
     """Start the Unix socket transport server and block until shutdown.
 
     Args:
         config: Fully-populated launcher configuration.
+        settings: Transport handler settings derived from the config.
 
     Returns:
         ``None`` once the transport server shuts down.
 
     Example:
-        >>> asyncio.run(_run_server(  # doctest: +SKIP
-        ...     LauncherConfig(
-        ...         socket_path=Path('/tmp/backend.sock'),
-        ...         weaviate_url='http://127.0.0.1:8080',
-        ...         ollama_url='http://127.0.0.1:11434',
-        ...         phoenix_url='http://127.0.0.1:6006',
-        ...         enable_trace=False,
-        ...         log_level='INFO',
-        ...     )
-        ... ))
+        >>> cfg = LauncherConfig(  # doctest: +SKIP
+        ...     config_path=Path('/etc/ragcli/ragcli-config.yaml'),
+        ...     socket_path=Path('/tmp/backend.sock'),
+        ...     weaviate_url='http://127.0.0.1:8080',
+        ...     ollama_url='http://127.0.0.1:11434',
+        ...     phoenix_url='http://127.0.0.1:6006',
+        ...     enable_trace=False,
+        ...     log_level='INFO',
+        ... )
+        >>> asyncio.run(_run_server(cfg, handler_settings_from_launcher(cfg)))  # doctest: +SKIP
     """
 
-    handlers = create_default_handlers()
+    handlers = create_default_handlers(settings=settings)
     LOGGER.info(
         "BackendLauncher._run_server(config) :: preparing_transport",
         socket=str(config.socket_path),
@@ -382,6 +387,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"rag_backend launcher error: {exc}", file=sys.stderr)
         return 2
 
+    handler_settings = handler_settings_from_launcher(config)
+
     configure_logging(config.log_level)
     trace_controller = TraceController()
     if config.enable_trace:
@@ -402,7 +409,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         with offline_guard.offline_mode():
-            asyncio.run(_run_server(config))
+            asyncio.run(_run_server(config, handler_settings))
         return 0
     except asyncio.CancelledError:  # pragma: no cover - defensive guard
         LOGGER.warning("BackendLauncher.main(argv) :: cancelled")

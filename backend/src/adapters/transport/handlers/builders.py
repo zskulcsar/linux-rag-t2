@@ -8,12 +8,12 @@ from typing import Any, Callable
 
 from adapters.ollama.client import OllamaAdapter
 from adapters.weaviate.client import WeaviateAdapter
+from application.handler_settings import HandlerSettings
 from application.query_engine import RetrievalLLMQueryPort
 from application.query_runner import QueryRunner
 from ports import SourceCatalog
 
 from .common import LOGGER, _using_fake_services
-from .config import _BackendSettings
 from .fakes import _FakeOllamaHttpClient, _FakeWeaviateClient
 from .http import _UrllibHttpClient
 
@@ -32,7 +32,7 @@ def _build_query_runner(
     return QueryRunner(query_port=retrieval_port)
 
 
-def _build_weaviate_adapter(settings: _BackendSettings) -> WeaviateAdapter:
+def _build_weaviate_adapter(settings: HandlerSettings) -> WeaviateAdapter:
     """Instantiate the Weaviate adapter with graceful fallbacks."""
 
     if _using_fake_services():
@@ -54,7 +54,7 @@ def _build_weaviate_adapter(settings: _BackendSettings) -> WeaviateAdapter:
     return WeaviateAdapter(client=client, class_name="Document")
 
 
-def _build_embedding_adapter(settings: _BackendSettings) -> OllamaAdapter:
+def _build_embedding_adapter(settings: HandlerSettings) -> OllamaAdapter:
     """Instantiate the Ollama adapter used for embeddings."""
 
     if _using_fake_services():
@@ -73,7 +73,7 @@ def _build_embedding_adapter(settings: _BackendSettings) -> OllamaAdapter:
     )
 
 
-def _build_completion_adapter(settings: _BackendSettings) -> OllamaAdapter:
+def _build_completion_adapter(settings: HandlerSettings) -> OllamaAdapter:
     """Instantiate the Ollama adapter used for completions."""
 
     if _using_fake_services():

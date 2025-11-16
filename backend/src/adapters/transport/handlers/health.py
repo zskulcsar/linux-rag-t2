@@ -7,19 +7,19 @@ from pathlib import Path
 from typing import Callable
 
 from adapters.storage.catalog import CatalogStorage
+from application.handler_settings import HandlerSettings
 from application.health_service import DiskSnapshot, HealthDiagnostics
 from ports import HealthComponent, HealthPort, HealthStatus
 from ports.health import HealthCheck
 
 from .common import LOGGER, _using_fake_services
-from .config import _BackendSettings
 from .http import _http_get_json, _http_request, _retry_with_backoff
 
 
 def _build_health_port(
     *,
     storage: CatalogStorage,
-    settings: _BackendSettings,
+    settings: HandlerSettings,
 ) -> HealthPort:
     catalog_loader = storage.load
     base_dir = getattr(storage, "_base_dir", Path.home())
@@ -38,7 +38,7 @@ def _build_health_port(
     )
 
 
-def _ollama_health_check(settings: _BackendSettings) -> HealthCheck:
+def _ollama_health_check(settings: HandlerSettings) -> HealthCheck:
     component = HealthComponent.OLLAMA
     if _using_fake_services():
         return HealthCheck(
@@ -81,7 +81,7 @@ def _ollama_health_check(settings: _BackendSettings) -> HealthCheck:
     )
 
 
-def _weaviate_health_check(settings: _BackendSettings) -> HealthCheck:
+def _weaviate_health_check(settings: HandlerSettings) -> HealthCheck:
     component = HealthComponent.WEAVIATE
     if _using_fake_services():
         return HealthCheck(
@@ -118,7 +118,7 @@ def _weaviate_health_check(settings: _BackendSettings) -> HealthCheck:
     )
 
 
-def _phoenix_health_check(settings: _BackendSettings) -> HealthCheck:
+def _phoenix_health_check(settings: HandlerSettings) -> HealthCheck:
     component = HealthComponent.PHOENIX
     if _using_fake_services():
         return HealthCheck(
