@@ -1,6 +1,5 @@
 """Contract tests for the Unix socket transport server handshake."""
 
-import asyncio
 from pathlib import Path
 
 import pytest

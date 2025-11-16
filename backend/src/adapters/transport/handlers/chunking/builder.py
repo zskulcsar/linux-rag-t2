@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable, Sequence, cast
+from typing import Sequence, cast
 
 from adapters.ollama.client import EmbeddingResult, OllamaAdapter
 from adapters.weaviate.client import Document, WeaviateAdapter

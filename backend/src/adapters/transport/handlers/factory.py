@@ -12,9 +12,8 @@ from .builders import (
     _calculate_checksum,
 )
 from .chunking import _chunk_builder_factory
-from .common import LOGGER, _clock
+from .common import _clock
 from .config import (
-    _BackendSettings,
     _configure_observability,
     _load_backend_settings,
     _resolve_data_dir,

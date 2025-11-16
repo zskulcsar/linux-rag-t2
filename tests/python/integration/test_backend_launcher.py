@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 import sys
 import textwrap
-from typing import Any
 
 import pytest
 
