@@ -62,14 +62,13 @@ def _sample_catalog() -> SourceCatalog:
 
 
 def test_catalog_storage_round_trip(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, catalog_storage: CatalogStorage
 ) -> None:
     """Ensure catalog save/load preserves metadata without mutation."""
 
     data_dir = tmp_path / "xdg-data" / "ragcli"
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
 
-    storage = CatalogStorage()
+    storage = catalog_storage
     catalog = _sample_catalog()
 
     storage.save(catalog)
@@ -83,14 +82,13 @@ def test_catalog_storage_round_trip(
 
 
 def test_catalog_storage_uses_atomic_write(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, catalog_storage: CatalogStorage
 ) -> None:
     """Verify save writes via temporary file and cleans up after renaming."""
 
     data_dir = tmp_path / "xdg-data" / "ragcli"
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
 
-    storage = CatalogStorage()
+    storage = catalog_storage
     catalog = _sample_catalog()
 
     storage.save(catalog)
@@ -102,13 +100,10 @@ def test_catalog_storage_uses_atomic_write(
     )
 
 
-def test_audit_logger_appends_json_lines(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_audit_logger_appends_json_lines(tmp_path: Path) -> None:
     """Ensure audit logger writes newline-delimited JSON entries."""
 
     data_dir = tmp_path / "xdg-data" / "ragcli"
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
     logger = AuditLogger()
 
     entry = {
@@ -132,11 +127,10 @@ def test_audit_logger_appends_json_lines(
 
 
 def test_audit_logger_adds_language_warning_for_non_english_mutations(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """Ensure audit logger annotates non-English mutations with warnings."""
 
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
     logger = AuditLogger()
 
     logger.log_mutation(
@@ -159,12 +153,9 @@ def test_audit_logger_adds_language_warning_for_non_english_mutations(
     assert entry["status"] == "success"
 
 
-def test_audit_logger_rejects_malformed_language_codes(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_audit_logger_rejects_malformed_language_codes(tmp_path: Path) -> None:
     """Ensure invalid language codes are rejected during mutation logging."""
 
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
     logger = AuditLogger()
 
     with pytest.raises(ValueError):
@@ -252,12 +243,11 @@ def test_audit_logger_requires_trace_ids_for_admin_entries(tmp_path: Path) -> No
 
 
 def test_catalog_storage_returns_empty_when_missing_file(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, catalog_storage: CatalogStorage
 ) -> None:
     """Ensure load() returns an empty catalog when no file exists yet."""
 
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
-    storage = CatalogStorage()
+    storage = catalog_storage
     catalog = storage.load()
 
     assert catalog.version == 0

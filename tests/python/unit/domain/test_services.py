@@ -7,6 +7,7 @@ import uuid
 
 import pytest
 
+from common import clock as common_clock
 from domain import health_service, models, query_service, source_service
 from ports.health import HealthCheck, HealthComponent, HealthStatus
 
@@ -259,9 +260,7 @@ def test_health_service_registers_checks_and_aggregates(
     """Ensure HealthService uses the default clock and aggregates WARN status."""
 
     generated_at = _utc(dt.datetime(2025, 1, 5, 12, 0, 0))
-    monkeypatch.setattr(
-        health_service, "_default_clock", lambda: generated_at, raising=False
-    )
+    monkeypatch.setattr(health_service, "utc_now", lambda: generated_at)
 
     def make_check(status: HealthStatus, component: HealthComponent):
         def factory() -> HealthCheck:
@@ -415,9 +414,7 @@ def test_query_service_default_clock_and_non_ready_freshness(
     """Ensure default clock path executes and non-ready indexes are returned untouched."""
 
     sentinel = _utc(dt.datetime(2025, 1, 6, 12, 0, 0))
-    monkeypatch.setattr(
-        query_service, "_default_clock", lambda: sentinel, raising=False
-    )
+    monkeypatch.setattr(query_service, "utc_now", lambda: sentinel)
     service = query_service.QueryService()
 
     version = models.ContentIndexVersion(
@@ -474,10 +471,10 @@ def test_query_service_rejects_mark_ready_for_non_building_version() -> None:
 def test_query_service_default_clock_returns_timezone_aware_timestamp() -> None:
     """Ensure the default clock helper yields a timezone-aware timestamp."""
 
-    assert query_service._default_clock().tzinfo is not None
+    assert common_clock.utc_now().tzinfo is not None
 
 
 def test_source_service_default_clock_returns_timezone_aware_timestamp() -> None:
     """Ensure the source service default clock provides UTC timestamps."""
 
-    assert source_service._default_clock().tzinfo is not None
+    assert common_clock.utc_now().tzinfo is not None

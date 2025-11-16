@@ -6,6 +6,7 @@ import uuid
 
 import pytest
 
+from common import clock as common_clock
 from domain import job_recovery, models
 
 
@@ -172,4 +173,4 @@ def test_resume_with_checkpoint_updates_documents_processed() -> None:
 
 
 def test_default_clock_returns_timezone_aware_timestamp() -> None:
-    assert job_recovery._default_clock().tzinfo is not None
+    assert common_clock.utc_now().tzinfo is not None

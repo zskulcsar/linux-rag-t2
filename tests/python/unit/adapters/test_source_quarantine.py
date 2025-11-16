@@ -67,12 +67,11 @@ def _catalog(updated_at: dt.datetime) -> SourceCatalog:
 
 
 def test_quarantine_manager_updates_catalog_and_audit_log(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    catalog_storage: CatalogStorage,
 ) -> None:
     """Ensure manager marks the source as quarantined and records audit metadata."""
 
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
-    storage = CatalogStorage()
+    storage = catalog_storage
     catalog = _catalog(updated_at=_utc(2025, 1, 2, 9, 0))
     storage.save(catalog)
 
@@ -103,12 +102,11 @@ def test_quarantine_manager_updates_catalog_and_audit_log(
 
 
 def test_quarantine_manager_rejects_unknown_alias(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    catalog_storage: CatalogStorage,
 ) -> None:
     """Ensure attempting to quarantine a missing alias raises a ValueError."""
 
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
-    storage = CatalogStorage()
+    storage = catalog_storage
     storage.save(_catalog(updated_at=_utc(2025, 1, 2, 9, 0)))
 
     manager = SourceQuarantineManager(
@@ -122,14 +120,13 @@ def test_quarantine_manager_rejects_unknown_alias(
 
 
 def test_quarantine_manager_uses_default_clock(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    catalog_storage: CatalogStorage, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Ensure default clock injection supplies timestamps when no override provided."""
 
     sentinel = _utc(2025, 1, 2, 12, 0)
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
-    monkeypatch.setattr("adapters.storage.quarantine._default_clock", lambda: sentinel)
-    storage = CatalogStorage()
+    monkeypatch.setattr("adapters.storage.quarantine.utc_now", lambda: sentinel)
+    storage = catalog_storage
     catalog = _catalog(updated_at=_utc(2025, 1, 2, 9, 0))
     storage.save(catalog)
 
@@ -149,5 +146,5 @@ def test_quarantine_manager_uses_default_clock(
 def test_quarantine_default_clock_returns_aware_timestamp() -> None:
     """Ensure the fallback clock helper returns a timezone-aware timestamp."""
 
-    timestamp = quarantine_module._default_clock()
+    timestamp = quarantine_module.utc_now()
     assert timestamp.tzinfo is not None

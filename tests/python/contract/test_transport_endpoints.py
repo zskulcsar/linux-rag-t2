@@ -2,13 +2,12 @@
 
 import asyncio
 import datetime as dt
-import json
 from pathlib import Path
 from typing import cast
 
 import pytest
 
-from adapters.transport import create_default_handlers, server
+from adapters.transport import server
 from ports import (
     IngestionPort,
     SourceCatalog,
@@ -16,6 +15,12 @@ from ports import (
     SourceSnapshot,
 )
 from ports.ingestion import SourceStatus, SourceType
+from tests.python.helpers.ipc import (
+    close_writer,
+    connect_and_handshake,
+    read_frame,
+    write_frame,
+)
 
 HANDSHAKE_REQUEST = {
     "type": "handshake",
@@ -30,57 +35,6 @@ def _fake_services(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RAG_BACKEND_FAKE_SERVICES", "1")
 
 
-async def _write_frame(writer: asyncio.StreamWriter, message: dict) -> None:
-    """Send a framed JSON message using <len>\\n<payload>\\n semantics."""
-
-    body = json.dumps(message, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    header = f"{len(body)}\n".encode("ascii")
-    writer.write(header)
-    writer.write(body)
-    writer.write(b"\n")
-    await writer.drain()
-
-
-async def _read_frame(reader: asyncio.StreamReader) -> dict:
-    """Read a framed JSON message using <len>\\n<payload>\\n semantics."""
-
-    length_line = await reader.readline()
-    if not length_line:
-        raise AssertionError("expected length-prefixed frame, got EOF")
-
-    try:
-        payload_length = int(length_line.decode("ascii").strip())
-    except ValueError as exc:  # pragma: no cover - defensive guard for clarity
-        raise AssertionError(f"invalid length prefix: {length_line!r}") from exc
-
-    payload = await reader.readexactly(payload_length)
-    newline = await reader.readexactly(1)
-    assert newline == b"\n", "transport must terminate frames with newline sentinel"
-
-    return json.loads(payload.decode("utf-8"))
-
-
-async def _connect_and_handshake(
-    socket_path: Path,
-) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
-    """Connect to the server and validate the handshake prior to issuing requests."""
-
-    reader, writer = await asyncio.wait_for(
-        asyncio.open_unix_connection(path=str(socket_path)), timeout=1
-    )
-    await asyncio.wait_for(_write_frame(writer, HANDSHAKE_REQUEST), timeout=1)
-    handshake_response = await asyncio.wait_for(_read_frame(reader), timeout=1)
-
-    assert handshake_response == {
-        "type": "handshake_ack",
-        "protocol": "rag-cli-ipc",
-        "version": 1,
-        "server": "rag-backend",
-    }
-
-    return reader, writer
-
-
 @pytest.mark.asyncio
 async def test_query_endpoint_returns_structured_response(tmp_path: Path) -> None:
     """`/v1/query` should return the structured query response contract."""
@@ -89,7 +43,9 @@ async def test_query_endpoint_returns_structured_response(tmp_path: Path) -> Non
     correlation_id = "contract-query"
 
     async with server.transport_server(socket_path=socket_path):
-        reader, writer = await _connect_and_handshake(socket_path)
+        reader, writer = await connect_and_handshake(
+            socket_path, request=HANDSHAKE_REQUEST
+        )
 
         request = {
             "type": "request",
@@ -103,11 +59,10 @@ async def test_query_endpoint_returns_structured_response(tmp_path: Path) -> Non
         }
 
         try:
-            await asyncio.wait_for(_write_frame(writer, request), timeout=1)
-            response = await asyncio.wait_for(_read_frame(reader), timeout=1)
+            await asyncio.wait_for(write_frame(writer, request), timeout=1)
+            response = await asyncio.wait_for(read_frame(reader), timeout=1)
         finally:
-            writer.close()
-            await writer.wait_closed()
+            await close_writer(writer)
 
     assert response["type"] == "response"
     assert response["status"] == 200
@@ -130,7 +85,9 @@ async def test_sources_endpoint_lists_catalog_snapshot(tmp_path: Path) -> None:
     correlation_id = "contract-sources"
 
     async with server.transport_server(socket_path=socket_path):
-        reader, writer = await _connect_and_handshake(socket_path)
+        reader, writer = await connect_and_handshake(
+            socket_path, request=HANDSHAKE_REQUEST
+        )
 
         request = {
             "type": "request",
@@ -140,11 +97,10 @@ async def test_sources_endpoint_lists_catalog_snapshot(tmp_path: Path) -> None:
         }
 
         try:
-            await asyncio.wait_for(_write_frame(writer, request), timeout=1)
-            response = await asyncio.wait_for(_read_frame(reader), timeout=1)
+            await asyncio.wait_for(write_frame(writer, request), timeout=1)
+            response = await asyncio.wait_for(read_frame(reader), timeout=1)
         finally:
-            writer.close()
-            await writer.wait_closed()
+            await close_writer(writer)
 
     assert response["type"] == "response"
     assert response["status"] == 200
@@ -168,7 +124,9 @@ async def test_reindex_endpoint_triggers_ingestion_job(tmp_path: Path) -> None:
     correlation_id = "contract-reindex"
 
     async with server.transport_server(socket_path=socket_path):
-        reader, writer = await _connect_and_handshake(socket_path)
+        reader, writer = await connect_and_handshake(
+            socket_path, request=HANDSHAKE_REQUEST
+        )
 
         request = {
             "type": "request",
@@ -178,11 +136,10 @@ async def test_reindex_endpoint_triggers_ingestion_job(tmp_path: Path) -> None:
         }
 
         try:
-            await asyncio.wait_for(_write_frame(writer, request), timeout=1)
-            response = await asyncio.wait_for(_read_frame(reader), timeout=1)
+            await asyncio.wait_for(write_frame(writer, request), timeout=1)
+            response = await asyncio.wait_for(read_frame(reader), timeout=1)
         finally:
-            writer.close()
-            await writer.wait_closed()
+            await close_writer(writer)
 
     assert response["type"] == "response"
     assert response["status"] == 202
@@ -203,7 +160,9 @@ async def test_admin_init_endpoint_reports_dependency_checks(tmp_path: Path) -> 
     correlation_id = "contract-admin-init"
 
     async with server.transport_server(socket_path=socket_path):
-        reader, writer = await _connect_and_handshake(socket_path)
+        reader, writer = await connect_and_handshake(
+            socket_path, request=HANDSHAKE_REQUEST
+        )
 
         request = {
             "type": "request",
@@ -213,11 +172,10 @@ async def test_admin_init_endpoint_reports_dependency_checks(tmp_path: Path) -> 
         }
 
         try:
-            await asyncio.wait_for(_write_frame(writer, request), timeout=1)
-            response = await asyncio.wait_for(_read_frame(reader), timeout=1)
+            await asyncio.wait_for(write_frame(writer, request), timeout=1)
+            response = await asyncio.wait_for(read_frame(reader), timeout=1)
         finally:
-            writer.close()
-            await writer.wait_closed()
+            await close_writer(writer)
 
     assert response["type"] == "response"
     assert response["status"] == 200
@@ -231,13 +189,15 @@ async def test_admin_init_endpoint_reports_dependency_checks(tmp_path: Path) -> 
 
 
 @pytest.mark.asyncio
-async def test_admin_init_rejects_when_index_missing(tmp_path: Path) -> None:
+async def test_admin_init_rejects_when_index_missing(
+    tmp_path: Path, make_transport_handlers
+) -> None:
     """`/v1/admin/init` should reject when no index snapshot exists for the catalog."""
 
     socket_path = tmp_path / "backend.sock"
     correlation_id = "contract-admin-init-missing"
 
-    handlers = create_default_handlers()
+    handlers = make_transport_handlers()
 
     class _MissingIndexPort:
         def list_sources(self) -> SourceCatalog:
@@ -267,7 +227,9 @@ async def test_admin_init_rejects_when_index_missing(tmp_path: Path) -> None:
     handlers.ingestion_port = cast(IngestionPort, _MissingIndexPort())
 
     async with server.transport_server(socket_path=socket_path, handlers=handlers):
-        reader, writer = await _connect_and_handshake(socket_path)
+        reader, writer = await connect_and_handshake(
+            socket_path, request=HANDSHAKE_REQUEST
+        )
 
         request = {
             "type": "request",
@@ -277,11 +239,10 @@ async def test_admin_init_rejects_when_index_missing(tmp_path: Path) -> None:
         }
 
         try:
-            await asyncio.wait_for(_write_frame(writer, request), timeout=1)
-            response = await asyncio.wait_for(_read_frame(reader), timeout=1)
+            await asyncio.wait_for(write_frame(writer, request), timeout=1)
+            response = await asyncio.wait_for(read_frame(reader), timeout=1)
         finally:
-            writer.close()
-            await writer.wait_closed()
+            await close_writer(writer)
 
     assert response["type"] == "response"
     assert response["status"] == 409
@@ -293,13 +254,15 @@ async def test_admin_init_rejects_when_index_missing(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_admin_init_rejects_when_catalog_newer_than_index(tmp_path: Path) -> None:
+async def test_admin_init_rejects_when_catalog_newer_than_index(
+    tmp_path: Path, make_transport_handlers
+) -> None:
     """`/v1/admin/init` should reject when catalog checksums differ from index snapshots."""
 
     socket_path = tmp_path / "backend.sock"
     correlation_id = "contract-admin-init-stale"
 
-    handlers = create_default_handlers()
+    handlers = make_transport_handlers()
 
     class _StaleIndexPort:
         def list_sources(self) -> SourceCatalog:
@@ -357,7 +320,9 @@ async def test_admin_init_rejects_when_catalog_newer_than_index(tmp_path: Path) 
     handlers.ingestion_port = cast(IngestionPort, _StaleIndexPort())
 
     async with server.transport_server(socket_path=socket_path, handlers=handlers):
-        reader, writer = await _connect_and_handshake(socket_path)
+        reader, writer = await connect_and_handshake(
+            socket_path, request=HANDSHAKE_REQUEST
+        )
 
         request = {
             "type": "request",
@@ -367,11 +332,10 @@ async def test_admin_init_rejects_when_catalog_newer_than_index(tmp_path: Path) 
         }
 
         try:
-            await asyncio.wait_for(_write_frame(writer, request), timeout=1)
-            response = await asyncio.wait_for(_read_frame(reader), timeout=1)
+            await asyncio.wait_for(write_frame(writer, request), timeout=1)
+            response = await asyncio.wait_for(read_frame(reader), timeout=1)
         finally:
-            writer.close()
-            await writer.wait_closed()
+            await close_writer(writer)
 
     assert response["type"] == "response"
     assert response["status"] == 409

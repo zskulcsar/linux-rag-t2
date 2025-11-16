@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 from adapters.storage.catalog import CatalogStorage
-from adapters.transport import create_default_handlers
 from adapters.transport.handlers import IndexUnavailableError
 from adapters.transport.handlers import factory as handler_factory
 from adapters.ollama.client import EmbeddingResult
@@ -29,10 +28,9 @@ def _fake_services_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RAG_BACKEND_FAKE_SERVICES", "1")
 
 
-def _seed_catalog(tmp_path: Path) -> None:
+def _seed_catalog(storage: CatalogStorage) -> None:
     """Persist a catalog snapshot with active sources for query tests."""
 
-    storage = CatalogStorage()
     now = dt.datetime(2025, 1, 2, 12, tzinfo=dt.timezone.utc)
     sources = [
         SourceRecord(
@@ -69,26 +67,31 @@ def _seed_catalog(tmp_path: Path) -> None:
     storage.save(catalog)
 
 
-def test_query_port_requires_index_presence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_query_port_requires_index_presence(
+    monkeypatch: pytest.MonkeyPatch,
+    make_transport_handlers,
+) -> None:
     """Query requests should raise when no index snapshot exists."""
 
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
     monkeypatch.setenv("RAG_BACKEND_DISABLE_BOOTSTRAP", "1")
-    handlers = create_default_handlers()
+    handlers = make_transport_handlers()
     request = QueryRequest(question="How do I change file permissions?")
 
     with pytest.raises(IndexUnavailableError):
         handlers.query_port.query(request)
 
 
-def test_query_port_reflects_catalog_metadata(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_query_port_reflects_catalog_metadata(
+    catalog_storage: CatalogStorage,
+    monkeypatch: pytest.MonkeyPatch,
+    make_transport_handlers,
+) -> None:
     """Query responses should incorporate catalog metadata when the index exists."""
 
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
     monkeypatch.setenv("RAG_BACKEND_DISABLE_BOOTSTRAP", "1")
-    _seed_catalog(tmp_path)
+    _seed_catalog(catalog_storage)
 
-    handlers = create_default_handlers()
+    handlers = make_transport_handlers()
     response = handlers.query_port.query(
         QueryRequest(
             question="How do I change file permissions?",
@@ -101,14 +104,17 @@ def test_query_port_reflects_catalog_metadata(tmp_path: Path, monkeypatch: pytes
     assert 0.0 <= response.confidence <= 1.0
 
 
-def test_ingestion_port_start_reindex_returns_job(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ingestion_port_start_reindex_returns_job(
+    catalog_storage: CatalogStorage,
+    monkeypatch: pytest.MonkeyPatch,
+    make_transport_handlers,
+) -> None:
     """start_reindex should return an IngestionJob with sensible defaults."""
 
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
     monkeypatch.setenv("RAG_BACKEND_DISABLE_BOOTSTRAP", "1")
-    _seed_catalog(tmp_path)
+    _seed_catalog(catalog_storage)
 
-    handlers = create_default_handlers()
+    handlers = make_transport_handlers()
     job = handlers.ingestion_port.start_reindex(IngestionTrigger.MANUAL)
 
     assert job.source_alias == "*"
@@ -167,14 +173,17 @@ def test_chunk_builder_handles_missing_source_gracefully(tmp_path: Path) -> None
     assert vector.calls == []
 
 
-def test_health_port_reports_dependency_checks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_health_port_reports_dependency_checks(
+    catalog_storage: CatalogStorage,
+    monkeypatch: pytest.MonkeyPatch,
+    make_transport_handlers,
+) -> None:
     """Health port should include Ollama, Weaviate, and Phoenix dependency checks."""
 
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
     monkeypatch.setenv("RAG_BACKEND_DISABLE_BOOTSTRAP", "1")
     monkeypatch.setenv("RAG_BACKEND_PHOENIX_URL", "http://phoenix.local")
-    _seed_catalog(tmp_path)
-    handlers = create_default_handlers()
+    _seed_catalog(catalog_storage)
+    handlers = make_transport_handlers()
 
     report = handlers.health_port.evaluate()
     components = {check.component for check in report.checks}
