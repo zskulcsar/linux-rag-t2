@@ -5,28 +5,13 @@ import datetime as dt
 from typing import Any, Callable
 
 from common.clock import utc_now
+from common.helpers import normalise_metrics_history
 
 from telemetry import trace_call
 
 DEFAULT_REINDEX_BUDGET_MS = 600_000.0
 
 Clock = Callable[[], dt.datetime]
-
-
-def _normalise_history(history: Sequence[int | float]) -> list[float]:
-    """Sort and validate recorded reindex durations."""
-
-    if not history:
-        raise ValueError("reindex duration history must not be empty")
-
-    samples: list[float] = []
-    for value in history:
-        sample = float(value)
-        if sample < 0:
-            raise ValueError("reindex durations must be non-negative")
-        samples.append(sample)
-    samples.sort()
-    return samples
 
 
 def _recommendation(status: str, *, over_budget_ms: float) -> str:
@@ -61,7 +46,7 @@ def compute_p95(history: Sequence[int | float]) -> float:
         504999.99999999994
     """
 
-    samples = _normalise_history(history)
+    samples = normalise_metrics_history("reindex duration", history)
     if len(samples) == 1:
         return samples[0]
 

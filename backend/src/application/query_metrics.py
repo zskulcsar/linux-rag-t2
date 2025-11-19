@@ -5,36 +5,13 @@ import datetime as dt
 from typing import Any, Callable
 
 from common.clock import utc_now
+from common.helpers import normalise_metrics_history
 
 from telemetry import trace_call
 
 DEFAULT_LATENCY_BUDGET_MS = 8000.0
 
 Clock = Callable[[], dt.datetime]
-
-
-def _normalise_history(history: Sequence[int | float]) -> list[float]:
-    """Return sorted latency samples as floats.
-
-    Args:
-        history: Sequence of recorded latencies in milliseconds.
-
-    Returns:
-        Sorted list of latency samples.
-
-    Raises:
-        ValueError: If the sequence is empty or contains negative values.
-    """
-
-    if not history:
-        raise ValueError("latency history must not be empty")
-    normalised = []
-    for value in history:
-        sample = float(value)
-        if sample < 0:
-            raise ValueError("latency samples must be non-negative")
-        normalised.append(sample)
-    return sorted(normalised)
 
 
 @trace_call
@@ -55,7 +32,7 @@ def compute_p95(history: Sequence[int | float]) -> float:
         234.0
     """
 
-    samples = _normalise_history(history)
+    samples = normalise_metrics_history("latency", history)
     if len(samples) == 1:
         return samples[0]
 
