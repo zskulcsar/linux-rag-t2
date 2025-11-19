@@ -1,6 +1,7 @@
 """Serialization helpers for transport payloads."""
 
 import dataclasses
+import datetime as dt
 from typing import Any
 
 from ports import (
@@ -44,16 +45,16 @@ def serialize_catalog(catalog: SourceCatalog) -> dict[str, Any]:
 def serialize_source_record(record: SourceRecord) -> dict[str, Any]:
     """Serialize a single :class:`SourceRecord` to transport format."""
 
-    status = record.status.value if hasattr(record.status, "value") else record.status
     return {
         "alias": record.alias,
         "type": record.type.value if hasattr(record.type, "value") else record.type,
         "location": record.location,
         "language": record.language,
+        "status": record.status.value if hasattr(record.status, "value") else record.status,
+        "last_updated": record.last_updated.astimezone(dt.timezone.utc).isoformat(),
         "size_bytes": record.size_bytes,
-        "last_updated": record.last_updated.isoformat(),
-        "status": status,
         "checksum": record.checksum,
+        "notes": record.notes,
     }
 
 
@@ -63,9 +64,7 @@ def serialize_ingestion_job(job: IngestionJob) -> dict[str, Any]:
     return {
         "job_id": job.job_id,
         "source_alias": job.source_alias,
-        "status": job.status.value
-        if isinstance(job.status, IngestionStatus)
-        else str(job.status),
+        "status": job.status.value if isinstance(job.status, IngestionStatus) else str(job.status),
         "requested_at": job.requested_at.isoformat(),
         "started_at": job.started_at.isoformat() if job.started_at else None,
         "completed_at": job.completed_at.isoformat() if job.completed_at else None,
@@ -73,9 +72,7 @@ def serialize_ingestion_job(job: IngestionJob) -> dict[str, Any]:
         "stage": job.stage,
         "percent_complete": job.percent_complete,
         "error_message": job.error_message,
-        "trigger": job.trigger.value
-        if isinstance(job.trigger, IngestionTrigger)
-        else str(job.trigger),
+        "trigger": job.trigger.value if isinstance(job.trigger, IngestionTrigger) else str(job.trigger),
     }
 
 

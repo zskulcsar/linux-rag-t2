@@ -74,6 +74,7 @@ from typing import Any, Protocol
 from common.clock import utc_now
 
 from ports import ingestion as ingestion_ports
+from adapters.transport.handlers import serialize_source_record
 from telemetry import trace_call, trace_section
 
 DEFAULT_CONFIG_TEMPLATE = """ragman:
@@ -146,20 +147,6 @@ def _apply_alias_to_location(location: str, alias: str) -> str:
         return str(path.with_name(replacement))
     except ValueError:
         return replacement
-
-
-def _serialize_source(record: ingestion_ports.SourceRecord) -> dict[str, Any]:
-    return {
-        "alias": record.alias,
-        "type": record.type.value,
-        "location": record.location,
-        "language": record.language,
-        "status": record.status.value,
-        "last_updated": record.last_updated.astimezone(dt.timezone.utc).isoformat(),
-        "size_bytes": record.size_bytes,
-        "checksum": record.checksum,
-        "notes": record.notes,
-    }
 
 
 class InitService:
@@ -285,7 +272,7 @@ class InitService:
                 continue
             existing_aliases.add(record.alias)
             existing_locations.add(_normalize_location(record.location))
-            seeded.append(_serialize_source(record))
+            seeded.append(serialize_source_record(record))
 
         return seeded
 

@@ -274,7 +274,8 @@ def test_health_port_contract_shapes() -> None:
     assert get_origin(metrics_hint) is dict
     key_type, value_type = get_args(metrics_hint)
     assert key_type is str
-    if get_origin(value_type) is Union:
+    value_origin = get_origin(value_type)
+    if value_origin in {Union, types.UnionType}:
         assert set(get_args(value_type)) == {int, float}
     else:
         assert value_type in {int, float}
