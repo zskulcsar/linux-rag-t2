@@ -1,7 +1,5 @@
 """LLM-backed query port that retrieves context and generates answers."""
 
-from __future__ import annotations
-
 import json
 import textwrap
 import time

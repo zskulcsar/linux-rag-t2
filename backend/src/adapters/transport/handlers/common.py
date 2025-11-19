@@ -1,7 +1,5 @@
 """Shared helpers for transport handler modules."""
 
-from __future__ import annotations
-
 import datetime as dt
 import os
 

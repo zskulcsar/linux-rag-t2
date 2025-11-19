@@ -1,7 +1,5 @@
 """Fake service clients used when RAG_BACKEND_FAKE_SERVICES=1."""
 
-from __future__ import annotations
-
 from typing import Any
 
 

@@ -1,7 +1,5 @@
 """Port adapters exposed through the transport handlers."""
 
-from __future__ import annotations
-
 import datetime as dt
 import uuid
 from typing import Callable

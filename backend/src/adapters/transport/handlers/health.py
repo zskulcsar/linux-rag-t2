@@ -1,7 +1,5 @@
 """Health check helpers for transport handlers."""
 
-from __future__ import annotations
-
 import shutil
 from pathlib import Path
 from typing import Callable

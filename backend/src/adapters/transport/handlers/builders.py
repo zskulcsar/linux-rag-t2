@@ -1,7 +1,5 @@
 """Client and adapter builders used by the transport factory."""
 
-from __future__ import annotations
-
 import hashlib
 from pathlib import Path
 from typing import Any, Callable

@@ -1,7 +1,5 @@
 """UTC clock utilities shared across backend services."""
 
-from __future__ import annotations
-
 import datetime as dt
 
 
