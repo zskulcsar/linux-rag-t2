@@ -3,12 +3,10 @@
 from .errors import IndexUnavailableError, TransportError
 from .factory import create_default_handlers
 from .router import TransportHandlers
-from .serializers import serialize_source_record
 
 __all__ = [
     "TransportHandlers",
     "TransportError",
     "IndexUnavailableError",
     "create_default_handlers",
-    "serialize_source_record",
 ]

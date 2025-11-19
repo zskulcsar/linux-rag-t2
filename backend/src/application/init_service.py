@@ -72,9 +72,9 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from common.clock import utc_now
+from common.serializers import serialize_source_record
 
 from ports import ingestion as ingestion_ports
-from adapters.transport.handlers import serialize_source_record
 from telemetry import trace_call, trace_section
 
 DEFAULT_CONFIG_TEMPLATE = """ragman:

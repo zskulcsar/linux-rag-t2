@@ -18,14 +18,15 @@ from ports import (
 from ports.ingestion import SourceStatus
 from telemetry import trace_call, trace_section
 
-from .errors import IndexUnavailableError, TransportError
-from .serializers import (
+from common.serializers import (
     serialize_catalog,
     serialize_health_report,
     serialize_ingestion_job,
     serialize_query_response,
     serialize_source_record,
 )
+
+from .errors import IndexUnavailableError, TransportError
 
 
 @dataclass

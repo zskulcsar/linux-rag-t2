@@ -4,14 +4,14 @@ from collections.abc import Sequence
 
 
 def normalise_metrics_history(metric: str, history: Sequence[int | float]) -> list[float]:
-    """Return sorted latency samples as floats.
+    """Return sorted metric samples as floats.
 
     Args:
         metric: The name of the metric to be normalised.
-        history: Sequence of recorded latencies in milliseconds.
+        history: Sequence of recorded metrics in milliseconds.
 
     Returns:
-        Sorted list of latency samples.
+        Sorted list of metric samples.
 
     Raises:
         ValueError: If the sequence is empty or contains negative values.
