@@ -46,6 +46,14 @@ class RetrievalLLMQueryPort(query_ports.QueryPort):
         llm_adapter: OllamaAdapter,
         documents_per_source: int = 3,
     ) -> None:
+        """Create a retrieval/generation pipeline.
+
+        Args:
+            catalog_loader: Callable returning the latest source catalog snapshot.
+            vector_adapter: Adapter used to retrieve semantic chunks.
+            llm_adapter: Adapter used to generate final completions.
+            documents_per_source: Maximum chunks to retrieve per active source.
+        """
         self._catalog_loader = catalog_loader
         self._vector = vector_adapter
         self._llm = llm_adapter
@@ -53,6 +61,17 @@ class RetrievalLLMQueryPort(query_ports.QueryPort):
 
     @trace_call
     def query(self, request: query_ports.QueryRequest) -> query_ports.QueryResponse:
+        """Execute a query using Weaviate retrieval and Ollama generation.
+
+        Args:
+            request: Fully-populated query request from :mod:`ports.query`.
+
+        Returns:
+            A structured :class:`~ports.query.QueryResponse` payload.
+
+        Raises:
+            IndexUnavailableError: If no catalog snapshots can be queried.
+        """
         catalog = self._catalog_loader()
         if catalog.version <= 0 or not catalog.snapshots:
             raise IndexUnavailableError(

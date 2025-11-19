@@ -109,6 +109,14 @@ class QueryRunner:
         confidence_threshold: float | None = None,
         presentation_config_path: Path | None = None,
     ) -> None:
+        """Create a query runner configured with confidence handling.
+
+        Args:
+            query_port: Port responsible for retrieval and generation.
+            clock: Optional UTC clock override for telemetry metadata.
+            confidence_threshold: Optional explicit confidence override.
+            presentation_config_path: Optional path to the ragcli presentation config.
+        """
         self._query_port = query_port
         self._clock = clock or utc_now
         self._presentation_config_path = (

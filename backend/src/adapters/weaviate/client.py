@@ -15,7 +15,13 @@ class IngestionMetrics(Protocol):
     def record_ingestion(
         self, alias: str, count: int, latency_ms: float
     ) -> None:  # pragma: no cover - Protocol
-        ...
+        """Record document ingestion latency and counts.
+
+        Args:
+            alias: Source alias for which ingestion occurred.
+            count: Number of documents ingested in the batch.
+            latency_ms: Duration (in milliseconds) of the batch operation.
+        """
 
 
 class QueryMetrics(Protocol):
@@ -24,7 +30,13 @@ class QueryMetrics(Protocol):
     def record_query(
         self, alias: str, latency_ms: float, result_count: int
     ) -> None:  # pragma: no cover - Protocol
-        ...
+        """Record a query round-trip for observability dashboards.
+
+        Args:
+            alias: Source alias targeted by the retrieval query.
+            latency_ms: Time spent executing the query call.
+            result_count: Number of documents returned.
+        """
 
 
 @dataclass(slots=True)

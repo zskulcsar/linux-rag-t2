@@ -38,6 +38,13 @@ class IndexUnavailableError(TransportError):
     """Raised when the content index is stale or missing."""
 
     def __init__(self, code: str, message: str, remediation: str) -> None:
+        """Create an index error response ready for transport serialization.
+
+        Args:
+            code: Stable machine-readable error code (e.g. ``"INDEX_MISSING"``).
+            message: Human-readable description returned to CLI clients.
+            remediation: Suggested operator action that resolves the issue.
+        """
         super().__init__(
             status=409,
             code=code,

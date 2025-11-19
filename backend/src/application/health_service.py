@@ -83,6 +83,17 @@ class HealthDiagnostics:
         disk_fail_ratio: float = DEFAULT_DISK_FAIL_RATIO,
         index_warn_age: dt.timedelta = DEFAULT_INDEX_WARN_AGE,
     ) -> None:
+        """Create a new diagnostics helper.
+
+        Args:
+            catalog_loader: Callable supplying catalog snapshots.
+            disk_probe: Callable returning raw disk statistics.
+            dependency_checks: Optional iterable of dependency probe factories.
+            clock: Optional UTC clock override primarily for tests.
+            disk_warn_ratio: Threshold that flips the disk check to WARN.
+            disk_fail_ratio: Threshold that flips the disk check to FAIL.
+            index_warn_age: Duration after which indexes are marked stale.
+        """
         self._catalog_loader = catalog_loader
         self._disk_probe = disk_probe
         self._dependency_checks = list(dependency_checks or [])

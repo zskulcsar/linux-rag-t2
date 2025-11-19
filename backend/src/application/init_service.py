@@ -195,6 +195,16 @@ class InitService:
         default_sources: Sequence[ingestion_ports.SourceCreateRequest] | None = None,
         clock: Callable[[], dt.datetime] | None = None,
     ) -> None:
+        """Create a new init service.
+
+        Args:
+            directory_targets: Absolute directories that must exist after bootstrap.
+            config_writer: Helper used to materialize default ragcli configs.
+            ingestion_port: Port used for catalog inspection and mutation.
+            dependency_checks: Optional iterable of dependency probe callables.
+            default_sources: Optional seed templates for knowledge sources.
+            clock: Optional deterministic clock override.
+        """
         self._directory_targets = [Path(target) for target in directory_targets]
         self._config_writer = config_writer
         self._ingestion_port = ingestion_port

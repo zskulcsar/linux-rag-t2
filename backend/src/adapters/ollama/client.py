@@ -15,7 +15,13 @@ class EmbeddingMetrics(Protocol):
     def record_embedding(
         self, alias: str, vector_size: int, latency_ms: float
     ) -> None:  # pragma: no cover - Protocol
-        ...
+        """Record a completed embedding request.
+
+        Args:
+            alias: Source alias associated with the embedding batch.
+            vector_size: Length of the embedding vector returned by Ollama.
+            latency_ms: End-to-end time (in milliseconds) spent computing the batch.
+        """
 
 
 class HttpClient(Protocol):
@@ -24,7 +30,16 @@ class HttpClient(Protocol):
     def post(
         self, url: str, json: dict[str, Any], timeout: float
     ) -> Any:  # pragma: no cover - Protocol
-        ...
+        """Issue a POST request and return the HTTP response object.
+
+        Args:
+            url: Fully-qualified Ollama URL to call.
+            json: JSON-serialisable payload to include in the body.
+            timeout: Request timeout in seconds.
+
+        Returns:
+            Provider-specific response object exposing ``json()``.
+        """
 
 
 class GenerationMetrics(Protocol):
@@ -37,7 +52,14 @@ class GenerationMetrics(Protocol):
         prompt_tokens: int,
         completion_tokens: int,
     ) -> None:  # pragma: no cover - Protocol
-        ...
+        """Record a completion generation latency sample.
+
+        Args:
+            alias: Logical alias for the completion request.
+            latency_ms: Time taken to produce the completion.
+            prompt_tokens: Number of prompt tokens consumed.
+            completion_tokens: Number of tokens produced by the LLM.
+        """
 
 
 @dataclass(slots=True)

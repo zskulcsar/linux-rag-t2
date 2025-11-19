@@ -23,10 +23,10 @@ class CatalogStorage(Protocol):
     """Protocol describing catalog persistence helpers."""
 
     def load(self) -> ingestion_ports.SourceCatalog:  # pragma: no cover - protocol
-        ...
+        """Return the persisted catalog snapshot."""
 
     def save(self, catalog: ingestion_ports.SourceCatalog) -> None:  # pragma: no cover
-        ...
+        """Persist the provided catalog snapshot."""
 
 
 ChecksumCalculator = Callable[[Path], str]
@@ -43,7 +43,17 @@ class ChunkBuilder(Protocol):
         location: Path,
         source_type: ingestion_ports.SourceType,
     ) -> Sequence[Document]:  # pragma: no cover - protocol
-        ...
+        """Create semantic chunks for a source location.
+
+        Args:
+            alias: Generated source alias.
+            checksum: Deterministic checksum derived from the source contents.
+            location: Filesystem path to the source payload.
+            source_type: Source type used for downstream tagging.
+
+        Returns:
+            Sequence of prepared :class:`Document` instances.
+        """
 
 
 def _default_language(language: str | None) -> str:
@@ -132,6 +142,15 @@ class SourceCatalogService:
         clock: Callable[[], dt.datetime] | None = None,
         audit_logger: AuditLogger | None = None,
     ) -> None:
+        """Create a catalog service composed of storage and chunk builders.
+
+        Args:
+            storage: Storage backend responsible for persistence.
+            checksum_calculator: Callable that returns deterministic checksums.
+            chunk_builder: Callable that produces semantic chunks for ingestion.
+            clock: Optional UTC clock override.
+            audit_logger: Optional audit sink for catalog mutations.
+        """
         self._storage = storage
         self._checksum_calculator = checksum_calculator
         self._chunk_builder = chunk_builder

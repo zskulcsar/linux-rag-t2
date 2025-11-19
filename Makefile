@@ -90,7 +90,8 @@ lint-go: ## Run `golangcli-lint` over Go sources
 	done
 
 lint-py: venv ## Run `ruff check` over Python sources. Pass `FIX=--FIX` to automatically fix the errors
-	@uv run ruff check $(PYTHON_SRC_DIRS) $(FIX)
+	@PYTHONPYCACHEPREFIX=$(CURDIR)/.pycache uv run ruff check $(PYTHON_SRC_DIRS) $(FIX)
+#	@PYTHONPYCACHEPREFIX=$(CURDIR)/.pycache uv run ruff check $(BE_SRC) $(FIX) --select D1,D2,D4
 
 tc: tc-go tc-py ## Run Go and Python code checkers
 

@@ -24,6 +24,13 @@ class TraceSection(AbstractContextManager["TraceSection"]):
         logger: Any | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
+        """Create a synchronous trace section tracker.
+
+        Args:
+            name: Human-readable identifier for log output.
+            logger: Optional structured logger to emit events with.
+            metadata: Static metadata appended to each log entry.
+        """
         self._name = name
         self._metadata = dict(metadata or {})
         self._logger = logger or get_logger(f"rag_backend.telemetry.section.{name}")
@@ -110,6 +117,13 @@ class AsyncTraceSection(AbstractAsyncContextManager["AsyncTraceSection"]):
         logger: Any | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
+        """Create an async trace section wrapper.
+
+        Args:
+            name: Human-readable section name.
+            logger: Optional structured logger instance.
+            metadata: Static metadata applied to every log record.
+        """
         self._sync_delegate = TraceSection(name=name, logger=logger, metadata=metadata)
 
     async def __aenter__(self) -> "AsyncTraceSection":
