@@ -3,7 +3,7 @@
 import datetime as dt
 import enum
 from dataclasses import dataclass, field
-from typing import Protocol, Union
+from typing import Protocol
 
 
 class HealthStatus(str, enum.Enum):
@@ -36,7 +36,7 @@ class HealthCheck:
     timestamp: dt.datetime = field(
         default_factory=lambda: dt.datetime.now(dt.timezone.utc)
     )
-    metrics: dict[str, Union[int, float]] = field(default_factory=dict)
+    metrics: dict[str, int | float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)

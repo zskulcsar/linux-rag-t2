@@ -3,7 +3,6 @@
 from dataclasses import dataclass, field
 import datetime as dt
 import enum
-from typing import List, Optional
 
 from ports.ingestion import (
     IngestionJob as PortIngestionJob,
@@ -39,8 +38,8 @@ class KnowledgeSource:
     size_bytes: int
     last_updated: dt.datetime
     status: KnowledgeSourceStatus
-    checksum: Optional[str] = None
-    notes: Optional[str] = None
+    checksum: str | None = None
+    notes: str | None = None
     created_at: dt.datetime = field(
         default_factory=lambda: dt.datetime.now(dt.timezone.utc)
     )
@@ -65,14 +64,14 @@ class ContentIndexVersion:
     index_id: str
     status: IndexStatus
     checksum: str
-    source_snapshot: List[SourceSnapshot]
+    source_snapshot: list[SourceSnapshot]
     size_bytes: int
     document_count: int
     trigger_job_id: str
-    built_at: Optional[dt.datetime] = None
-    freshness_expires_at: Optional[dt.datetime] = None
-    retrieval_latency_ms: Optional[int] = None
-    llm_latency_ms: Optional[int] = None
+    built_at: dt.datetime | None = None
+    freshness_expires_at: dt.datetime | None = None
+    retrieval_latency_ms: int | None = None
+    llm_latency_ms: int | None = None
 
 
 __all__ = [
