@@ -126,7 +126,8 @@ test-unit-go: ## Run unit test suites for Go code
 	$(GO) test -v ./tests/go/unit/... 
 
 test-unit-py: venv ## Run unit test suites for Python code
-	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest --cov=$(BE_SRC) tests/python/unit
+	@PYTHONPYCACHEPREFIX=$(CURDIR)/.pycache PYTHONPATH=$(BE_SRC) \
+	uv run --project backend pytest --cov=$(BE_SRC) tests/python/unit
 
 test-contr: test-contr-go test-contr-py ## Run contract test suites for Go and Python code
 
@@ -134,7 +135,8 @@ test-contr-go: ## Run contract test suites for Go code
 	@$(GO) test -v ./tests/go/contract/...
 
 test-contr-py: venv ## Run contract test suites for Python code
-	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest --cov=$(BE_SRC)/adapters/transport tests/python/contract
+	@PYTHONPYCACHEPREFIX=$(CURDIR)/.pycache PYTHONPATH=$(BE_SRC) \
+	uv run --project backend pytest --cov=$(BE_SRC)/adapters/transport tests/python/contract
 
 test-int: test-int-go test-int-py ## Run integration test suites for Go and Python code
 
@@ -142,7 +144,8 @@ test-int-go: ## Not implemented yet! Run integration test suites for Go code
 	@echo "No implemented yet!"
 
 test-int-py: venv ## Run integration test suites for Python code
-	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest --cov=$(BE_SRC) tests/python/integration
+	@PYTHONPYCACHEPREFIX=$(CURDIR)/.pycache PYTHONPATH=$(BE_SRC) \
+	uv run --project backend pytest --cov=$(BE_SRC) tests/python/integration
 
 test-perf: test-perf-go test-perf-py ## Run performance test suites for Go and Python code
 
@@ -150,19 +153,20 @@ test-perf-go: ## Not implemented! Run performance test suites for Go code
 	@echo "No implemented yet!"
 
 test-perf-py: venv ## Run performance test suites for Python code
-	@PYTHONPATH=$(BE_SRC) uv run --project backend pytest --cov=$(BE_SRC) tests/python/performance
+	@PYTHONPYCACHEPREFIX=$(CURDIR)/.pycache PYTHONPATH=$(BE_SRC) \
+	uv run --project backend pytest --cov=$(BE_SRC) tests/python/performance
 
 run-be: ## Runs the backend service with local defaults for development testing
 #	@mkdir -p tmp/ragcli
-	@PYTHONPATH=$(BE_SRC) \
-		uv run --project backend python -m main \
-			--config "~/.config/ragcli/config.yaml" \
-			--socket "/tmp/ragcli/backend.sock" \
-			--weaviate-url "http://localhost:8080" \
-			--ollama-url "http://localhost:11434" \
-			--phoenix-url "http://localhost:6006" \
-			--log-level "DEBUG" \
-			--trace
+	@PYTHONPYCACHEPREFIX=$(CURDIR)/.pycache PYTHONPATH=$(BE_SRC) \
+	uv run --project backend python -m main \
+		--config "~/.config/ragcli/config.yaml" \
+		--socket "/tmp/ragcli/backend.sock" \
+		--weaviate-url "http://localhost:8080" \
+		--ollama-url "http://localhost:11434" \
+		--phoenix-url "http://localhost:6006" \
+		--log-level "DEBUG" \
+		--trace
 
 ## Building & Packaging
 pack: pack-go pack-py ## Package Go and Python binaries for installation/development test
@@ -180,8 +184,8 @@ pack-go: ## Package Go binaries for installation/development test
 	fi
 
 pack-py: venv ## Package Python binaries for installation/development test
-# TODO: fix this
-	@uv run --directory $(PY_ROOT) python -m build -o $(CURDIR)/dist
+	@mkdir -p $(PY_ROOT)/build
+	uv run --directory $(PY_ROOT) python -m build -o $(CURDIR)/dist
 
 install: install-go install-py ## Install compiled Go and Python binaries
 	@echo "Not implemented yet!"

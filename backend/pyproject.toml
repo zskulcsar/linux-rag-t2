@@ -33,6 +33,9 @@ package-dir = {"" = "src"}
 where = ["src"]
 include = ["*"]
 
+[tool.distutils.egg_info]
+egg_base = "build"
+
 [tool.mypy]
 mypy_path = ["src"]
 explicit_package_bases = true
