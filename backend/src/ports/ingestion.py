@@ -145,7 +145,11 @@ class IngestionPort(Protocol):
         """Remove a source from the catalog."""
 
     def start_reindex(
-        self, trigger: IngestionTrigger, *, callbacks: ReindexCallbacks | None = None
+        self,
+        trigger: IngestionTrigger,
+        *,
+        force_rebuild: bool = False,
+        callbacks: ReindexCallbacks | None = None,
     ) -> IngestionJob:
         """Queue a new ingestion job for the catalog."""
 

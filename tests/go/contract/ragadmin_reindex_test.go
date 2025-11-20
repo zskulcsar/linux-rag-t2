@@ -190,3 +190,101 @@ func TestRagadminReindexStreamsProgressJSON(t *testing.T) {
 
 	runRagadminScenario(t, scenario)
 }
+
+func TestRagadminReindexTreatsErrorMessageAsFailure(t *testing.T) {
+	t.Parallel()
+
+	stream := []ragadminStreamFrame{
+		{
+			status: 202,
+			body: map[string]any{
+				"job": map[string]any{
+					"job_id":           "job-error",
+					"status":           "running",
+					"stage":            "chunking",
+					"percent_complete": 50,
+				},
+			},
+		},
+		{
+			status: 202,
+			body: map[string]any{
+				"job": map[string]any{
+					"job_id":           "job-error",
+					"status":           "succeeded",
+					"stage":            "completed",
+					"percent_complete": 100,
+					"error_message":    "vector ingest failed",
+				},
+			},
+		},
+	}
+
+	scenario := ragadminScenario{
+		name: "reindex-error-message",
+		args: []string{
+			"--socket",
+			"",
+			"reindex",
+		},
+		expectError:    true,
+		responseStream: stream,
+		outputAssert: func(t *testing.T, output string) {
+			t.Helper()
+			if !strings.Contains(output, "vector ingest failed") {
+				t.Fatalf("expected error message in output:\n%s", output)
+			}
+			if !strings.Contains(output, "Reindex failed") {
+				t.Fatalf("expected failure summary in output:\n%s", output)
+			}
+		},
+	}
+
+	runRagadminScenario(t, scenario)
+}
+
+func TestRagadminReindexForceFlag(t *testing.T) {
+	t.Parallel()
+
+	scenario := ragadminScenario{
+		name: "reindex-force-flag",
+		args: []string{
+			"--socket",
+			"",
+			"reindex",
+			"--force",
+		},
+		requestAssert: func(t *testing.T, frame map[string]any) {
+			t.Helper()
+			body, _ := frame["body"].(map[string]any)
+			if force, _ := body["force"].(bool); !force {
+				t.Fatalf("expected force flag to be true, body=%v", body)
+			}
+		},
+		responseStream: []ragadminStreamFrame{
+			{
+				status: 202,
+				body: map[string]any{
+					"job": map[string]any{
+						"job_id": "job-force",
+						"status": "running",
+						"stage":  "discovering",
+					},
+				},
+			},
+			{
+				status: 200,
+				body: map[string]any{
+					"job": map[string]any{
+						"job_id":           "job-force",
+						"status":           "succeeded",
+						"stage":            "completed",
+						"percent_complete": 100,
+					},
+				},
+			},
+		},
+	}
+
+	runRagadminScenario(t, scenario)
+}

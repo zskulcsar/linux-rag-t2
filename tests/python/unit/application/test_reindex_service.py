@@ -250,3 +250,44 @@ def test_run_skips_sources_when_checksums_match(tmp_path: Path) -> None:
         SourceSnapshot(alias="man-pages", checksum="sha256:man-new"),
         SourceSnapshot(alias="info-pages", checksum="sha256:info-same"),
     ]
+
+
+def test_run_force_rebuild_processes_all_sources(tmp_path: Path) -> None:
+    """Force rebuild should re-ingest even when checksums are unchanged."""
+
+    catalog = _build_catalog(
+        tmp_path,
+        checksums={
+            "man-pages": "sha256:man-same",
+            "info-pages": "sha256:info-same",
+        },
+        snapshot_checksums={
+            "man-pages": "sha256:man-same",
+            "info-pages": "sha256:info-same",
+        },
+    )
+    storage = _RecordingStorage(catalog=catalog, saved=[])
+    builder = _RecordingChunkBuilder(calls=[], documents=1)
+
+    service = ReindexService(
+        storage=storage,
+        chunk_builder=builder,
+        checksum_calculator=_checksum_factory(
+            {
+                str(tmp_path / "man-pages.txt"): "sha256:man-same",
+                str(tmp_path / "info-pages.txt"): "sha256:info-same",
+            }
+        ),
+        audit_logger=None,
+        index_writer=_RecordingIndexWriter(),
+        clock=lambda: dt.datetime(2025, 1, 2, tzinfo=dt.timezone.utc),
+        job_id_factory=lambda: "job-force",
+    )
+
+    job = service.run(
+        IngestionTrigger.MANUAL,
+        force_rebuild=True,
+    )
+
+    assert builder.calls == ["man-pages", "info-pages"]
+    assert job.documents_processed == 2

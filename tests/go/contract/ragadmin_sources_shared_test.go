@@ -21,6 +21,7 @@ type ragadminScenario struct {
 	responseBody   map[string]any
 	responseStream []ragadminStreamFrame
 	env            map[string]string
+	expectError    bool
 	outputAssert   func(t *testing.T, output string)
 }
 
@@ -77,12 +78,17 @@ func runRagadminScenario(t *testing.T, scenario ragadminScenario) {
 	cmd.Env = env
 
 	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("expected ragadmin CLI to succeed for scenario %q: %v\noutput:\n%s", scenario.name, err, string(output))
-	}
 
 	if err := <-serverErr; err != nil {
 		t.Fatalf("stub server failed for scenario %q: %v", scenario.name, err)
+	}
+
+	if scenario.expectError {
+		if err == nil {
+			t.Fatalf("expected ragadmin CLI to fail for scenario %q, but it succeeded:\n%s", scenario.name, string(output))
+		}
+	} else if err != nil {
+		t.Fatalf("expected ragadmin CLI to succeed for scenario %q: %v\noutput:\n%s", scenario.name, err, string(output))
 	}
 
 	if scenario.outputAssert != nil {

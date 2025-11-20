@@ -240,9 +240,12 @@ def test_ingestion_port_contract_shapes() -> None:
 
     reindex_sig = inspect.signature(ingestion_port.start_reindex)
     reindex_params = list(reindex_sig.parameters.values())
-    assert len(reindex_params) == 3
+    assert len(reindex_params) == 4
     assert reindex_params[1].annotation is ingestion_trigger
-    _assert_optional(reindex_params[2].annotation, reindex_callbacks)
+    force_param = reindex_params[2]
+    assert force_param.annotation is bool
+    assert force_param.default is False
+    _assert_optional(reindex_params[3].annotation, reindex_callbacks)
     assert reindex_sig.return_annotation is ingestion_job
 
 

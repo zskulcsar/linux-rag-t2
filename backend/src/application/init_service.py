@@ -44,7 +44,7 @@ Example:
     ...         raise NotImplementedError
     ...     def remove_source(self, alias):
     ...         raise NotImplementedError
-    ...     def start_reindex(self, trigger):
+    ...     def start_reindex(self, trigger, *, force_rebuild=False, callbacks=None):
     ...         raise NotImplementedError
     >>> dummy = DummyIngestion()
     >>> service = InitService(

@@ -96,6 +96,7 @@ class CatalogIngestionPort(IngestionPort):
         self,
         trigger: IngestionTrigger,
         *,
+        force_rebuild: bool = False,
         callbacks: ReindexCallbacks | None = None,
     ) -> IngestionJob:
         """Record a reindex request and schedule orchestration.
@@ -144,6 +145,7 @@ class CatalogIngestionPort(IngestionPort):
                 self._reindex_service.run,
                 trigger,
                 job_id=job.job_id,
+                force_rebuild=force_rebuild,
                 callbacks=callbacks,
             ),
         )

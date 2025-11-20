@@ -204,9 +204,11 @@ class TransportHandlers:
                 message=f"Unsupported reindex trigger {trigger_value!r}",
             ) from exc
 
+        force_value = body.get("force", False)
+        force_rebuild = force_value if isinstance(force_value, bool) else False
         stream = _JobStream(asyncio.get_running_loop())
         job = self.ingestion_port.start_reindex(
-            trigger, callbacks=stream.callbacks
+            trigger, force_rebuild=force_rebuild, callbacks=stream.callbacks
         )
         return StreamingResponse(
             initial_status=202,

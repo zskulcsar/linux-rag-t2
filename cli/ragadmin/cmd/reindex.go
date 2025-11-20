@@ -16,6 +16,7 @@ import (
 func newReindexCommand() *cobra.Command {
 	var opts struct {
 		trigger string
+		force   bool
 	}
 
 	cmd := &cobra.Command{
@@ -33,6 +34,7 @@ func newReindexCommand() *cobra.Command {
 			req := ipc.ReindexRequest{
 				TraceID: ipc.NewTraceID(),
 				Trigger: trigger,
+				Force:   opts.force,
 			}
 			started := time.Now()
 
@@ -47,7 +49,7 @@ func newReindexCommand() *cobra.Command {
 					return err
 				}
 
-				status := strings.ToLower(strings.TrimSpace(job.Status))
+				status := normalizedJobStatus(job)
 				target := job.SourceAlias
 				if target == "" {
 					target = "*"
@@ -71,6 +73,7 @@ func newReindexCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&opts.trigger, "trigger", "manual", "Reindex trigger (manual|init|scheduled)")
+	cmd.Flags().BoolVar(&opts.force, "force", false, "Force rebuild even if source checksums are unchanged")
 	return cmd
 }
 
@@ -88,10 +91,11 @@ func renderReindexResult(out io.Writer, format string, job ipc.IngestionJob, ela
 		return err
 	}
 
-	statusLine := fmt.Sprintf("Reindex %s (job %s)", strings.ToLower(job.Status), job.JobID)
+	status := normalizedJobStatus(job)
+	statusLine := fmt.Sprintf("Reindex %s (job %s)", status, job.JobID)
 	stage := strings.TrimSpace(job.Stage)
 	if stage == "" {
-		stage = strings.ToLower(job.Status)
+		stage = status
 	}
 	stageLine := fmt.Sprintf("Stage: %s", stage)
 	if job.PercentComplete != nil {
@@ -196,10 +200,7 @@ func (r *reindexProgressRenderer) Complete(job ipc.IngestionJob, elapsed time.Du
 }
 
 func (r *reindexProgressRenderer) buildProgressLine(job ipc.IngestionJob) string {
-	status := strings.ToLower(strings.TrimSpace(job.Status))
-	if status == "" {
-		status = "running"
-	}
+	status := normalizedJobStatus(job)
 	stage := formatProgressStage(job)
 	line := fmt.Sprintf("Reindex %s — Stage: %s", status, stage)
 	if job.DocumentsProcessed > 0 {
@@ -211,13 +212,21 @@ func (r *reindexProgressRenderer) buildProgressLine(job ipc.IngestionJob) string
 func formatProgressStage(job ipc.IngestionJob) string {
 	stage := strings.TrimSpace(job.Stage)
 	if stage == "" {
-		stage = strings.ToLower(strings.TrimSpace(job.Status))
-		if stage == "" {
-			stage = "running"
-		}
+		stage = normalizedJobStatus(job)
 	}
 	if job.PercentComplete != nil {
 		return fmt.Sprintf("%s (%s)", stage, formatPercent(*job.PercentComplete))
 	}
 	return stage
+}
+
+func normalizedJobStatus(job ipc.IngestionJob) string {
+	status := strings.ToLower(strings.TrimSpace(job.Status))
+	if status == "" {
+		status = "running"
+	}
+	if job.ErrorMessage != "" && status == "succeeded" {
+		return "failed"
+	}
+	return status
 }

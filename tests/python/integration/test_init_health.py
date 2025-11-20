@@ -93,7 +93,11 @@ class _RecordingIngestionPort(ingestion_ports.IngestionPort):
         raise NotImplementedError
 
     def start_reindex(  # pragma: no cover - unused in tests
-        self, trigger: ingestion_ports.IngestionTrigger
+        self,
+        trigger: ingestion_ports.IngestionTrigger,
+        *,
+        force_rebuild: bool = False,
+        callbacks: ingestion_ports.ReindexCallbacks | None = None,
     ) -> ingestion_ports.IngestionJob:
         raise NotImplementedError
 

@@ -65,6 +65,7 @@ class ReindexService:
         trigger: ingestion_ports.IngestionTrigger,
         *,
         job_id: str | None = None,
+        force_rebuild: bool = False,
         callbacks: ingestion_ports.ReindexCallbacks | None = None,
     ) -> ingestion_ports.IngestionJob:
         """Execute the reindex workflow and return the final job snapshot."""
@@ -114,7 +115,7 @@ class ReindexService:
                     location_path = _resolve_location(record.location)
                     checksum = self._checksum_calculator(location_path)
                     size_bytes = _stat_size(location_path)
-                    changed = checksum != (record.checksum or "")
+                    changed = force_rebuild or checksum != (record.checksum or "")
                     stage = f"skipping:{alias}"
                     documents: Sequence[Document] = []
                     if changed:

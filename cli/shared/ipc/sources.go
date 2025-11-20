@@ -91,6 +91,7 @@ type SourceRemoveRequest struct {
 type ReindexRequest struct {
 	TraceID string `json:"trace_id"`
 	Trigger string `json:"trigger"`
+	Force   bool   `json:"force,omitempty"`
 }
 
 // SourceListResponse captures catalog listing payloads.

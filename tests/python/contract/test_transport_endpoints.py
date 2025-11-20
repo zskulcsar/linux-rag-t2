@@ -274,7 +274,7 @@ async def test_admin_init_rejects_when_index_missing(
             raise NotImplementedError
 
         def start_reindex(
-            self, trigger
+            self, trigger, *, force_rebuild=False, callbacks=None
         ):  # pragma: no cover - not needed for contract tests
             raise NotImplementedError
 
@@ -367,7 +367,7 @@ async def test_admin_init_rejects_when_catalog_newer_than_index(
             raise NotImplementedError
 
         def start_reindex(
-            self, trigger
+            self, trigger, *, force_rebuild=False, callbacks=None
         ):  # pragma: no cover - not needed for contract tests
             raise NotImplementedError
 
