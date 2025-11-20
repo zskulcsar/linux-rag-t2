@@ -138,6 +138,17 @@ class WeaviateAdapter:
         self._metrics = metrics
         self._query_metrics = query_metrics
 
+    def __enter__(self) -> "WeaviateAdapter":
+        """Return the adapter instance for use within a context manager."""
+
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        """Ensure the underlying client closes when leaving a context block."""
+
+        self.close()
+        return False
+
     @trace_call
     def ingest(self, documents: Iterable[Document]) -> None:
         """Persist documents to Weaviate using the dynamic batch writer.
@@ -259,6 +270,19 @@ class WeaviateAdapter:
                 self._query_metrics.record_query(alias, elapsed_ms, len(documents))
             section.debug("query_complete", result_count=len(documents))
             return documents
+
+    @trace_call
+    def close(self) -> None:
+        """Close the underlying Weaviate client to prevent socket leaks.
+
+        Example:
+            >>> adapter = WeaviateAdapter(client=client, class_name="Document")
+            >>> adapter.close()
+        """
+
+        client_close = getattr(self._client, "close", None)
+        if callable(client_close):
+            client_close()
 
 
     def _ingest_dynamic_batch(

@@ -362,6 +362,7 @@ async def transport_server(
     _ensure_socket_directory(path)
 
     active_handlers = handlers or create_default_handlers()
+    owns_handlers = handlers is None
     connection_handler = functools.partial(_handle_connection, handlers=active_handlers)
     server = await asyncio.start_unix_server(
         connection_handler,
@@ -382,6 +383,11 @@ async def transport_server(
                 pass
             except OSError as exc:  # pragma: no cover - defensive guard
                 section.debug("cleanup_failed", error=str(exc))
+            if owns_handlers:
+                close = getattr(active_handlers, "close", None)
+                if callable(close):
+                    section.debug("handlers_closing")
+                    close()
 
 
 @trace_call

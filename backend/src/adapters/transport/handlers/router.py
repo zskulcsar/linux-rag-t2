@@ -2,6 +2,7 @@
 
 import asyncio
 import datetime as dt
+import logging
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Callable, Dict
@@ -29,6 +30,8 @@ from common.serializers import (
 
 from .errors import IndexUnavailableError, TransportError
 
+LOGGER = logging.getLogger(__name__)
+
 
 @dataclass
 class StreamingResponse:
@@ -50,6 +53,19 @@ class TransportHandlers:
     _clock: Callable[[], dt.datetime] = field(
         default=lambda: dt.datetime.now(dt.timezone.utc)
     )
+    _shutdown_hooks: list[Callable[[], None]] = field(default_factory=list, repr=False)
+    _closed: bool = field(default=False, init=False, repr=False)
+
+    def __enter__(self) -> "TransportHandlers":
+        """Return the handler collection for context-manager usage."""
+
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        """Close the handler collection when exiting a context manager."""
+
+        self.close()
+        return False
 
     def dispatch(
         self, path: str, body: dict[str, Any]
@@ -83,6 +99,31 @@ class TransportHandlers:
             code="NOT_FOUND",
             message=f"Unknown path {path!r}",
         )
+
+    def register_shutdown_hook(self, hook: Callable[[], None] | None) -> None:
+        """Register a callable executed when close() runs.
+
+        Args:
+            hook: Callable that cleans up adapter state. ``None`` values are ignored.
+        """
+
+        if hook is None:
+            return
+        self._shutdown_hooks.append(hook)
+
+    def close(self) -> None:
+        """Run all registered shutdown hooks exactly once."""
+
+        if self._closed:
+            return
+        for hook in self._shutdown_hooks:
+            try:
+                hook()
+            except Exception as exc:  # pragma: no cover - defensive logging
+                LOGGER.warning(
+                    "TransportHandlers.close() :: hook_failed", exc_info=exc
+                )
+        self._closed = True
 
     def _handle_query(self, body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
         """Execute a query request and serialize the response.

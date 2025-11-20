@@ -9,9 +9,18 @@ from adapters.transport import create_default_handlers
 
 @pytest.fixture
 def make_transport_handlers():
-    """Provide a factory for constructing transport handlers."""
+    """Provide a factory for constructing and cleaning up transport handlers."""
+
+    created = []
 
     def _factory():
-        return create_default_handlers()
+        handlers = create_default_handlers()
+        created.append(handlers)
+        return handlers
 
-    return _factory
+    yield _factory
+
+    for handlers in created:
+        close = getattr(handlers, "close", None)
+        if callable(close):
+            close()

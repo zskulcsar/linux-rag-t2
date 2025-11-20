@@ -40,3 +40,27 @@ async def test_transport_server_creates_socket_and_acknowledges_handshake(
             newline_error="transport must terminate frames with a trailing newline sentinel",
         )
         await close_writer(writer)
+
+
+@pytest.mark.asyncio
+async def test_transport_server_closes_default_handlers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The server should close handlers when it instantiates them."""
+
+    socket_path = tmp_path / "backend.sock"
+    closed: list[bool] = []
+
+    class _StubHandlers:
+        def dispatch(self, path: str, body: dict[str, str]):
+            return 200, {"ok": True}
+
+        def close(self):
+            closed.append(True)
+
+    monkeypatch.setattr(server, "create_default_handlers", lambda: _StubHandlers())
+
+    async with server.transport_server(socket_path=socket_path):
+        pass
+
+    assert closed == [True], "transport_server must close default handlers on exit"

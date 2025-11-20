@@ -83,13 +83,17 @@ def create_default_handlers(
     query_port = QueryRunnerPort(query_runner)
     health_port = _build_health_port(storage=storage, settings=active_settings)
 
-    return TransportHandlers(
+    handlers = TransportHandlers(
         query_port=query_port,
         ingestion_port=ingestion_port,
         health_port=health_port,
         audit_logger=audit_logger,
         _clock=_clock,
     )
+    _register_adapter_closer(handlers, vector_adapter)
+    _register_adapter_closer(handlers, embedding_adapter)
+    _register_adapter_closer(handlers, completion_adapter)
+    return handlers
 
 
 def _configure_observability(settings: HandlerSettings) -> None:
@@ -166,3 +170,11 @@ def _seed_bootstrap_catalog(
 
 
 __all__ = ["create_default_handlers", "_chunk_builder_factory"]
+
+
+def _register_adapter_closer(handlers: TransportHandlers, adapter: object) -> None:
+    """Register adapter close hooks when available."""
+
+    close = getattr(adapter, "close", None)
+    if callable(close):
+        handlers.register_shutdown_hook(close)
