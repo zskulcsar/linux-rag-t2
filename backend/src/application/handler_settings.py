@@ -15,6 +15,7 @@ class HandlerSettings:
     """Runtime configuration for transport handlers."""
 
     weaviate_url: str
+    weaviate_grpc_port: int
     ollama_url: str
     phoenix_url: str | None
     embedding_model: str
@@ -40,6 +41,9 @@ def load_handler_settings_from_env() -> HandlerSettings:
         weaviate_url=os.environ.get(
             "RAG_BACKEND_WEAVIATE_URL", "http://127.0.0.1:8080"
         ),
+        weaviate_grpc_port=int(
+            os.environ.get("RAG_BACKEND_WEAVIATE_GRPC_PORT", "50051")
+        ),
         ollama_url=os.environ.get("RAG_BACKEND_OLLAMA_URL", "http://127.0.0.1:11434"),
         phoenix_url=os.environ.get("RAG_BACKEND_PHOENIX_URL"),
         embedding_model=os.environ.get(
@@ -57,6 +61,7 @@ def handler_settings_from_launcher(config: "LauncherConfig") -> HandlerSettings:
     base = load_handler_settings_from_env()
     return HandlerSettings(
         weaviate_url=config.weaviate_url,
+        weaviate_grpc_port=config.weaviate_grpc_port,
         ollama_url=config.ollama_url,
         phoenix_url=config.phoenix_url,
         embedding_model=base.embedding_model,

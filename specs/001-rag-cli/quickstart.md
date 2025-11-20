@@ -34,6 +34,7 @@
      --config "${XDG_CONFIG_HOME:-$HOME/.config}/ragcli/config.yaml" \
      --socket "${XDG_RUNTIME_DIR:-/tmp}/ragcli/backend.sock" \
      --weaviate-url http://localhost:8080 \
+     --weaviate-grpc-port 50051 \
      --ollama-url http://localhost:11434 \
      --phoenix-url http://localhost:6006 \
      --log-level INFO
@@ -57,6 +58,9 @@
    go run ./cli/ragadmin health
    ```
    Health output lists each component (disk, index freshness, source access, Ollama, Weaviate) with pass/warn/fail status and concise remediation hints. Disk warnings appear when free space drops below 10% and failures when it falls to 8% or lower; FAIL takes precedence if both thresholds apply. Index builds older than 30 days warn until a reindex completes.
+   Ensure the backend can reach Weaviate on both protocols: HTTP for schema/meta
+   operations (`--weaviate-url`) and gRPC for collection queries/ingest
+   (`--weaviate-grpc-port`). The default install exposes gRPC on 50051.
 3. Review seeded sources and register additional content:
    ```bash
    go run ./cli/ragadmin sources list

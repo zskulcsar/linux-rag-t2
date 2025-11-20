@@ -3,6 +3,7 @@
 import hashlib
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlparse
 
 from adapters.ollama.client import OllamaAdapter
 from adapters.weaviate.client import WeaviateAdapter
@@ -40,7 +41,19 @@ def _build_weaviate_adapter(settings: HandlerSettings) -> WeaviateAdapter:
     try:
         import weaviate  # type: ignore
 
-        client: Any = weaviate.Client(settings.weaviate_url)  # type: ignore[call-arg]
+        parsed = urlparse(settings.weaviate_url)
+        host = parsed.hostname or "127.0.0.1"
+        scheme = parsed.scheme or "http"
+        http_secure = scheme == "https"
+        http_port = parsed.port or (443 if http_secure else 80)
+        client: Any = weaviate.connect_to_custom(  # type: ignore[attr-defined]
+            http_host=host,
+            http_port=http_port,
+            http_secure=http_secure,
+            grpc_host=host,
+            grpc_port=settings.weaviate_grpc_port,
+            grpc_secure=http_secure,
+        )
     except Exception as exc:  # pragma: no cover - defensive fallback
         LOGGER.warning(
             "factory.weaviate_adapter(settings) :: client_initialization_failed",

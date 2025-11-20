@@ -3,7 +3,9 @@
 import time
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Mapping, Protocol
+
+from weaviate.collections.classes.filters import Filter
 
 from ports.ingestion import SourceType
 from telemetry import trace_call, trace_section
@@ -103,6 +105,16 @@ class WeaviateAdapter:
         >>> adapter.ingest([doc])
     """
 
+    _QUERY_FIELDS = [
+        "text",
+        "checksum",
+        "chunk_id",
+        "source_alias",
+        "source_type",
+        "language",
+        "embedding",
+    ]
+
     @trace_call
     def __init__(
         self,
@@ -156,31 +168,21 @@ class WeaviateAdapter:
             "weaviate.ingest",
             metadata={"class_name": self._class_name, "document_count": len(doc_list)},
         ) as section:
-            with batch:
-                for document in doc_list:
-                    alias_counts[document.alias] = (
-                        alias_counts.get(document.alias, 0) + 1
-                    )
-
-                    payload: dict[str, Any] = {
-                        "text": document.text,
-                        "source_alias": document.alias,
-                        "source_type": document.source_type.value,
-                        "language": document.language,
-                        "checksum": document.checksum,
-                        "chunk_id": document.chunk_id,
-                    }
-                    if document.embedding is not None:
-                        payload["embedding"] = list(document.embedding)
-
-                    batch.add_data_object(
-                        payload, class_name=self._class_name, uuid=document.document_id
-                    )
-                    section.debug(
-                        "document_enqueued",
-                        alias=document.alias,
-                        chunk_id=document.chunk_id,
-                    )
+            dynamic_method = getattr(batch, "dynamic", None)
+            if callable(dynamic_method):
+                self._ingest_dynamic_batch(
+                    batch_wrapper=batch,
+                    documents=doc_list,
+                    alias_counts=alias_counts,
+                    section=section,
+                )
+            else:
+                self._ingest_legacy_batch(
+                    batch_context=batch,
+                    documents=doc_list,
+                    alias_counts=alias_counts,
+                    section=section,
+                )
 
             elapsed_ms = (time.perf_counter() - start) * 1000.0
             if self._metrics:
@@ -221,10 +223,155 @@ class WeaviateAdapter:
         if not alias or not language:
             raise ValueError("alias and language must be provided")
 
-        query_client = getattr(self._client, "query", None)
-        if query_client is None:
-            raise ValueError("Weaviate client does not expose a query interface")
+        start = time.perf_counter()
+        with trace_section(
+            "weaviate.query",
+            metadata={
+                "alias": alias,
+                "source_type": source_type.value,
+                "language": language,
+                "limit": limit,
+            },
+        ) as section:
+            collections = getattr(self._client, "collections", None)
+            if collections is not None and hasattr(collections, "get"):
+                documents = self._query_with_collections(
+                    collections=collections,
+                    alias=alias,
+                    source_type=source_type,
+                    language=language,
+                    limit=limit,
+                )
+            else:
+                query_client = getattr(self._client, "query", None)
+                if query_client is None:
+                    raise ValueError("Weaviate client does not expose a query interface")
+                documents = self._query_with_legacy_client(
+                    query_client=query_client,
+                    alias=alias,
+                    source_type=source_type,
+                    language=language,
+                    limit=limit,
+                )
 
+            elapsed_ms = (time.perf_counter() - start) * 1000.0
+            if self._query_metrics:
+                self._query_metrics.record_query(alias, elapsed_ms, len(documents))
+            section.debug("query_complete", result_count=len(documents))
+            return documents
+
+
+    def _ingest_dynamic_batch(
+        self,
+        *,
+        batch_wrapper: Any,
+        documents: list[Document],
+        alias_counts: dict[str, int],
+        section: Any,
+    ) -> None:
+        dynamic_method = getattr(batch_wrapper, "dynamic", None)
+        if not callable(dynamic_method):
+            raise ValueError("batch wrapper missing dynamic()")
+        context = dynamic_method()
+        with context as batch_ctx:
+            add_object = getattr(batch_ctx, "add_object", None)
+            if add_object is None:
+                raise ValueError("Weaviate batch context missing add_object")
+            for document in documents:
+                alias_counts[document.alias] = alias_counts.get(document.alias, 0) + 1
+                payload = self._document_payload(document)
+                add_object(
+                    collection=self._class_name,
+                    properties=payload,
+                    uuid=document.document_id,
+                )
+                section.debug(
+                    "document_enqueued",
+                    alias=document.alias,
+                    chunk_id=document.chunk_id,
+                )
+
+    def _ingest_legacy_batch(
+        self,
+        *,
+        batch_context: Any,
+        documents: list[Document],
+        alias_counts: dict[str, int],
+        section: Any,
+    ) -> None:
+        if not hasattr(batch_context, "__enter__"):
+            raise ValueError("Weaviate client must expose a 'batch' context manager")
+        with batch_context:
+            for document in documents:
+                alias_counts[document.alias] = alias_counts.get(document.alias, 0) + 1
+                payload = self._document_payload(document)
+                batch_context.add_data_object(  # type: ignore[attr-defined]
+                    payload, class_name=self._class_name, uuid=document.document_id
+                )
+                section.debug(
+                    "document_enqueued",
+                    alias=document.alias,
+                    chunk_id=document.chunk_id,
+                )
+
+    def _document_payload(self, document: Document) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "text": document.text,
+            "source_alias": document.alias,
+            "source_type": document.source_type.value,
+            "language": document.language,
+            "checksum": document.checksum,
+            "chunk_id": document.chunk_id,
+        }
+        if document.embedding is not None:
+            payload["embedding"] = list(document.embedding)
+        return payload
+
+    def _query_with_collections(
+        self,
+        *,
+        collections: Any,
+        alias: str,
+        source_type: SourceType,
+        language: str,
+        limit: int,
+    ) -> list[Document]:
+        collection = collections.get(self._class_name)
+        query_namespace = getattr(collection, "query", None)
+        if query_namespace is None:
+            raise ValueError("collections interface missing query namespace")
+
+        filters = self._build_v4_filters(alias=alias, source_type=source_type, language=language)
+        result = query_namespace.fetch_objects(  # type: ignore[call-arg]
+            filters=filters,
+            limit=limit,
+            return_properties=self._QUERY_FIELDS,
+        )
+        records = getattr(result, "objects", None)
+        if records is None:
+            raise ValueError("collections interface returned unexpected payload")
+        return [self._document_from_properties(obj.properties) for obj in records]
+
+    def _build_v4_filters(
+        self, *, alias: str, source_type: SourceType, language: str
+    ) -> Any:
+        return Filter.all_of(
+            [
+                Filter.by_property("source_alias").equal(alias),
+                Filter.by_property("source_type").equal(source_type.value),
+                Filter.by_property("language").equal(language),
+            ]
+        )
+
+    def _query_with_legacy_client(
+        self,
+        *,
+        query_client: Any,
+        alias: str,
+        source_type: SourceType,
+        language: str,
+        limit: int,
+    ) -> list[Document]:
         filters = {
             "operator": "And",
             "operands": [
@@ -238,54 +385,24 @@ class WeaviateAdapter:
             ],
         }
 
-        start = time.perf_counter()
-        with trace_section(
-            "weaviate.query",
-            metadata={
-                "alias": alias,
-                "source_type": source_type.value,
-                "language": language,
-                "limit": limit,
-            },
-        ) as section:
-            builder = query_client.get(
-                self._class_name,
-                [
-                    "text",
-                    "checksum",
-                    "chunk_id",
-                    "source_alias",
-                    "source_type",
-                    "language",
-                    "embedding",
-                ],
-            )
-            response = builder.with_where(filters).with_limit(limit).do()
-            raw_entries = (
-                response.get("data", {}).get("Get", {}).get(self._class_name, [])
-            )
+        builder = query_client.get(self._class_name, self._QUERY_FIELDS)
+        response = builder.with_where(filters).with_limit(limit).do()
+        raw_entries = response.get("data", {}).get("Get", {}).get(self._class_name, [])
+        return [self._document_from_properties(entry) for entry in raw_entries]
 
-            documents: list[Document] = []
-            for entry in raw_entries:
-                try:
-                    document = Document(
-                        alias=entry["source_alias"],
-                        checksum=entry["checksum"],
-                        chunk_id=int(entry["chunk_id"]),
-                        text=entry["text"],
-                        source_type=SourceType(entry["source_type"]),
-                        language=entry["language"],
-                        embedding=entry.get("embedding"),
-                    )
-                except KeyError as exc:
-                    raise ValueError("query result missing required field") from exc
-                documents.append(document)
-
-            elapsed_ms = (time.perf_counter() - start) * 1000.0
-            if self._query_metrics:
-                self._query_metrics.record_query(alias, elapsed_ms, len(documents))
-            section.debug("query_complete", result_count=len(documents))
-            return documents
+    def _document_from_properties(self, payload: Mapping[str, Any]) -> Document:
+        try:
+            return Document(
+                alias=str(payload["source_alias"]),
+                checksum=str(payload["checksum"]),
+                chunk_id=int(payload["chunk_id"]),
+                text=str(payload["text"]),
+                source_type=SourceType(str(payload["source_type"])),
+                language=str(payload["language"]),
+                embedding=payload.get("embedding"),
+            )
+        except KeyError as exc:
+            raise ValueError("query result missing required field") from exc
 
 
 __all__ = ["Document", "WeaviateAdapter", "IngestionMetrics", "QueryMetrics"]

@@ -52,10 +52,20 @@ class AuditLogger:
             >>> audit_logger.append({'action': 'init', 'status': 'success'})
         """
 
-        self._log_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._log_path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry, ensure_ascii=False))
-            handle.write("\n")
+        try:
+            self._log_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._log_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(entry, ensure_ascii=False))
+                handle.write("\n")
+        except PermissionError as exc:
+            fallback = Path.cwd() / ".ragcli" / self._log_path.name
+            if fallback == self._log_path:
+                raise
+            self._log_path = fallback
+            self._log_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._log_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(entry, ensure_ascii=False))
+                handle.write("\n")
 
     @trace_call
     def log_mutation(

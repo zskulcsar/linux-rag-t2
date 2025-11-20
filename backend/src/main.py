@@ -47,6 +47,7 @@ class LauncherConfig:
         config_path: Location of the ragcli YAML configuration file.
         socket_path: Filesystem path for the Unix domain socket.
         weaviate_url: HTTP URL pointing at the local Weaviate deployment.
+        weaviate_grpc_port: Port used for the Weaviate gRPC endpoint.
         ollama_url: HTTP URL targeting the Ollama service for generation or embeddings.
         phoenix_url: HTTP URL pointing at the Phoenix observability endpoint.
         enable_trace: Whether to enable the optional trace controller.
@@ -57,6 +58,7 @@ class LauncherConfig:
         ...     config_path=Path('/etc/ragcli/ragcli-config.yaml'),
         ...     socket_path=Path('/tmp/backend.sock'),
         ...     weaviate_url='http://127.0.0.1:8080',
+        ...     weaviate_grpc_port=50051,
         ...     ollama_url='http://127.0.0.1:11434',
         ...     phoenix_url='http://127.0.0.1:6006',
         ...     enable_trace=False,
@@ -68,6 +70,7 @@ class LauncherConfig:
     config_path: Path
     socket_path: Path
     weaviate_url: str
+    weaviate_grpc_port: int
     ollama_url: str
     phoenix_url: str
     enable_trace: bool
@@ -109,6 +112,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--weaviate-url",
         help="HTTP endpoint for the local Weaviate deployment (e.g. http://127.0.0.1:8080).",
+    )
+    parser.add_argument(
+        "--weaviate-grpc-port",
+        type=int,
+        help="gRPC port for the local Weaviate deployment (default: 50051).",
     )
     parser.add_argument(
         "--ollama-url",
@@ -217,6 +225,7 @@ async def _run_server(config: LauncherConfig, settings: HandlerSettings) -> None
         ...     config_path=Path('/etc/ragcli/ragcli-config.yaml'),
         ...     socket_path=Path('/tmp/backend.sock'),
         ...     weaviate_url='http://127.0.0.1:8080',
+        ...     weaviate_grpc_port=50051,
         ...     ollama_url='http://127.0.0.1:11434',
         ...     phoenix_url='http://127.0.0.1:6006',
         ...     enable_trace=False,
@@ -288,6 +297,28 @@ def _coalesce_value(
     )
 
 
+def _coalesce_int(
+    *,
+    name: str,
+    cli_value: int | None,
+    config: dict[str, Any],
+    default: int,
+) -> int:
+    """Return the CLI override, config value, or default for integer options."""
+
+    if cli_value is not None:
+        return int(cli_value)
+    candidate = config.get(name)
+    if candidate is None or candidate == "":
+        return default
+    try:
+        return int(candidate)
+    except (TypeError, ValueError) as exc:  # pragma: no cover - defensive guard
+        raise LauncherConfigError(
+            f"Invalid integer value for '{name}': {candidate!r}"
+        ) from exc
+
+
 def _coalesce_bool(
     *,
     name: str,
@@ -329,6 +360,12 @@ def build_launcher_config(args: argparse.Namespace) -> LauncherConfig:
         cli_value=args.weaviate_url,
         config=backend_settings,
     )
+    weaviate_grpc_port = _coalesce_int(
+        name="weaviate_grpc_port",
+        cli_value=getattr(args, "weaviate_grpc_port", None),
+        config=backend_settings,
+        default=50051,
+    )
     ollama_url = _coalesce_value(
         name="ollama_url",
         cli_value=args.ollama_url,
@@ -356,6 +393,7 @@ def build_launcher_config(args: argparse.Namespace) -> LauncherConfig:
         config_path=config_path,
         socket_path=Path(socket_value).expanduser(),
         weaviate_url=weaviate_url,
+        weaviate_grpc_port=weaviate_grpc_port,
         ollama_url=ollama_url,
         phoenix_url=phoenix_url,
         enable_trace=trace_enabled,
@@ -398,6 +436,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         config=str(config.config_path),
         socket=str(config.socket_path),
         weaviate_url=config.weaviate_url,
+        weaviate_grpc_port=config.weaviate_grpc_port,
         ollama_url=config.ollama_url,
         phoenix_url=config.phoenix_url,
         log_level=config.log_level,

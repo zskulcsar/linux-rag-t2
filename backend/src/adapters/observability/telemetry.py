@@ -71,13 +71,7 @@ def configure_phoenix(
         RuntimeError: If the Phoenix package is not installed.
     """
 
-    try:
-        from phoenix.otel import register  # type: ignore
-    except ModuleNotFoundError as exc:  # pragma: no cover - exercised via tests
-        raise RuntimeError(
-            "configure_phoenix(service_name=%s) :: phoenix package not installed"
-            % service_name
-        ) from exc
+    register = _resolve_phoenix_register(service_name)
 
     kwargs: dict[str, Any] = {
         "project_name": service_name,
@@ -89,6 +83,31 @@ def configure_phoenix(
         kwargs["instrumentors"] = tuple(instrumentors)
 
     register(**kwargs)
+
+
+def _resolve_phoenix_register(service_name: str) -> Any:
+    """Return the Phoenix register callable or raise with a descriptive error."""
+
+    try:
+        from phoenix.otel import register  # type: ignore
+        return register
+    except ModuleNotFoundError:
+        try:
+            import phoenix  # type: ignore
+        except ModuleNotFoundError as exc:  # pragma: no cover - exercised via tests
+            raise RuntimeError(
+                "configure_phoenix(service_name=%s) :: phoenix package not installed"
+                % service_name
+            ) from exc
+
+        phoenix_module = phoenix  # type: ignore[assignment]
+        otel = getattr(phoenix_module, "otel", None)
+        if otel is None or not hasattr(otel, "register"):
+            raise RuntimeError(
+                "configure_phoenix(service_name=%s) :: phoenix.otel.register missing"
+                % service_name
+            )
+        return otel.register
 
 
 __all__ = ["configure_structlog", "configure_phoenix"]
