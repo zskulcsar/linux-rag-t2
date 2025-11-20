@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Callable
 
 from adapters.weaviate.client import Document
-from application.reindex_service import JobCallbacks, ReindexService
+from application.reindex_service import ReindexService
 from domain.models import ContentIndexVersion, IndexStatus
 from ports.ingestion import (
     IngestionStatus,
@@ -16,6 +16,7 @@ from ports.ingestion import (
     SourceSnapshot,
     SourceStatus,
     SourceType,
+    ReindexCallbacks,
 )
 
 
@@ -163,7 +164,7 @@ def test_run_processes_sources_and_updates_catalog(tmp_path: Path) -> None:
 
     job = service.run(
         IngestionTrigger.MANUAL,
-        callbacks=JobCallbacks(
+        callbacks=ReindexCallbacks(
             on_progress=callbacks.progress_hook,
             on_complete=callbacks.complete_hook,
         ),
@@ -233,7 +234,7 @@ def test_run_skips_sources_when_checksums_match(tmp_path: Path) -> None:
 
     job = service.run(
         IngestionTrigger.MANUAL,
-        callbacks=JobCallbacks(
+        callbacks=ReindexCallbacks(
             on_progress=callbacks.progress_hook,
             on_complete=callbacks.complete_hook,
         ),

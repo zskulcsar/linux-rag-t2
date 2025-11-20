@@ -57,7 +57,7 @@ class AuditLogger:
             with self._log_path.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(entry, ensure_ascii=False))
                 handle.write("\n")
-        except PermissionError as exc:
+        except PermissionError:
             fallback = Path.cwd() / ".ragcli" / self._log_path.name
             if fallback == self._log_path:
                 raise

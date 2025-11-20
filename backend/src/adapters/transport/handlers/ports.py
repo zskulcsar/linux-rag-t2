@@ -1,11 +1,14 @@
 """Port adapters exposed through the transport handlers."""
 
+import asyncio
 import datetime as dt
+import functools
 import uuid
 from typing import Callable
 
 from adapters.storage.catalog import CatalogStorage
 from application.query_runner import QueryRunner
+from application.reindex_service import ReindexService
 from application.source_catalog import SourceCatalogService
 from ports import QueryPort, QueryRequest, QueryResponse, SourceCatalog
 from ports.ingestion import (
@@ -13,6 +16,7 @@ from ports.ingestion import (
     IngestionStatus,
     IngestionPort,
     IngestionTrigger,
+    ReindexCallbacks,
     SourceCreateRequest,
     SourceMutationResult,
     SourceUpdateRequest,
@@ -29,6 +33,7 @@ class CatalogIngestionPort(IngestionPort):
         *,
         service: SourceCatalogService,
         storage: CatalogStorage,
+        reindex_service: ReindexService | None = None,
         clock: Callable[[], dt.datetime] = _clock,
     ) -> None:
         """Create an ingestion adapter backed by catalog services.
@@ -40,6 +45,7 @@ class CatalogIngestionPort(IngestionPort):
         """
         self._service = service
         self._storage = storage
+        self._reindex_service = reindex_service
         self._clock = clock
 
     def list_sources(self) -> SourceCatalog:
@@ -86,30 +92,35 @@ class CatalogIngestionPort(IngestionPort):
         """
         return self._service.remove_source(alias)
 
-    def start_reindex(self, trigger: IngestionTrigger) -> IngestionJob:
-        """Record a queued reindex request for telemetry and UX purposes.
+    def start_reindex(
+        self,
+        trigger: IngestionTrigger,
+        *,
+        callbacks: ReindexCallbacks | None = None,
+    ) -> IngestionJob:
+        """Record a reindex request and schedule orchestration.
 
         Args:
             trigger: Event that initiated the reindex request.
 
         Returns:
-            Synthetic ingestion job representing the queued work.
+            Ingestion job snapshot representing the running work.
         """
         catalog = self._storage.load()
         now = self._clock()
         job_id = f"reindex-{uuid.uuid4().hex}"
         LOGGER.info(
-            "CatalogIngestionPort.start_reindex(trigger) :: queued",
+            "CatalogIngestionPort.start_reindex(trigger) :: scheduled",
             job_id=job_id,
             trigger=trigger.value,
             source_count=len(catalog.sources),
         )
-        return IngestionJob(
+        job = IngestionJob(
             job_id=job_id,
             source_alias="*",
-            status=IngestionStatus.QUEUED,
+            status=IngestionStatus.RUNNING,
             requested_at=now,
-            started_at=None,
+            started_at=now,
             completed_at=None,
             documents_processed=0,
             stage="preparing_index",
@@ -117,6 +128,37 @@ class CatalogIngestionPort(IngestionPort):
             error_message=None,
             trigger=trigger,
         )
+        if callbacks and callbacks.on_progress:
+            callbacks.on_progress(job)
+
+        if self._reindex_service is None:
+            return job
+
+        loop = self._get_running_loop()
+        if loop is None:
+            return job
+
+        loop.run_in_executor(
+            None,
+            functools.partial(
+                self._reindex_service.run,
+                trigger,
+                job_id=job.job_id,
+                callbacks=callbacks,
+            ),
+        )
+        return job
+
+    def _get_running_loop(self) -> asyncio.AbstractEventLoop | None:
+        """Return the running event loop when available."""
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return None
+        if not loop.is_running():
+            return None
+        return loop
 
 
 class QueryRunnerPort(QueryPort):

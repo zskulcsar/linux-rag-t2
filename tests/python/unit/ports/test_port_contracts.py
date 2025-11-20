@@ -12,7 +12,7 @@ import inspect
 import types
 import datetime as dt
 import enum
-from typing import Any, Protocol, Union, get_args, get_origin, get_type_hints
+from typing import Any, Callable, Protocol, Union, get_args, get_origin, get_type_hints
 
 
 def _assert_list_of(annotation: Any, expected_inner: Any) -> None:
@@ -123,6 +123,7 @@ def test_ingestion_port_contract_shapes() -> None:
     ingestion_job = getattr(module, "IngestionJob", None)
     snapshot_entry = getattr(module, "SourceSnapshot", None)
     ingestion_port = getattr(module, "IngestionPort", None)
+    reindex_callbacks = getattr(module, "ReindexCallbacks", None)
 
     assert issubclass(source_type, enum.Enum)
     assert {member.value for member in source_type} == {"man", "kiwix", "info"}
@@ -208,6 +209,12 @@ def test_ingestion_port_contract_shapes() -> None:
     assert mutation_hints["source"] is source_record
     _assert_optional(mutation_hints["job"], ingestion_job)
 
+    assert dataclasses.is_dataclass(reindex_callbacks)
+    callback_hints = get_type_hints(reindex_callbacks)
+    job_callback = Callable[[ingestion_job], type(None)]
+    _assert_optional(callback_hints["on_progress"], job_callback)
+    _assert_optional(callback_hints["on_complete"], job_callback)
+
     assert inspect.isclass(ingestion_port)
     assert issubclass(ingestion_port, Protocol)
 
@@ -233,9 +240,9 @@ def test_ingestion_port_contract_shapes() -> None:
 
     reindex_sig = inspect.signature(ingestion_port.start_reindex)
     reindex_params = list(reindex_sig.parameters.values())
-    assert (
-        len(reindex_params) == 2 and reindex_params[1].annotation is ingestion_trigger
-    )
+    assert len(reindex_params) == 3
+    assert reindex_params[1].annotation is ingestion_trigger
+    _assert_optional(reindex_params[2].annotation, reindex_callbacks)
     assert reindex_sig.return_annotation is ingestion_job
 
 

@@ -145,7 +145,7 @@ def test_configure_phoenix_invokes_register(monkeypatch: pytest.MonkeyPatch) -> 
 
     assert stub.calls
     call = stub.calls[0]
-    assert call["service_name"] == "rag-backend"
+    assert call["project_name"] == "rag-backend"
     assert call["endpoint"] == "http://localhost:6006"
     assert call["instrumentors"] == ("fastapi",)
     assert call["auto_instrument"] is True

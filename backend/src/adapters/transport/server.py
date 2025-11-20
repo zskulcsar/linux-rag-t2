@@ -14,6 +14,7 @@ from telemetry import async_trace_section, trace_call
 
 from .handlers import (
     IndexUnavailableError,
+    StreamingResponse,
     TransportError,
     TransportHandlers,
     create_default_handlers,
@@ -266,7 +267,22 @@ async def _handle_connection(
                 body = frame.get("body") or {}
 
                 try:
-                    status, payload = handlers.dispatch(path=path, body=body)
+                    result = handlers.dispatch(path=path, body=body)
+                    if isinstance(result, StreamingResponse):
+                        await _write_frame(
+                            writer,
+                            {
+                                "type": "response",
+                                "status": result.initial_status,
+                                "correlation_id": correlation,
+                                "body": result.initial_body,
+                            },
+                        )
+                        await _stream_responses(
+                            writer, correlation_id=correlation, stream=result.stream
+                        )
+                        continue
+                    status, payload = result
                 except IndexUnavailableError as exc:
                     section.debug("index_unavailable", path=path, code=exc.code)
                     await _write_frame(
@@ -404,3 +420,38 @@ async def _send_error(
             "body": body,
         },
     )
+
+
+@trace_call
+async def _stream_responses(
+    writer: asyncio.StreamWriter,
+    *,
+    correlation_id: str,
+    stream: AsyncIterator[dict[str, Any]],
+) -> None:
+    """Write streaming payloads to the transport writer."""
+
+    async for payload in stream:
+        status = _stream_status(payload)
+        await _write_frame(
+            writer,
+            {
+                "type": "response",
+                "status": status,
+                "correlation_id": correlation_id,
+                "body": payload,
+            },
+        )
+
+
+def _stream_status(payload: dict[str, Any]) -> int:
+    """Return the HTTP-like status code for a streaming payload."""
+
+    job = payload.get("job")
+    if isinstance(job, dict):
+        status = str(job.get("status", "")).lower()
+        if status == "succeeded":
+            return 200
+        if status == "failed":
+            return 500
+    return 202

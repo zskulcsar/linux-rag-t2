@@ -1,9 +1,11 @@
 """Factory helpers that wire transport handlers to the real services."""
 
-from adapters.observability import configure_phoenix, configure_structlog
+from adapters.observability import configure_phoenix
 from adapters.storage.audit_log import AuditLogger
 from adapters.storage.catalog import CatalogStorage
+from adapters.storage.index_version import ContentIndexStorage
 from application.handler_settings import HandlerSettings, load_handler_settings_from_env
+from application.reindex_service import ReindexService
 from application.source_catalog import SourceCatalogService
 from ports import SourceCatalog
 from ports.ingestion import (
@@ -21,7 +23,7 @@ from .builders import (
     _calculate_checksum,
 )
 from .chunking import _chunk_builder_factory
-from .common import LOGGER, _clock
+from .common import LOGGER, _clock, _using_fake_services
 from .health import _build_health_port
 from .ports import CatalogIngestionPort, QueryRunnerPort
 from .router import TransportHandlers
@@ -38,7 +40,12 @@ def create_default_handlers(
     _configure_observability(active_settings)
 
     storage = CatalogStorage(base_dir=active_settings.data_dir)
-    _seed_bootstrap_catalog(storage, disable=active_settings.disable_bootstrap)
+    index_storage = ContentIndexStorage(base_dir=active_settings.data_dir)
+    _seed_bootstrap_catalog(
+        storage,
+        disable=active_settings.disable_bootstrap,
+        force=_using_fake_services(),
+    )
     embedding_adapter = _build_embedding_adapter(active_settings)
     vector_adapter = _build_weaviate_adapter(active_settings)
     chunk_builder = _chunk_builder_factory(
@@ -58,8 +65,21 @@ def create_default_handlers(
         chunk_builder=chunk_builder,
         audit_logger=audit_logger,
     )
+    reindex_service = ReindexService(
+        storage=storage,
+        chunk_builder=chunk_builder,
+        checksum_calculator=_calculate_checksum,
+        audit_logger=audit_logger,
+        clock=_clock,
+        index_writer=index_storage.save,
+    )
 
-    ingestion_port = CatalogIngestionPort(service=catalog_service, storage=storage)
+    ingestion_port = CatalogIngestionPort(
+        service=catalog_service,
+        storage=storage,
+        reindex_service=reindex_service,
+        clock=_clock,
+    )
     query_port = QueryRunnerPort(query_runner)
     health_port = _build_health_port(storage=storage, settings=active_settings)
 
@@ -97,6 +117,7 @@ def _seed_bootstrap_catalog(
     storage: CatalogStorage,
     *,
     disable: bool,
+    force: bool = False,
 ) -> None:
     """Populate a deterministic catalog snapshot for bootstrap behavior."""
 
@@ -104,7 +125,7 @@ def _seed_bootstrap_catalog(
         return
 
     catalog = storage.load()
-    if catalog.version > 0 and catalog.snapshots:
+    if not force and catalog.version > 0 and catalog.snapshots:
         return
 
     now = _clock()

@@ -1,9 +1,10 @@
 """Routing logic for Unix transport requests."""
 
+import asyncio
 import datetime as dt
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict
+from typing import Any, AsyncIterator, Callable, Dict
 
 from adapters.storage.audit_log import AuditLogger
 from ports import (
@@ -15,7 +16,7 @@ from ports import (
     SourceCatalog,
     SourceRecord,
 )
-from ports.ingestion import SourceStatus
+from ports.ingestion import IngestionJob, ReindexCallbacks, SourceStatus
 from telemetry import trace_call, trace_section
 
 from common.serializers import (
@@ -30,6 +31,15 @@ from .errors import IndexUnavailableError, TransportError
 
 
 @dataclass
+class StreamingResponse:
+    """Streaming payload returned from handlers for incremental updates."""
+
+    initial_status: int
+    initial_body: dict[str, Any]
+    stream: AsyncIterator[dict[str, Any]]
+
+
+@dataclass
 class TransportHandlers:
     """Route transport frames to domain ports and serialize responses."""
 
@@ -41,7 +51,9 @@ class TransportHandlers:
         default=lambda: dt.datetime.now(dt.timezone.utc)
     )
 
-    def dispatch(self, path: str, body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    def dispatch(
+        self, path: str, body: dict[str, Any]
+    ) -> tuple[int, dict[str, Any]] | StreamingResponse:
         """Dispatch a transport path to the appropriate handler.
 
         Args:
@@ -129,7 +141,7 @@ class TransportHandlers:
         catalog = self.ingestion_port.list_sources()
         return 200, serialize_catalog(catalog)
 
-    def _handle_reindex(self, body: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    def _handle_reindex(self, body: dict[str, Any]) -> StreamingResponse:
         """Trigger a reindex job and serialize the job metadata.
 
         Args:
@@ -151,8 +163,15 @@ class TransportHandlers:
                 message=f"Unsupported reindex trigger {trigger_value!r}",
             ) from exc
 
-        job = self.ingestion_port.start_reindex(trigger)
-        return 202, {"job": serialize_ingestion_job(job)}
+        stream = _JobStream(asyncio.get_running_loop())
+        job = self.ingestion_port.start_reindex(
+            trigger, callbacks=stream.callbacks
+        )
+        return StreamingResponse(
+            initial_status=202,
+            initial_body={"job": serialize_ingestion_job(job)},
+            stream=stream,
+        )
 
     @trace_call
     def _handle_admin_init(self) -> tuple[int, dict[str, Any]]:
@@ -307,4 +326,56 @@ def _extract_trace_id(body: dict[str, Any]) -> str:
     return uuid.uuid4().hex
 
 
-__all__ = ["TransportHandlers"]
+__all__ = ["TransportHandlers", "StreamingResponse"]
+
+
+class _JobStream:
+    """Async iterator that relays job snapshots from callbacks."""
+
+    def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
+        self._loop = loop
+        self._queue: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
+        self.callbacks = ReindexCallbacks(
+            on_progress=self._enqueue_progress,
+            on_complete=self._complete,
+        )
+
+    def _enqueue_progress(self, job: IngestionJob) -> None:
+        """Schedule a serialized job snapshot for downstream consumers.
+
+        Args:
+            job: Latest job metadata emitted by the reindex service.
+        """
+
+        payload = {"job": serialize_ingestion_job(job)}
+        self._loop.call_soon_threadsafe(self._queue.put_nowait, payload)
+
+    def _complete(self, job: IngestionJob) -> None:
+        """Finalize the stream by enqueueing the snapshot and sentinel.
+
+        Args:
+            job: Terminal job snapshot describing success or failure.
+        """
+
+        self._enqueue_progress(job)
+        self._loop.call_soon_threadsafe(self._queue.put_nowait, None)
+
+    def __aiter__(self) -> "_JobStream":
+        """Return the async iterator interface for ``async for`` consumers."""
+
+        return self
+
+    async def __anext__(self) -> dict[str, Any]:
+        """Yield the next payload from the queue or terminate the iterator.
+
+        Returns:
+            Serialized job payload suitable for transport framing.
+
+        Raises:
+            StopAsyncIteration: When the completion sentinel is observed.
+        """
+
+        payload = await self._queue.get()
+        if payload is None:
+            raise StopAsyncIteration
+        return payload

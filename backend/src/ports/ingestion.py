@@ -3,7 +3,7 @@
 import datetime as dt
 import enum
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Callable, Protocol
 
 
 class SourceType(str, enum.Enum):
@@ -119,6 +119,14 @@ class SourceMutationResult:
     job: IngestionJob | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class ReindexCallbacks:
+    """Callback hooks invoked as reindex jobs progress."""
+
+    on_progress: Callable[[IngestionJob], None] | None = None
+    on_complete: Callable[[IngestionJob], None] | None = None
+
+
 class IngestionPort(Protocol):
     """Protocol describing catalog and ingestion use cases."""
 
@@ -136,7 +144,9 @@ class IngestionPort(Protocol):
     def remove_source(self, alias: str):
         """Remove a source from the catalog."""
 
-    def start_reindex(self, trigger: IngestionTrigger) -> IngestionJob:
+    def start_reindex(
+        self, trigger: IngestionTrigger, *, callbacks: ReindexCallbacks | None = None
+    ) -> IngestionJob:
         """Queue a new ingestion job for the catalog."""
 
 
@@ -153,4 +163,5 @@ __all__ = [
     "SourceMutationResult",
     "IngestionJob",
     "SourceSnapshot",
+    "ReindexCallbacks",
 ]
