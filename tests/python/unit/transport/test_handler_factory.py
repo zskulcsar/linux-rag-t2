@@ -175,6 +175,50 @@ def test_chunk_builder_handles_missing_source_gracefully(tmp_path: Path) -> None
     assert vector.calls == []
 
 
+def test_chunk_builder_raises_on_embedding_error(tmp_path: Path) -> None:
+    """Embedding failures should propagate to callers."""
+
+    text_path = tmp_path / "source.txt"
+    text_path.write_text("data", encoding="utf-8")
+    embedding = _FailingOllamaAdapter()
+    vector = _StubWeaviateAdapter()
+
+    builder = handler_factory._chunk_builder_factory(
+        embedding_adapter=embedding,
+        vector_adapter=vector,
+    )
+
+    with pytest.raises(RuntimeError, match="embedding failed"):
+        builder(
+            alias="man-pages",
+            checksum="abc123",
+            location=text_path,
+            source_type=SourceType.MAN,
+        )
+
+
+def test_chunk_builder_raises_on_ingestion_error(tmp_path: Path) -> None:
+    """Vector ingestion failures should propagate to callers."""
+
+    text_path = tmp_path / "source.txt"
+    text_path.write_text("data", encoding="utf-8")
+    embedding = _StubOllamaAdapter()
+    vector = _FailingWeaviateAdapter()
+
+    builder = handler_factory._chunk_builder_factory(
+        embedding_adapter=embedding,
+        vector_adapter=vector,
+    )
+
+    with pytest.raises(RuntimeError, match="vector ingestion failed"):
+        builder(
+            alias="info-pages",
+            checksum="def456",
+            location=text_path,
+            source_type=SourceType.INFO,
+        )
+
+
 def test_health_port_reports_dependency_checks(
     catalog_storage: CatalogStorage,
     monkeypatch: pytest.MonkeyPatch,
@@ -219,3 +263,13 @@ class _StubWeaviateAdapter:
 
     def ingest(self, documents: list[Document]) -> None:
         self.calls.append(list(documents))
+
+
+class _FailingOllamaAdapter(_StubOllamaAdapter):
+    def embed_documents(self, documents: list[Document]) -> list[EmbeddingResult]:
+        raise RuntimeError("embedding boom")
+
+
+class _FailingWeaviateAdapter(_StubWeaviateAdapter):
+    def ingest(self, documents: list[Document]) -> None:
+        raise RuntimeError("ingest boom")

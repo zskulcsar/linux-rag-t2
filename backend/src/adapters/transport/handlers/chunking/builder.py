@@ -59,7 +59,7 @@ class _ChunkBuilderAdapter:
                 alias=alias,
                 error=str(exc),
             )
-            embeddings = list(_fallback_embeddings(documents))
+            raise RuntimeError(f"embedding failed for {alias}: {exc}") from exc
         else:
             if len(embeddings) != len(documents):
                 LOGGER.warning(
@@ -88,6 +88,7 @@ class _ChunkBuilderAdapter:
                 alias=alias,
                 error=str(exc),
             )
+            raise RuntimeError(f"vector ingestion failed for {alias}: {exc}") from exc
         return documents
 
 
