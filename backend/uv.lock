@@ -1787,6 +1787,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "arize-phoenix" },
+    { name = "arize-phoenix-otel" },
     { name = "pyyaml" },
     { name = "structlog" },
     { name = "weaviate-client" },
@@ -1810,6 +1811,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "arize-phoenix" },
+    { name = "arize-phoenix-otel", specifier = ">=0.13.1" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "structlog" },
     { name = "weaviate-client" },

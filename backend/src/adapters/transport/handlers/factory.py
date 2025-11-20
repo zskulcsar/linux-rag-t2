@@ -77,7 +77,8 @@ def _configure_observability(settings: HandlerSettings) -> None:
     if _OBSERVABILITY_READY:
         return
 
-    configure_structlog(service_name="rag-backend")
+    # TODO: review
+    #configure_structlog(service_name="rag-backend")
     if settings.phoenix_url:
         try:
             configure_phoenix(

@@ -160,6 +160,7 @@ ragadmin:
 backend:
   socket: /run/ragcli/backend.sock
   weaviate_url: http://localhost:8080
+  weaviate_grpc_port: 50051
   ollama_url: http://localhost:11434
   phoenix_url: http://localhost:6006
   log_level: INFO
@@ -167,9 +168,11 @@ backend:
 ```
 
 Set `log_level` to `DEBUG` when you need verbose diagnostics or leave it at
-`INFO` for quieter logs. Toggle `trace: true` only when you need deep tracing;
-otherwise keep it `false` to minimize overhead. The `ragman`/`ragadmin` blocks
-remain available for CLI defaults (confidence threshold, presenters, etc.).
+`INFO` for quieter logs. `weaviate_grpc_port` must match the port exposed by
+your Weaviate deployment (the default systemd unit binds gRPC on `50051`).
+Toggle `trace: true` only when you need deep tracing; otherwise keep it `false`
+to minimize overhead. The `ragman`/`ragadmin` blocks remain available for CLI
+defaults (confidence threshold, presenters, etc.).
 
 ## 8. Install Systemd Units
 

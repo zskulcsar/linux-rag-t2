@@ -47,6 +47,7 @@ def _build_weaviate_adapter(settings: HandlerSettings) -> WeaviateAdapter:
         http_secure = scheme == "https"
         http_port = parsed.port or (443 if http_secure else 80)
         client: Any = weaviate.connect_to_custom(  # type: ignore[attr-defined]
+            skip_init_checks=True,
             http_host=host,
             http_port=http_port,
             http_secure=http_secure,
