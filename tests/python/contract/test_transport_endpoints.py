@@ -3,7 +3,7 @@
 import asyncio
 import datetime as dt
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import pytest
 
@@ -117,8 +117,8 @@ async def test_sources_endpoint_lists_catalog_snapshot(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_reindex_endpoint_triggers_ingestion_job(tmp_path: Path) -> None:
-    """`/v1/index/reindex` should accept the request and return job metadata."""
+async def test_reindex_endpoint_streams_job_updates(tmp_path: Path) -> None:
+    """`/v1/index/reindex` should stream job progress frames until completion."""
 
     socket_path = tmp_path / "backend.sock"
     correlation_id = "contract-reindex"
@@ -135,21 +135,34 @@ async def test_reindex_endpoint_triggers_ingestion_job(tmp_path: Path) -> None:
             "body": {"trigger": "manual"},
         }
 
+        frames: list[dict[str, Any]] = []
         try:
             await asyncio.wait_for(write_frame(writer, request), timeout=1)
-            response = await asyncio.wait_for(read_frame(reader), timeout=1)
+            frames.append(await asyncio.wait_for(read_frame(reader), timeout=1))
+            while frames[-1]["body"]["job"]["status"] not in {"succeeded", "failed"}:
+                frames.append(await asyncio.wait_for(read_frame(reader), timeout=1))
         finally:
             await close_writer(writer)
 
-    assert response["type"] == "response"
-    assert response["status"] == 202
-    assert response["correlation_id"] == correlation_id
+    initial = frames[0]
+    assert initial["type"] == "response"
+    assert initial["status"] == 202
+    assert initial["correlation_id"] == correlation_id
+    assert isinstance(initial["body"].get("job"), dict)
 
-    body = response["body"]
-    assert isinstance(body, dict)
-    assert "job" in body
-    assert isinstance(body["job"], dict)
-    assert body["job"].get("status") in {"queued", "running", "succeeded", "failed"}
+    assert len(frames) >= 2, "expected at least one progress update frame"
+    final_frame = frames[-1]
+    assert final_frame["type"] == "response"
+    assert final_frame["correlation_id"] == correlation_id
+
+    job = final_frame["body"]["job"]
+    assert job["status"] == "succeeded"
+    assert job["stage"] == "completed"
+    assert job["percent_complete"] == 100
+    assert isinstance(job["documents_processed"], int)
+
+    progress_stages = [frame["body"]["job"]["stage"] for frame in frames[:-1]]
+    assert any(stage and stage.startswith("ingesting:") for stage in progress_stages)
 
 
 @pytest.mark.asyncio
