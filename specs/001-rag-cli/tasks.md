@@ -165,6 +165,11 @@
 - [X] T070 [US3] Replace the bootstrap transport stubs in `backend/src/adapters/transport/handlers/factory.py` with the real query, ingestion, and health services so the running backend talks to Weaviate, Ollama, and Phoenix.
 - [X] T071 [US3] Add a `/v1/admin/health` handler in `backend/src/adapters/transport/handlers/router.py` that invokes `HealthPort`, emits audit entries, and serializes component results for the CLI.
 
+### Reindex Streaming & Catalog Persistence (see `tmp/specs/001-rag-cli/20-11-2025-reindex-design.md`)
+
+- [ ] T059a [US2] Add backend unit/integration + transport contract tests (e.g., `tests/python/unit/application/test_reindex_service.py`, `tests/python/contract/test_transport_endpoints.py::test_index_reindex_endpoint`) that mock the chunk builder and catalog storage to assert sequential iteration, checksum skipping, ContentIndexVersion persistence, and streaming transport frames updating stage/percent/documents (FR-004, FR-008).
+- [ ] T059b [US2] Implement `backend/src/application/reindex_service.py` plus CatalogIngestionPort wiring so `/v1/index/reindex` streams incremental job snapshots over the same Unix-socket request, sequentially processes sources, skips chunk regeneration when recomputed checksums match, and persists ContentIndexVersion alongside the catalog snapshot after successful runs (FR-004, FR-007, FR-008).
+
 ---
 
 ## Final Phase: Polish & Cross-Cutting Concerns

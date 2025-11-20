@@ -122,7 +122,7 @@ docs/
    • Owner: Backend + Go engineers (shared)
    • Effort: 2 engineering days
    • Inputs: Spec FR-010, Constitution V, `research.md` (Filesystems & Deployment Layout)
-5. **Expose backend transport API** – Implement the Unix socket adapter in `backend/src/adapters/transport/` so each port maps to the endpoints defined in `contracts/backend-openapi.yaml`, including error semantics for stale indexes (FR-007), structured `summary`/`steps`/`references` payloads, the fixed low-confidence guidance, and init verification (FR-005).
+5. **Expose backend transport API** – Implement the Unix socket adapter in `backend/src/adapters/transport/` so each port maps to the endpoints defined in `contracts/backend-openapi.yaml`, including error semantics for stale indexes (FR-007), structured `summary`/`steps`/`references` payloads, the fixed low-confidence guidance, init verification (FR-005), and the streaming `/v1/index/reindex` response required by FR-004. This work follows `tmp/specs/001-rag-cli/20-11-2025-reindex-design.md` and includes wiring a dedicated application-level `ReindexService` that iterates sources sequentially, skips unchanged checksums, persists ContentIndexVersion together with the catalog snapshot, and pushes job snapshots (stage, percent, documents processed, status) back through the transport while work executes.
    • Owner: Backend engineer (platform)
    • Effort: 3 engineering days
    • Inputs: `contracts/backend-openapi.yaml`, Spec Edge Cases, `research.md` (External Dependency Verification)
