@@ -170,7 +170,10 @@
  - [X] T059a [US2] Add backend unit/integration + transport contract tests (e.g., `tests/python/unit/application/test_reindex_service.py`, `tests/python/contract/test_transport_endpoints.py::test_index_reindex_endpoint`) that mock the chunk builder and catalog storage to assert sequential iteration, checksum skipping, ContentIndexVersion persistence, and streaming transport frames updating stage/percent/documents (FR-004, FR-008).
 - [X] T059b [US2] Implement `backend/src/application/reindex_service.py` plus CatalogIngestionPort wiring so `/v1/index/reindex` streams incremental job snapshots over the same Unix-socket request, sequentially processes sources, skips chunk regeneration when recomputed checksums match, and persists ContentIndexVersion alongside the catalog snapshot after successful runs (FR-004, FR-007, FR-008).
 
+### ragadmin Reindex Streaming Progress (see `tmp/specs/001-rag-cli/20-11-2025-ragadmin-reindex-streaming-design.md`)
 
+- [ ] T059c [US2] Add failing Go IPC and CLI tests that expect `/v1/index/reindex` to stream multiple progress updates to the client. Cover the streaming callback API in `cli/shared/ipc` and verify `ragadmin reindex` emits in-place progress updates (carriage-return or JSON events) when run against the fake backend (`RAG_BACKEND_FAKE_SERVICES=1`), ensuring progress metadata (stage, percent, documents processed) surfaces before the terminal snapshot (FR-004, FR-008).
+- [ ] T059d [US2] Implement `StartReindexStream` in `cli/shared/ipc` plus the CLI rendering changes in `cli/ragadmin/cmd/reindex.go` so `ragadmin reindex` displays live progress updates and final summaries while maintaining JSON mode compatibility, audit logging, and error handling as described in the design document (FR-004, FR-008).
 
 ---
 
