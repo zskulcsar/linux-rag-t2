@@ -114,13 +114,17 @@ func readFrame(ctx context.Context, reader *bufio.Reader, conn net.Conn) ([]byte
 	return payload, nil
 }
 
-// newCorrelationID generates a random hexadecimal correlation identifier.
-func newCorrelationID() string {
+var correlationIDGenerator = func() string {
 	var buf [16]byte
 	if _, err := rand.Read(buf[:]); err != nil {
 		return hex.EncodeToString([]byte(time.Now().Format(time.RFC3339Nano)))
 	}
 	return hex.EncodeToString(buf[:])
+}
+
+// newCorrelationID generates a random hexadecimal correlation identifier.
+func newCorrelationID() string {
+	return correlationIDGenerator()
 }
 
 // NewTraceID exposes a helper for generating trace identifiers shared across commands.

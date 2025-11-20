@@ -37,23 +37,27 @@ func newReindexCommand() *cobra.Command {
 			started := time.Now()
 
 			return runWithClient(cmd, func(ctx context.Context, state *runtimeState, client *ipc.Client) error {
-				job, err := client.StartReindex(ctx, req)
+				renderer := newReindexProgressRenderer(cmd.OutOrStdout(), state.OutputFormat)
+				job, streamErr := client.StartReindexStream(ctx, req, func(job ipc.IngestionJob) error {
+					return renderer.Handle(job)
+				})
 				elapsed := time.Since(started)
-				if err != nil {
+
+				if err := renderer.Complete(job, elapsed); err != nil {
 					return err
 				}
 
-				if err := renderReindexResult(cmd.OutOrStdout(), state.OutputFormat, job, elapsed); err != nil {
-					return err
-				}
-
-				status := strings.ToLower(job.Status)
+				status := strings.ToLower(strings.TrimSpace(job.Status))
 				target := job.SourceAlias
 				if target == "" {
 					target = "*"
 				}
 				details := fmt.Sprintf("stage=%s", strings.TrimSpace(job.Stage))
 				appendAuditEntry(state, "index_reindex", target, status, req.TraceID, details)
+
+				if streamErr != nil {
+					return streamErr
+				}
 
 				if status != "succeeded" {
 					if job.ErrorMessage != "" {
@@ -127,4 +131,93 @@ func isValidTrigger(value string) bool {
 	default:
 		return false
 	}
+}
+
+type reindexProgressRenderer struct {
+	out           io.Writer
+	format        string
+	lastLineWidth int
+	wroteProgress bool
+}
+
+func newReindexProgressRenderer(out io.Writer, format string) *reindexProgressRenderer {
+	return &reindexProgressRenderer{
+		out:    out,
+		format: format,
+	}
+}
+
+func (r *reindexProgressRenderer) Handle(job ipc.IngestionJob) error {
+	if r.format == "json" {
+		payload := map[string]any{
+			"event": "progress",
+			"job":   job,
+		}
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
+		_, err = r.out.Write(append(data, '\n'))
+		return err
+	}
+
+	line := r.buildProgressLine(job)
+	padding := ""
+	if r.lastLineWidth > len(line) {
+		padding = strings.Repeat(" ", r.lastLineWidth-len(line))
+	}
+	r.lastLineWidth = len(line)
+	r.wroteProgress = true
+	_, err := fmt.Fprintf(r.out, "\r%s%s", line, padding)
+	return err
+}
+
+func (r *reindexProgressRenderer) Complete(job ipc.IngestionJob, elapsed time.Duration) error {
+	if r.format == "json" {
+		payload := map[string]any{
+			"event":       "summary",
+			"job":         job,
+			"duration_ms": elapsed.Milliseconds(),
+		}
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
+		_, err = r.out.Write(append(data, '\n'))
+		return err
+	}
+
+	if r.wroteProgress {
+		if _, err := fmt.Fprint(r.out, "\n"); err != nil {
+			return err
+		}
+	}
+	return renderReindexResult(r.out, "table", job, elapsed)
+}
+
+func (r *reindexProgressRenderer) buildProgressLine(job ipc.IngestionJob) string {
+	status := strings.ToLower(strings.TrimSpace(job.Status))
+	if status == "" {
+		status = "running"
+	}
+	stage := formatProgressStage(job)
+	line := fmt.Sprintf("Reindex %s — Stage: %s", status, stage)
+	if job.DocumentsProcessed > 0 {
+		line = fmt.Sprintf("%s docs=%d", line, job.DocumentsProcessed)
+	}
+	return line
+}
+
+func formatProgressStage(job ipc.IngestionJob) string {
+	stage := strings.TrimSpace(job.Stage)
+	if stage == "" {
+		stage = strings.ToLower(strings.TrimSpace(job.Status))
+		if stage == "" {
+			stage = "running"
+		}
+	}
+	if job.PercentComplete != nil {
+		return fmt.Sprintf("%s (%s)", stage, formatPercent(*job.PercentComplete))
+	}
+	return stage
 }

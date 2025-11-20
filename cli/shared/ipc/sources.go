@@ -199,24 +199,7 @@ func (c *Client) RemoveSource(ctx context.Context, alias string, req SourceRemov
 
 // StartReindex triggers an index rebuild and returns the job metadata.
 func (c *Client) StartReindex(ctx context.Context, req ReindexRequest) (IngestionJob, error) {
-	req.TraceID = ensureTraceID(req.TraceID)
-	trigger := strings.TrimSpace(req.Trigger)
-	if trigger == "" {
-		trigger = "manual"
-	}
-	req.Trigger = trigger
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	frame, err := c.call(ctx, indexReindexPath, req)
-	if err != nil {
-		return IngestionJob{}, err
-	}
-	if frame.Status != 202 {
-		return IngestionJob{}, fmt.Errorf("ipc: start reindex unexpected status %d", frame.Status)
-	}
-	return decodeIngestionJob(frame.Body)
+	return c.StartReindexStream(ctx, req, nil)
 }
 
 func decodeSourceListResponse(payload []byte) (SourceListResponse, error) {

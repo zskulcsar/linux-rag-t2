@@ -16,8 +16,6 @@ import (
 )
 
 func TestStartReindexStreamInvokesCallbackForEachFrame(t *testing.T) {
-	t.Parallel()
-
 	jobs := []IngestionJob{
 		{
 			JobID:              "job-123",
@@ -69,8 +67,6 @@ func TestStartReindexStreamInvokesCallbackForEachFrame(t *testing.T) {
 }
 
 func TestStartReindexStreamForwardsCallbackErrors(t *testing.T) {
-	t.Parallel()
-
 	jobs := []IngestionJob{
 		{
 			JobID:           "job-456",
@@ -107,6 +103,10 @@ func TestStartReindexStreamForwardsCallbackErrors(t *testing.T) {
 
 func newTestReindexClient(t *testing.T, jobs []IngestionJob) *Client {
 	t.Helper()
+
+	oldGenerator := correlationIDGenerator
+	correlationIDGenerator = func() string { return "test-correlation" }
+	t.Cleanup(func() { correlationIDGenerator = oldGenerator })
 
 	var payload bytes.Buffer
 	writer := bufio.NewWriter(&payload)
