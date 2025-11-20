@@ -72,21 +72,15 @@ def configure_phoenix(
     """
 
     try:
-        import phoenix  # type: ignore
+        from phoenix.otel import register  # type: ignore
     except ModuleNotFoundError as exc:  # pragma: no cover - exercised via tests
         raise RuntimeError(
             "configure_phoenix(service_name=%s) :: phoenix package not installed"
             % service_name
         ) from exc
 
-    if not hasattr(phoenix, "otel"):
-        raise RuntimeError(
-            "configure_phoenix(service_name=%s) :: phoenix.otel unavailable"
-            % service_name
-        )
-
     kwargs: dict[str, Any] = {
-        "service_name": service_name,
+        "project_name": service_name,
         "auto_instrument": True,
     }
     if endpoint:
@@ -94,7 +88,7 @@ def configure_phoenix(
     if instrumentors:
         kwargs["instrumentors"] = tuple(instrumentors)
 
-    phoenix.otel.register(**kwargs)
+    register(**kwargs)
 
 
 __all__ = ["configure_structlog", "configure_phoenix"]
