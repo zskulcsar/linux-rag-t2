@@ -3,7 +3,7 @@
 import time
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Any, Mapping, Protocol
+from typing import Any, Literal, Mapping, Protocol
 
 from weaviate.collections.classes.filters import Filter
 
@@ -143,7 +143,7 @@ class WeaviateAdapter:
 
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> bool:
+    def __exit__(self, exc_type, exc, tb) -> Literal[False]:
         """Ensure the underlying client closes when leaving a context block."""
 
         self.close()

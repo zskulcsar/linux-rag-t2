@@ -5,7 +5,7 @@ import datetime as dt
 import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Callable, Dict
+from typing import Any, AsyncIterator, Callable, Dict, Literal
 
 from adapters.storage.audit_log import AuditLogger
 from ports import (
@@ -61,7 +61,7 @@ class TransportHandlers:
 
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> bool:
+    def __exit__(self, exc_type, exc, tb) -> Literal[False]:
         """Close the handler collection when exiting a context manager."""
 
         self.close()
