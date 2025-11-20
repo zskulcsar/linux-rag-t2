@@ -172,7 +172,7 @@
 
 ### ragadmin Reindex Streaming Progress (see `tmp/specs/001-rag-cli/20-11-2025-ragadmin-reindex-streaming-design.md`)
 
-- [ ] T059c [US2] Add failing Go IPC and CLI tests that expect `/v1/index/reindex` to stream multiple progress updates to the client. Cover the streaming callback API in `cli/shared/ipc` and verify `ragadmin reindex` emits in-place progress updates (carriage-return or JSON events) when run against the fake backend (`RAG_BACKEND_FAKE_SERVICES=1`), ensuring progress metadata (stage, percent, documents processed) surfaces before the terminal snapshot (FR-004, FR-008).
+- [X] T059c [US2] Add failing Go IPC and CLI tests that expect `/v1/index/reindex` to stream multiple progress updates to the client. Cover the streaming callback API in `cli/shared/ipc` and verify `ragadmin reindex` emits in-place progress updates (carriage-return or JSON events) when run against the fake backend (`RAG_BACKEND_FAKE_SERVICES=1`), ensuring progress metadata (stage, percent, documents processed) surfaces before the terminal snapshot (FR-004, FR-008).
 - [ ] T059d [US2] Implement `StartReindexStream` in `cli/shared/ipc` plus the CLI rendering changes in `cli/ragadmin/cmd/reindex.go` so `ragadmin reindex` displays live progress updates and final summaries while maintaining JSON mode compatibility, audit logging, and error handling as described in the design document (FR-004, FR-008).
 
 ---

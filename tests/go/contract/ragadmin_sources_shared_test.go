@@ -19,14 +19,16 @@ type ragadminScenario struct {
 	requestAssert  func(t *testing.T, frame map[string]any)
 	responseStatus int
 	responseBody   map[string]any
+	responseStream []ragadminStreamFrame
+	env            map[string]string
 	outputAssert   func(t *testing.T, output string)
 }
 
 func runRagadminScenario(t *testing.T, scenario ragadminScenario) {
 	t.Helper()
 
-	if scenario.responseBody == nil {
-		t.Fatalf("scenario %q requires a stub response body", scenario.name)
+	if scenario.responseBody == nil && len(scenario.responseStream) == 0 {
+		t.Fatalf("scenario %q requires a stub response body or stream", scenario.name)
 	}
 
 	socketDir := t.TempDir()
@@ -64,11 +66,15 @@ func runRagadminScenario(t *testing.T, scenario ragadminScenario) {
 	cmdArgs := append([]string{"run", "./cli/ragadmin"}, args...)
 	cmd := exec.Command("go", cmdArgs...)
 	cmd.Dir = findRepoRoot(t)
-	cmd.Env = append(os.Environ(),
+	env := append(os.Environ(),
 		fmt.Sprintf("XDG_RUNTIME_DIR=%s", socketDir),
 		fmt.Sprintf("XDG_CONFIG_HOME=%s", configDir),
 		fmt.Sprintf("RAGCLI_CONFIG=%s", configPath),
 	)
+	for key, value := range scenario.env {
+		env = append(env, fmt.Sprintf("%s=%s", key, value))
+	}
+	cmd.Env = env
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -136,6 +142,31 @@ func runRagadminStub(t *testing.T, socketPath string, scenario ragadminScenario,
 
 	correlationID, _ := frame["correlation_id"].(string)
 
+	if len(scenario.responseStream) > 0 {
+		for _, streamFrame := range scenario.responseStream {
+			status := streamFrame.status
+			if status == 0 {
+				status = scenario.responseStatus
+			}
+			if status == 0 {
+				status = 200
+			}
+			body := streamFrame.body
+			if body == nil {
+				body = scenario.responseBody
+			}
+			if err := writeFrame(writer, map[string]any{
+				"type":           "response",
+				"status":         status,
+				"correlation_id": correlationID,
+				"body":           body,
+			}); err != nil {
+				return fmt.Errorf("failed to write stream response frame: %w", err)
+			}
+		}
+		return nil
+	}
+
 	status := scenario.responseStatus
 	if status == 0 {
 		status = 200
@@ -150,4 +181,9 @@ func runRagadminStub(t *testing.T, socketPath string, scenario ragadminScenario,
 	}
 
 	return nil
+}
+
+type ragadminStreamFrame struct {
+	status int
+	body   map[string]any
 }

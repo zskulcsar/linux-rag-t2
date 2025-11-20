@@ -1,21 +1,70 @@
 package contract_test
 
+// Streaming requirements reference:
+// tmp/specs/001-rag-cli/20-11-2025-ragadmin-reindex-streaming-design.md.
+
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
 
-func TestRagadminReindexShowsProgress(t *testing.T) {
+func TestRagadminReindexStreamsProgressTTY(t *testing.T) {
 	t.Parallel()
 
+	stream := []ragadminStreamFrame{
+		{
+			status: 202,
+			body: map[string]any{
+				"job": map[string]any{
+					"job_id":              "job-tty",
+					"status":              "running",
+					"stage":               "discovering",
+					"percent_complete":    5,
+					"documents_processed": 16,
+					"requested_at":        "2025-11-20T00:00:00Z",
+				},
+			},
+		},
+		{
+			status: 202,
+			body: map[string]any{
+				"job": map[string]any{
+					"job_id":              "job-tty",
+					"status":              "running",
+					"stage":               "chunking",
+					"percent_complete":    45,
+					"documents_processed": 128,
+					"requested_at":        "2025-11-20T00:00:05Z",
+				},
+			},
+		},
+		{
+			status: 202,
+			body: map[string]any{
+				"job": map[string]any{
+					"job_id":              "job-tty",
+					"status":              "succeeded",
+					"stage":               "completed",
+					"percent_complete":    100,
+					"documents_processed": 256,
+					"completed_at":        "2025-11-20T00:00:12Z",
+				},
+			},
+		},
+	}
+
 	scenario := ragadminScenario{
-		name: "reindex-progress",
+		name: "reindex-stream-tty",
 		args: []string{
 			"--socket",
 			"",
 			"reindex",
 			"--trigger",
 			"manual",
+		},
+		env: map[string]string{
+			"RAG_BACKEND_FAKE_SERVICES": "1",
 		},
 		requestAssert: func(t *testing.T, frame map[string]any) {
 			t.Helper()
@@ -27,31 +76,114 @@ func TestRagadminReindexShowsProgress(t *testing.T) {
 				t.Fatalf("expected trigger manual, got %v", trigger)
 			}
 		},
-		responseStatus: 202,
-		responseBody: map[string]any{
-			"job": map[string]any{
-				"job_id":              "job-123",
-				"source_alias":        "*",
-				"status":              "succeeded",
-				"requested_at":        "2024-11-01T00:00:00Z",
-				"started_at":          "2024-11-01T00:00:01Z",
-				"completed_at":        "2024-11-01T00:00:10Z",
-				"documents_processed": 2048,
-				"stage":               "writing",
-				"percent_complete":    100,
-				"trigger":             "manual",
-			},
-		},
+		responseStream: stream,
 		outputAssert: func(t *testing.T, output string) {
 			t.Helper()
 			if !strings.Contains(output, "Reindex succeeded") {
 				t.Fatalf("expected success message in output:\n%s", output)
 			}
-			if !strings.Contains(output, "Stage: writing (100%)") {
-				t.Fatalf("expected stage line in output:\n%s", output)
+			if strings.Count(output, "\r") < 2 {
+				t.Fatalf("expected in-place progress updates, got output:\n%s", output)
 			}
-			if !strings.Contains(output, "Duration:") {
-				t.Fatalf("expected duration line in output:\n%s", output)
+			if !strings.Contains(output, "discovering (5%)") {
+				t.Fatalf("expected discovering stage in output:\n%s", output)
+			}
+			if !strings.Contains(output, "chunking (45%)") {
+				t.Fatalf("expected chunking stage in output:\n%s", output)
+			}
+			if !strings.Contains(output, "docs=128") {
+				t.Fatalf("expected documents processed in progress line:\n%s", output)
+			}
+		},
+	}
+
+	runRagadminScenario(t, scenario)
+}
+
+func TestRagadminReindexStreamsProgressJSON(t *testing.T) {
+	t.Parallel()
+
+	stream := []ragadminStreamFrame{
+		{
+			status: 202,
+			body: map[string]any{
+				"job": map[string]any{
+					"job_id":              "job-json",
+					"status":              "running",
+					"stage":               "discovering",
+					"percent_complete":    10,
+					"documents_processed": 64,
+					"requested_at":        "2025-11-20T01:00:00Z",
+				},
+			},
+		},
+		{
+			status: 202,
+			body: map[string]any{
+				"job": map[string]any{
+					"job_id":              "job-json",
+					"status":              "running",
+					"stage":               "embedding",
+					"percent_complete":    60,
+					"documents_processed": 512,
+					"requested_at":        "2025-11-20T01:00:15Z",
+				},
+			},
+		},
+		{
+			status: 202,
+			body: map[string]any{
+				"job": map[string]any{
+					"job_id":              "job-json",
+					"status":              "succeeded",
+					"stage":               "completed",
+					"percent_complete":    100,
+					"documents_processed": 1024,
+					"completed_at":        "2025-11-20T01:00:40Z",
+				},
+			},
+		},
+	}
+
+	scenario := ragadminScenario{
+		name: "reindex-stream-json",
+		args: []string{
+			"--socket",
+			"",
+			"--output",
+			"json",
+			"reindex",
+			"--trigger",
+			"manual",
+		},
+		env: map[string]string{
+			"RAG_BACKEND_FAKE_SERVICES": "1",
+		},
+		requestAssert: func(t *testing.T, frame map[string]any) {
+			t.Helper()
+			if path, _ := frame["path"].(string); path != "/v1/index/reindex" {
+				t.Fatalf("expected reindex path, got %q", path)
+			}
+		},
+		responseStream: stream,
+		outputAssert: func(t *testing.T, output string) {
+			t.Helper()
+			lines := strings.Split(strings.TrimSpace(output), "\n")
+			if len(lines) != len(stream)+1 {
+				t.Fatalf("expected %d progress events plus summary, got %d\n%s", len(stream)+1, len(lines), output)
+			}
+			for idx, line := range lines {
+				var payload map[string]any
+				if err := json.Unmarshal([]byte(line), &payload); err != nil {
+					t.Fatalf("line %d is not valid json: %v\n%s", idx, err, line)
+				}
+				event, _ := payload["event"].(string)
+				if idx < len(stream) && event != "progress" {
+					t.Fatalf("expected progress event at line %d, got %q", idx, event)
+				}
+				if idx == len(stream) && event != "summary" {
+					t.Fatalf("expected summary event at line %d, got %q", idx, event)
+				}
 			}
 		},
 	}
