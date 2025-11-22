@@ -58,7 +58,7 @@ def configure_phoenix(
     service_name: str,
     endpoint: str | None = None,
     instrumentors: Iterable[str] | None = None,
-) -> None:
+) -> Any:
     """Configure Arize Phoenix OTEL instrumentation.
 
     Args:
@@ -76,13 +76,17 @@ def configure_phoenix(
     kwargs: dict[str, Any] = {
         "project_name": service_name,
         "auto_instrument": True,
+        "endpoint": endpoint,
     }
-    if endpoint:
-        kwargs["endpoint"] = endpoint
-    if instrumentors:
-        kwargs["instrumentors"] = tuple(instrumentors)
+    if instrumentors is not None:
+        kwargs["instrumentors"] = instrumentors
 
-    register(**kwargs)
+    tracer_provider = register(**kwargs)
+    # TODO: find a way to bubble this up as a decorator
+    if tracer_provider is None:
+        return None
+    else:
+        return tracer_provider.get_tracer(__name__)
 
 
 def _resolve_phoenix_register(service_name: str) -> Any:

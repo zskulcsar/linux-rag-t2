@@ -173,10 +173,20 @@ def test_catalog_service_adds_source_and_persists_checksum(tmp_path: Path) -> No
     listed = service.list_sources()
     assert any(src.alias == saved_source.alias for src in listed.sources)
     assert chunk_builder.calls, "expected chunk builder to prepare ingestion documents"
-    assert chunk_builder.generated_ids == [
-        f"{saved_source.alias}:{saved_source.checksum}:0",
-        f"{saved_source.alias}:{saved_source.checksum}:1",
-    ], "document identifiers must follow <alias>:<checksum>:<chunk_id>"
+    expected_ids = [
+        Document(
+            alias=saved_source.alias,
+            checksum=saved_source.checksum,
+            chunk_id=chunk_id,
+            text=f"chunk-{chunk_id}",
+            source_type=ingestion_ports.SourceType.KIWIX,
+            language="en",
+        ).document_id
+        for chunk_id in range(2)
+    ]
+    assert (
+        chunk_builder.generated_ids == expected_ids
+    ), "document identifiers must remain deterministic per alias/checksum/chunk_id"
 
 
 def test_catalog_service_appends_suffix_for_alias_collisions(tmp_path: Path) -> None:
@@ -231,10 +241,18 @@ def test_catalog_service_appends_suffix_for_alias_collisions(tmp_path: Path) -> 
         src.alias == "linuxwiki-2" for src in storage.saved_catalogs[-1].sources
     ), "new alias must be persisted in catalog"
     assert storage.saved_catalogs[-1].snapshots[-1].alias == "linuxwiki-2"
-    assert chunk_builder.generated_ids == [
-        f"linuxwiki-2:{result.source.checksum}:0",
-        f"linuxwiki-2:{result.source.checksum}:1",
+    expected_ids = [
+        Document(
+            alias="linuxwiki-2",
+            checksum=result.source.checksum,
+            chunk_id=chunk_id,
+            text=f"chunk-{chunk_id}",
+            source_type=ingestion_ports.SourceType.KIWIX,
+            language="en",
+        ).document_id
+        for chunk_id in range(2)
     ]
+    assert chunk_builder.generated_ids == expected_ids
     assert result.source.size_bytes == artifact.stat().st_size
 
 
@@ -302,10 +320,18 @@ def test_catalog_service_updates_metadata_and_replans_chunks(tmp_path: Path) -> 
     )
     assert snapshot.checksum == "newchecksumabcd"
     assert chunk_builder.calls and chunk_builder.calls[-1][0] == "linuxwiki"
-    assert chunk_builder.generated_ids == [
-        "linuxwiki:newchecksumabcd:0",
-        "linuxwiki:newchecksumabcd:1",
+    expected_ids = [
+        Document(
+            alias="linuxwiki",
+            checksum="newchecksumabcd",
+            chunk_id=chunk_id,
+            text=f"chunk-{chunk_id}",
+            source_type=ingestion_ports.SourceType.KIWIX,
+            language="en",
+        ).document_id
+        for chunk_id in range(2)
     ]
+    assert chunk_builder.generated_ids == expected_ids
 
 
 def test_catalog_service_update_without_location_preserves_checksum() -> None:

@@ -5,6 +5,7 @@ SHELL := /usr/bin/env bash
 MKDOCS_CONFIG := mkdocs.yml
 MKDOCS_SITE_DIR := site
 DESTDIR ?= /usr/local
+LOG_LEVEL ?= DEBUG
 
 # Python
 PY_ROOT := ./backend
@@ -157,6 +158,7 @@ test-perf-py: venv ## Run performance test suites for Python code
 	@PYTHONPYCACHEPREFIX=$(CURDIR)/.pycache PYTHONPATH=$(BE_SRC) \
 	uv run --project backend pytest --cov=$(BE_SRC) tests/python/performance
 
+# pass "TRACE=--trace" to enable tracing
 run-be: ## Runs the backend service with local defaults for development testing
 #	@mkdir -p tmp/ragcli
 	@PYTHONPYCACHEPREFIX=$(CURDIR)/.pycache PYTHONPATH=$(BE_SRC) \
@@ -164,10 +166,11 @@ run-be: ## Runs the backend service with local defaults for development testing
 		--config "~/.config/ragcli/config.yaml" \
 		--socket "/tmp/ragcli/backend.sock" \
 		--weaviate-url "http://localhost:8080" \
+		--weaviate-grpc-port=50051 \
 		--ollama-url "http://localhost:11434" \
-		--phoenix-url "http://localhost:6006" \
-		--log-level "DEBUG" \
-		--trace
+		--phoenix-url "http://localhost:4317" \
+		--log-level "$(LOG_LEVEL)" \
+		$(TRACE)
 
 ## Building & Packaging
 pack: pack-go pack-py ## Package Go and Python binaries for installation/development test

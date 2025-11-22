@@ -162,7 +162,7 @@ backend:
   weaviate_url: http://localhost:8080
   weaviate_grpc_port: 50051
   ollama_url: http://localhost:11434
-  phoenix_url: http://localhost:6006
+  phoenix_url: localhost:4317  # gRPC OTLP endpoint (UI remains on 6006)
   log_level: INFO
   trace: false
 ```

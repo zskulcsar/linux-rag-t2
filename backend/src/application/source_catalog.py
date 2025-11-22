@@ -42,6 +42,7 @@ class ChunkBuilder(Protocol):
         checksum: str,
         location: Path,
         source_type: ingestion_ports.SourceType,
+        on_progress: Callable[[int, int], None] | None = None,
     ) -> Sequence[Document]:  # pragma: no cover - protocol
         """Create semantic chunks for a source location.
 
@@ -50,6 +51,7 @@ class ChunkBuilder(Protocol):
             checksum: Deterministic checksum derived from the source contents.
             location: Filesystem path to the source payload.
             source_type: Source type used for downstream tagging.
+            on_progress: Optional callback invoked with (processed, total).
 
         Returns:
             Sequence of prepared :class:`Document` instances.

@@ -243,8 +243,8 @@ class _FakeHttpClient:
     def __post_init__(self) -> None:
         self._response_iter = iter(self.responses)
 
-    def post(self, url: str, json: dict[str, Any], timeout: float) -> _FakeResponse:
-        self.posts.append({"url": url, "json": json, "timeout": timeout})
+    def post(self, url: str, payload: dict[str, Any], timeout: float) -> _FakeResponse:
+        self.posts.append({"url": url, "payload": payload, "timeout": timeout})
         try:
             return next(self._response_iter)
         except StopIteration as exc:  # pragma: no cover - guard for test misuse
@@ -299,8 +299,8 @@ def test_ollama_adapter_returns_embeddings_and_records_metrics() -> None:
     assert results[1].alias == "info-pages"
     assert results[1].embedding == [0.3, 0.4]
 
-    assert fake_client.posts[0]["url"].endswith("/api/embeddings")
-    request_body = fake_client.posts[0]["json"]
+    assert fake_client.posts[0]["url"].endswith("/api/embed")
+    request_body = fake_client.posts[0]["payload"]
     assert request_body["model"] == "embeddinggemma:latest"
     assert request_body["input"] == [doc.text for doc in documents]
 
@@ -335,7 +335,7 @@ def test_ollama_adapter_generate_records_metrics() -> None:
     assert result["response"] == "Answer text"
     request = fake_client.posts[0]
     assert request["url"].endswith("/api/generate")
-    assert request["json"]["model"] == "gemma3:1b"
-    assert request["json"]["prompt"] == "Explain chmod"
+    assert request["payload"]["model"] == "gemma3:1b"
+    assert request["payload"]["prompt"] == "Explain chmod"
 
     assert "man-pages" in metrics.generations

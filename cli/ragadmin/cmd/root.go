@@ -17,6 +17,7 @@ import (
 )
 
 type appStateKey struct{}
+type timeoutKey struct{}
 
 type runtimeState struct {
 	Config       config.Config
@@ -36,6 +37,7 @@ type rootOptions struct {
 const (
 	clientID       = "ragadmin-cli"
 	requestTimeout = 15 * time.Second
+	reindexTimeout = 30 * time.Minute
 )
 
 var (
@@ -192,7 +194,11 @@ func runWithClient(cmd *cobra.Command, fn func(context.Context, *runtimeState, *
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
+	timeout := requestTimeout
+	if override, ok := ctx.Value(timeoutKey{}).(time.Duration); ok && override > 0 {
+		timeout = override
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	client, err := ipc.NewClient(ipc.Config{

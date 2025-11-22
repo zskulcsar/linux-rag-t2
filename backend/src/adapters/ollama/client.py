@@ -1,5 +1,6 @@
 """Ollama adapter for embedding generation."""
 
+from contextlib import nullcontext
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -7,7 +8,7 @@ from typing import Any, Protocol
 
 from adapters.weaviate.client import Document
 from telemetry import trace_call, trace_section
-
+from opentelemetry.trace import Status, StatusCode
 
 class EmbeddingMetrics(Protocol):
     """Interface for recording embedding metrics per alias."""
@@ -28,13 +29,13 @@ class HttpClient(Protocol):
     """Minimal HTTP client protocol required for Ollama interactions."""
 
     def post(
-        self, url: str, json: dict[str, Any], timeout: float
+        self, url: str, payload: dict[str, Any], timeout: float
     ) -> Any:  # pragma: no cover - Protocol
         """Issue a POST request and return the HTTP response object.
 
         Args:
             url: Fully-qualified Ollama URL to call.
-            json: JSON-serialisable payload to include in the body.
+            payload: JSON-serialisable payload to include in the body.
             timeout: Request timeout in seconds.
 
         Returns:
@@ -96,6 +97,7 @@ class OllamaAdapter:
         metrics: EmbeddingMetrics | None = None,
         generation_metrics: GenerationMetrics | None = None,
         timeout: float = 30.0,
+        tracer: Any | None = None,
     ) -> None:
         """Initialize the adapter.
 
@@ -117,67 +119,95 @@ class OllamaAdapter:
         self._metrics = metrics
         self._generation_metrics = generation_metrics
         self._timeout = timeout
+        self.tracer = tracer
 
     @trace_call
     def embed_documents(self, documents: Sequence[Document]) -> list[EmbeddingResult]:
         """Request embeddings for the provided documents."""
 
-        if not documents:
-            return []
-
-        payload = {
-            "model": self._model,
-            "input": [document.text for document in documents],
-        }
-        response = self._http_client.post(
-            f"{self._base_url}/api/embeddings", json=payload, timeout=self._timeout
+        span_context = (
+            self.tracer.start_as_current_span(
+                "process_document", openinference_span_kind="embedding"
+            )
+            if self.tracer is not None
+            else nullcontext()
         )
-        body = response.json()
-        embeddings = body.get("embeddings")
-        if embeddings is None:
-            raise ValueError("embedding response must include 'embeddings'")
+        with span_context as span:
+            if not documents:
+                if span is not None:
+                    span.set_status(Status(StatusCode.ERROR))
+                return []
 
-        if len(embeddings) != len(documents):
-            raise ValueError("embedding count must match input document count")
+            payload = {
+                "model": self._model,
+                "input": [document.text for document in documents],
+            }
+            # Phoenix tracing
+            if span is not None:
+                span.set_input(payload["input"])
 
-        start = time.perf_counter()
-        results: list[EmbeddingResult] = []
+            response = self._http_client.post(
+                f"{self._base_url}/api/embed", payload=payload, timeout=self._timeout
+            )
+            body = response.json()
+            embeddings = body.get("embeddings")
+            if embeddings is None and "embedding" in body:
+                embeddings = [body["embedding"]]
+            if embeddings is None:
+                if span is not None:
+                    span.set_status(Status(StatusCode.ERROR))
+                error_message = body.get("error") or "embedding response must include 'embeddings'"
+                raise ValueError(error_message)
 
-        with trace_section(
-            "ollama.embed",
-            metadata={"model": self._model, "document_count": len(documents)},
-        ) as section:
-            for document, vector in zip(documents, embeddings, strict=True):
-                vector_list = list(vector)
-                results.append(
-                    EmbeddingResult(
-                        alias=document.alias,
-                        checksum=document.checksum,
-                        chunk_id=document.chunk_id,
-                        embedding=vector_list,
-                    )
-                )
-                section.debug(
-                    "embedding_mapped",
-                    alias=document.alias,
-                    chunk_id=document.chunk_id,
-                    vector_length=len(vector_list),
-                )
+            if len(embeddings) != len(documents):
+                if span is not None:
+                    span.set_status(Status(StatusCode.ERROR))
+                raise ValueError("embedding count must match input document count")
 
-            elapsed_ms = (time.perf_counter() - start) * 1000.0
-            if self._metrics:
+            start = time.perf_counter()
+            results: list[EmbeddingResult] = []
+
+            with trace_section(
+                "ollama.embed",
+                metadata={"model": self._model, "document_count": len(documents)},
+            ) as section:
                 for document, vector in zip(documents, embeddings, strict=True):
-                    self._metrics.record_embedding(
-                        document.alias, len(vector), elapsed_ms
-                    )
-                    section.debug(
-                        "metrics_recorded",
-                        alias=document.alias,
-                        vector_length=len(vector),
-                        latency_ms=elapsed_ms,
+                    vector_list = list(vector)
+                    results.append(
+                        EmbeddingResult(
+                            alias=document.alias,
+                            checksum=document.checksum,
+                            chunk_id=document.chunk_id,
+                            embedding=vector_list,
+                        )
                     )
 
-        return results
+                    # Phoenix tracing
+                    if span is not None:
+                        span.set_output(vector_list)
+                        span.set_status(Status(StatusCode.OK))
+
+                    section.debug(
+                        "embedding_mapped",
+                        alias=document.alias,
+                        chunk_id=document.chunk_id,
+                        vector_length=len(vector_list),
+                    )
+
+                elapsed_ms = (time.perf_counter() - start) * 1000.0
+                if self._metrics:
+                    for document, vector in zip(documents, embeddings, strict=True):
+                        self._metrics.record_embedding(
+                            document.alias, len(vector), elapsed_ms
+                        )
+                        section.debug(
+                            "metrics_recorded",
+                            alias=document.alias,
+                            vector_length=len(vector),
+                            latency_ms=elapsed_ms,
+                        )
+
+            return results
 
     @trace_call
     def generate_completion(
@@ -208,7 +238,7 @@ class OllamaAdapter:
             metadata={"alias": alias, "model": self._model},
         ) as section:
             response = self._http_client.post(
-                f"{self._base_url}/api/generate", json=payload, timeout=self._timeout
+                f"{self._base_url}/api/generate", payload=payload, timeout=self._timeout
             )
             body = response.json()
             elapsed_ms = (time.perf_counter() - start) * 1000.0

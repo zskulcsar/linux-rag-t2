@@ -1,7 +1,8 @@
 """Chunk builder orchestration."""
 
+import time
 from pathlib import Path
-from typing import Sequence, cast
+from typing import Callable, Optional, Sequence, cast
 
 from adapters.ollama.client import EmbeddingResult, OllamaAdapter
 from adapters.weaviate.client import Document, WeaviateAdapter
@@ -10,6 +11,9 @@ from ports import ingestion as ingestion_ports
 
 from ..common import LOGGER, _DEFAULT_CHUNK_TOKEN_LIMIT, _MAX_CHUNK_FILES
 from .documents import _generate_documents
+
+_PROGRESS_HEARTBEAT = 1.0  # seconds
+_PROGRESS_BATCH_SIZE = 10
 
 
 class _ChunkBuilderAdapter:
@@ -33,6 +37,7 @@ class _ChunkBuilderAdapter:
         checksum: str,
         location: Path,
         source_type: ingestion_ports.SourceType,
+        on_progress: Optional[Callable[[int, int], None]] = None,
     ) -> Sequence[Document]:
         documents = list(
             _generate_documents(
@@ -51,44 +56,73 @@ class _ChunkBuilderAdapter:
             )
             return []
 
-        try:
-            embeddings = list(self._embedding.embed_documents(documents))
-        except Exception as exc:  # pragma: no cover - defensive guard
-            LOGGER.warning(
-                "factory.chunk_builder(alias) :: embedding_failed",
-                alias=alias,
-                error=str(exc),
-            )
-            raise RuntimeError(f"embedding failed for {alias}: {exc}") from exc
-        else:
-            if len(embeddings) != len(documents):
+        processed = 0
+        total = len(documents)
+        last_emit = time.monotonic()
+
+        def maybe_emit_progress(callback: Optional[Callable[[int, int], None]]) -> None:
+            nonlocal last_emit
+            if callback is None:
+                return
+            now = time.monotonic()
+            if processed % _PROGRESS_BATCH_SIZE == 0 or now - last_emit >= _PROGRESS_HEARTBEAT:
+                last_emit = now
+                try:
+                    callback(processed, total)
+                except Exception as exc:  # pragma: no cover - defensive guard
+                    LOGGER.warning(
+                        "factory.chunk_builder(alias) :: progress_callback_failed",
+                        alias=alias,
+                        error=str(exc),
+                    )
+
+        # TODO: this `single` works, but it is dirty.
+        # We should update all the called methods to to handle the Document directly without the list wrapper
+        for document in documents:
+            single = [document]
+            try:
+                embeddings = list(self._embedding.embed_documents(single))
+            except Exception as exc:  # pragma: no cover - defensive guard
+                LOGGER.warning(
+                    "factory.chunk_builder(alias) :: embedding_failed",
+                    alias=alias,
+                    chunk_id=document.chunk_id,
+                    error=str(exc),
+                )
+                raise RuntimeError(f"embedding failed for {alias}: {exc}") from exc
+
+            if len(embeddings) != len(single):
                 LOGGER.warning(
                     "factory.chunk_builder(alias) :: embedding_count_mismatch",
                     alias=alias,
-                    expected=len(documents),
+                    chunk_id=document.chunk_id,
+                    expected=len(single),
                     actual=len(embeddings),
                 )
-                embeddings = list(_fallback_embeddings(documents))
+                continue
 
-        _attach_embeddings(documents, embeddings)
+            _attach_embeddings(single, embeddings)
+            if not document.embedding:
+                LOGGER.warning(
+                    "factory.chunk_builder(alias) :: no_embedding_for_document",
+                    alias=alias,
+                    chunk_id=document.chunk_id,
+                )
+                continue
 
-        enriched = [doc for doc in documents if doc.embedding]
-        if not enriched:
-            LOGGER.warning(
-                "factory.chunk_builder(alias) :: no_embeddings_available",
-                alias=alias,
-            )
-            return documents
-
-        try:
-            self._vector.ingest(enriched)
-        except Exception as exc:  # pragma: no cover - defensive guard
-            LOGGER.warning(
-                "factory.chunk_builder(alias) :: ingestion_failed",
-                alias=alias,
-                error=str(exc),
-            )
-            raise RuntimeError(f"vector ingestion failed for {alias}: {exc}") from exc
+            try:
+                self._vector.ingest(single)
+            except Exception as exc:  # pragma: no cover - defensive guard
+                LOGGER.warning(
+                    "factory.chunk_builder(alias) :: ingestion_failed",
+                    alias=alias,
+                    chunk_id=document.chunk_id,
+                    error=str(exc),
+                )
+                raise RuntimeError(f"vector ingestion failed for {alias}: {exc}") from exc
+            processed += 1
+            maybe_emit_progress(None if on_progress is None else on_progress)
+        maybe_emit_progress(None if on_progress is None else on_progress)
         return documents
 
 

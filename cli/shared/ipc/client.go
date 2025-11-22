@@ -194,7 +194,16 @@ func (c *Client) callStream(ctx context.Context, path string, body any) (respons
 	}
 
 	iter := func(ctx context.Context) (responseFrame, bool, error) {
-		data, err := c.readFrameWithRetry(ctx)
+		// For streaming, avoid inheriting short-lived parent deadlines; use a generous read timeout instead.
+		readCtx := ctx
+		if ctx == nil || ctx.Done() == nil {
+			// no parent context; reuse background
+			readCtx = context.Background()
+		}
+		perReadCtx, cancel := context.WithTimeout(readCtx, 15*time.Second)
+		defer cancel()
+
+		data, err := c.readFrameWithRetry(perReadCtx)
 		if err != nil {
 			if isStreamClosedError(err) {
 				return responseFrame{}, false, nil

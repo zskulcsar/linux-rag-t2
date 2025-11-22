@@ -29,6 +29,7 @@ class ChunkBuilder(Protocol):
         checksum: str,
         location: Path,
         source_type: ingestion_ports.SourceType,
+        on_progress: Callable[[int, int], None] | None = None,
     ) -> Sequence[Document]:
         """Return chunked document payloads for ingestion."""
 
@@ -118,14 +119,33 @@ class ReindexService:
                     changed = force_rebuild or checksum != (record.checksum or "")
                     stage = f"skipping:{alias}"
                     documents: Sequence[Document] = []
+                    documents_in_alias = 0
                     if changed:
+                        def _alias_progress(done: int, total: int) -> None:
+                            current_processed = documents_processed + done
+                            percent_complete = (
+                                100.0
+                                if total_sources == 0 or total == 0
+                                else ((processed_sources + done / total) / total_sources)
+                                * 100.0
+                            )
+                            progress_job = replace(
+                                job,
+                                documents_processed=current_processed,
+                                stage=f"ingesting:{alias}",
+                                percent_complete=percent_complete,
+                            )
+                            self._emit_progress(callbacks, progress_job)
+
                         documents = self._chunk_builder(
                             alias=alias,
                             checksum=checksum,
                             location=location_path,
                             source_type=record.type,
+                            on_progress=_alias_progress,
                         )
-                        documents_processed += len(documents)
+                        documents_in_alias = len(documents)
+                        documents_processed += documents_in_alias
                         stage = f"ingesting:{alias}"
 
                     refreshed_record = ingestion_ports.SourceRecord(

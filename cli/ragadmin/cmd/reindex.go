@@ -38,6 +38,8 @@ func newReindexCommand() *cobra.Command {
 			}
 			started := time.Now()
 
+			cmd.SetContext(context.WithValue(cmd.Context(), timeoutKey{}, reindexTimeout))
+
 			return runWithClient(cmd, func(ctx context.Context, state *runtimeState, client *ipc.Client) error {
 				renderer := newReindexProgressRenderer(cmd.OutOrStdout(), state.OutputFormat)
 				job, streamErr := client.StartReindexStream(ctx, req, func(job ipc.IngestionJob) error {

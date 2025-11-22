@@ -1,6 +1,6 @@
 # Development Testing Plan
 
-This guide documents how to exercise the ragadmin/ragman stack end-to-end today. It assumes Ollama, Weaviate, and Phoenix are already running locally. Because `ragadmin init` and `ragadmin health` are not implemented yet, a few bootstrap steps must be performed manually.
+This guide documents how to exercise the ragadmin/ragman stack end-to-end on a developer workstation. It assumes Ollama, Weaviate, and Phoenix are already running locally and reachable via `localhost`. The workflow below uses the shipping `ragadmin init` and `ragadmin health` commands so no manual catalog bootstrap is required.
 
 ## 1. Prepare the Environment
 
@@ -24,38 +24,46 @@ This guide documents how to exercise the ragadmin/ragman stack end-to-end today.
    - ~/.local/share/ragcli
    - /tmp/ragcli
 
-3. Create a minimal `${XDG_CONFIG_HOME:-$HOME/.config}/ragcli/config.yaml` using the sample in `specs/001-rag-cli/quickstart.md`.
+3. (Optional) Inspect or edit `${XDG_CONFIG_HOME:-$HOME/.config}/ragcli/config.yaml` after `ragadmin init` seeds it. The sample schema lives in `specs/001-rag-cli/quickstart.md`.
 
 ## 2. Launch the Backend
 
 Run the backend entrypoint with the local service URLs:
 
 ```bash
-PYTHONPATH=backend/src uv run --directory backend python -m main \
+PYTHONPATH=backend/src uv run --project backend python -m main \
   --config "${XDG_CONFIG_HOME:-$HOME/.config}/ragcli/config.yaml" \
   --socket "${XDG_RUNTIME_DIR:-/tmp}/ragcli/backend.sock" \
   --weaviate-url http://127.0.0.1:8080 \
+  --weaviate-grpc-port 50051 \
   --ollama-url http://127.0.0.1:11434 \
-  --phoenix-url http://127.0.0.1:6006 \
+  --phoenix-url localhost:4317 \
   --log-level INFO
 ```
 
 Add `--trace` if you need the optional deep diagnostics controller.
 
-## 3. Seed the Catalog (Manual Bootstrap)
+Alternatively a target is provided in the Makefile called *run-be*, so that `make run-be` runs the same with log level *DEBUG* and *--trace* passed.
 
-Until `ragadmin init` lands, register sources directly:
+## 3. Initialize the Environment
+
+Run the command once per machine to create XDG directories, config, and seed sources:
 
 ```bash
-go run ./cli/ragadmin sources add --type man  --path /usr/share/man
-go run ./cli/ragadmin sources add --type info --path /usr/share/info
-# add kiwix or other sources as needed:
-go run ./cli/ragadmin sources add --type kiwix --path /data/linuxwiki_en.zim
+go run ./cli/ragadmin init
 ```
 
-Use `ragadmin sources list/update/remove` to verify the catalog. Audit entries are appended under `${XDG_DATA_HOME:-$HOME/.local/share}/ragcli/audit.log`.
+The CLI prints the created directories plus any seeded sources (`man-pages`, `info-pages`). Audit entries are written to `${XDG_DATA_HOME:-$HOME/.local/share}/ragcli/audit.log`.
 
-## 4. Reindex the Knowledge Base
+## 4. Verify Dependencies and Storage
+
+```bash
+go run ./cli/ragadmin health
+```
+
+Confirm each component (disk capacity, index freshness, source access, Ollama, Weaviate) reports `PASS`/`WARN`/`FAIL` as expected. Use the remediation hints to fix local issues before continuing.
+
+## 5. Reindex the Knowledge Base
 
 ```bash
 go run ./cli/ragadmin reindex
@@ -63,7 +71,13 @@ go run ./cli/ragadmin reindex
 
 Watch Phoenix traces/logs for Ollama/Weaviate health, since `ragadmin health` is not yet available.
 
-## 5. Exercise ragman
+> **Note:** The backend now requires both HTTP **and** gRPC connectivity to Weaviate.
+> Ensure your local deployment listens on `:8080` for HTTP and `:50051` for gRPC (the
+> defaults in `docs/install/systemd/weaviate.service`). If you change either port,
+> update both `weaviate_url` and `weaviate_grpc_port` in the backend config/CLI flags
+> before running the steps above.
+
+## 6. Exercise ragman
 
 Once reindexing succeeds:
 
@@ -73,8 +87,9 @@ go run ./cli/ragman query "How do I change file permissions?"
 
 Test additional options (`--json`, `--plain`, `--context-tokens`, conversation IDs) and confirm confidence thresholds plus citations behave as specified.
 
-## 6. Troubleshooting Tips
+## 7. Troubleshooting Tips
 
 - If tests or builds start failing inexplicably, run `make clean DEEP_CLEAN=1` to wipe repo artifacts plus `~/.cache/uv` and `~/.cache/pip`, then recreate the venv.
 - For service readiness, hit Ollama/Weaviate health endpoints directly or inspect backend logs until `ragadmin health` is implemented.
 - Keep `ragadmin`/`ragman` binaries pointed at `${XDG_RUNTIME_DIR:-/tmp}/ragcli/backend.sock`; delete stale sockets if CLIs fail to connect.
+- Long-running IPC streams (e.g., `ragadmin reindex`) use a generous per-frame read timeout (5m) and emit heartbeats during ingestion; if the client drops, the server stops writing but continues processing unless configured otherwise.

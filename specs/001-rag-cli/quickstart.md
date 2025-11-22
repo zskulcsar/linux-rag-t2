@@ -30,14 +30,14 @@
 ## Start Backend Service
 1. Launch the Python backend (development mode) via the launcher module:
    ```bash
-   PYTHONPATH=backend/src uv run --directory backend python -m main \
-     --config "${XDG_CONFIG_HOME:-$HOME/.config}/ragcli/config.yaml" \
-     --socket "${XDG_RUNTIME_DIR:-/tmp}/ragcli/backend.sock" \
-     --weaviate-url http://localhost:8080 \
-     --weaviate-grpc-port 50051 \
-     --ollama-url http://localhost:11434 \
-     --phoenix-url http://localhost:6006 \
-     --log-level INFO
+  PYTHONPATH=backend/src uv run --directory backend python -m main \
+    --config "${XDG_CONFIG_HOME:-$HOME/.config}/ragcli/config.yaml" \
+    --socket "${XDG_RUNTIME_DIR:-/tmp}/ragcli/backend.sock" \
+    --weaviate-url http://localhost:8080 \
+    --weaviate-grpc-port 50051 \
+    --ollama-url http://localhost:11434 \
+    --phoenix-url localhost:4317 \
+    --log-level INFO
    ```
    The `--config` flag is required; the other options override values from the
    file when you need ad-hoc adjustments. Append `--trace` when you want the

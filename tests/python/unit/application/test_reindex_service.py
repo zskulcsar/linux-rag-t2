@@ -32,9 +32,10 @@ class _RecordingChunkBuilder:
         checksum: str,
         location: Path,
         source_type: SourceType,
+        on_progress=None,
     ) -> list[Document]:
         self.calls.append(alias)
-        return [
+        docs = [
             Document(
                 alias=alias,
                 checksum=checksum,
@@ -45,6 +46,10 @@ class _RecordingChunkBuilder:
             )
             for i in range(self.documents)
         ]
+        if on_progress:
+            for idx in range(1, len(docs) + 1):
+                on_progress(idx, len(docs))
+        return docs
 
 
 @dataclass
@@ -145,7 +150,7 @@ def test_run_processes_sources_and_updates_catalog(tmp_path: Path) -> None:
     builder = _RecordingChunkBuilder(calls=[], documents=2)
     index_writer = _RecordingIndexWriter()
     callbacks = _RecordingCallbacks()
-    clock = lambda: dt.datetime(2025, 1, 2, tzinfo=dt.timezone.utc)
+    def clock(): return dt.datetime(2025, 1, 2, tzinfo=dt.timezone.utc)
 
     service = ReindexService(
         storage=storage,
@@ -196,6 +201,44 @@ def test_run_processes_sources_and_updates_catalog(tmp_path: Path) -> None:
         SourceSnapshot(alias="man-pages", checksum="sha256:man-new"),
         SourceSnapshot(alias="info-pages", checksum="sha256:info-new"),
     ]
+
+
+def test_run_emits_progress_within_alias(tmp_path: Path) -> None:
+    """Progress callbacks should fire mid-alias so long runs stream updates."""
+
+    checksum_map = {"man-pages": "sha256:man-new"}
+    catalog = _build_catalog(
+        tmp_path,
+        checksums={"man-pages": "sha256:man-old"},
+        snapshot_checksums={"man-pages": "sha256:man-old"},
+    )
+    storage = _RecordingStorage(catalog=catalog, saved=[])
+    builder = _RecordingChunkBuilder(calls=[], documents=25)
+    callbacks = _RecordingCallbacks()
+
+    service = ReindexService(
+        storage=storage,
+        chunk_builder=builder,
+        checksum_calculator=_checksum_factory(
+            {str(tmp_path / "man-pages.txt"): checksum_map["man-pages"]}
+        ),
+        audit_logger=None,
+        index_writer=_RecordingIndexWriter(),
+        clock=lambda: dt.datetime(2025, 1, 2, tzinfo=dt.timezone.utc),
+        job_id_factory=lambda: "job-progress",
+    )
+
+    job = service.run(
+        IngestionTrigger.MANUAL,
+        callbacks=ReindexCallbacks(
+            on_progress=callbacks.progress_hook,
+            on_complete=callbacks.complete_hook,
+        ),
+    )
+
+    assert callbacks.progress, "expected mid-alias progress callbacks"
+    assert any(stage and stage.startswith("ingesting:man-pages") for stage in callbacks.stages)
+    assert job.documents_processed == 25
 
 
 def test_run_skips_sources_when_checksums_match(tmp_path: Path) -> None:

@@ -437,17 +437,22 @@ async def _stream_responses(
 ) -> None:
     """Write streaming payloads to the transport writer."""
 
-    async for payload in stream:
-        status = _stream_status(payload)
-        await _write_frame(
-            writer,
-            {
-                "type": "response",
-                "status": status,
-                "correlation_id": correlation_id,
-                "body": payload,
-            },
-        )
+    try:
+        async for payload in stream:
+            status = _stream_status(payload)
+            await _write_frame(
+                writer,
+                {
+                    "type": "response",
+                    "status": status,
+                    "correlation_id": correlation_id,
+                    "body": payload,
+                },
+            )
+    except (ConnectionResetError, BrokenPipeError):
+        return
+    except Exception:
+        raise
 
 
 def _stream_status(payload: dict[str, Any]) -> int:

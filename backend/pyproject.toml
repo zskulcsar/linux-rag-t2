@@ -9,6 +9,9 @@ dependencies = [
     "arize-phoenix",
     "arize-phoenix-otel>=0.13.1",
     "pyyaml>=6.0",
+    "openinference-instrumentation>=0.1.41",
+    "opentelemetry-api>=1.38.0",
+    "opentelemetry-sdk>=1.38.0",
 ]
 
 

@@ -1,5 +1,7 @@
 """Factory helpers that wire transport handlers to the real services."""
 
+from typing import Any
+
 from adapters.observability import configure_phoenix
 from adapters.storage.audit_log import AuditLogger
 from adapters.storage.catalog import CatalogStorage
@@ -29,6 +31,7 @@ from .ports import CatalogIngestionPort, QueryRunnerPort
 from .router import TransportHandlers
 
 _OBSERVABILITY_READY = False
+_TRACER: Any | None = None
 
 
 def create_default_handlers(
@@ -37,7 +40,7 @@ def create_default_handlers(
     """Create transport handlers backed by catalog services and health diagnostics."""
 
     active_settings = settings or load_handler_settings_from_env()
-    _configure_observability(active_settings)
+    tracer = _configure_observability(active_settings)
 
     storage = CatalogStorage(base_dir=active_settings.data_dir)
     index_storage = ContentIndexStorage(base_dir=active_settings.data_dir)
@@ -46,7 +49,7 @@ def create_default_handlers(
         disable=active_settings.disable_bootstrap,
         force=_using_fake_services(),
     )
-    embedding_adapter = _build_embedding_adapter(active_settings)
+    embedding_adapter = _build_embedding_adapter(active_settings, tracer)
     vector_adapter = _build_weaviate_adapter(active_settings)
     chunk_builder = _chunk_builder_factory(
         embedding_adapter=embedding_adapter,
@@ -96,16 +99,18 @@ def create_default_handlers(
     return handlers
 
 
-def _configure_observability(settings: HandlerSettings) -> None:
+def _configure_observability(settings: HandlerSettings) -> Any | None:
     global _OBSERVABILITY_READY
+    global _TRACER
     if _OBSERVABILITY_READY:
-        return
+        return _TRACER
 
+    tracer: Any | None = None
     # TODO: review
     #configure_structlog(service_name="rag-backend")
     if settings.phoenix_url:
         try:
-            configure_phoenix(
+            tracer = configure_phoenix(
                 service_name="rag-backend",
                 endpoint=settings.phoenix_url,
             )
@@ -115,6 +120,8 @@ def _configure_observability(settings: HandlerSettings) -> None:
                 error=str(exc),
             )
     _OBSERVABILITY_READY = True
+    _TRACER = tracer
+    return tracer
 
 
 def _seed_bootstrap_catalog(

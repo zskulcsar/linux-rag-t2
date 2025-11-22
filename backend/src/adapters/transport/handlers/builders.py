@@ -66,7 +66,7 @@ def _build_weaviate_adapter(settings: HandlerSettings) -> WeaviateAdapter:
     return WeaviateAdapter(client=client, class_name="Document")
 
 
-def _build_embedding_adapter(settings: HandlerSettings) -> OllamaAdapter:
+def _build_embedding_adapter(settings: HandlerSettings, tracer: Any) -> OllamaAdapter:
     """Instantiate the Ollama adapter used for embeddings."""
 
     if _using_fake_services():
@@ -82,6 +82,7 @@ def _build_embedding_adapter(settings: HandlerSettings) -> OllamaAdapter:
         http_client=real_client,
         base_url=settings.ollama_url,
         model=settings.embedding_model,
+        tracer=tracer,
     )
 
 

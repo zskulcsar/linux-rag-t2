@@ -1,6 +1,7 @@
 """Weaviate vector adapter handling ingestion flows."""
 
 import time
+import uuid
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, Mapping, Protocol
@@ -94,7 +95,9 @@ class Document:
             'info-pages:def456:3'
         """
 
-        return f"{self.alias}:{self.checksum}:{self.chunk_id}"
+        seed = f"{self.alias}:{self.checksum}:{self.chunk_id}"
+        deterministic = uuid.uuid5(uuid.NAMESPACE_URL, seed)
+        return str(deterministic)
 
 
 class WeaviateAdapter:

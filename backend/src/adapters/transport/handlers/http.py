@@ -21,9 +21,13 @@ class _UrllibHttpResponse:
 
 class _UrllibHttpClient:
     def post(
-        self, url: str, payload: dict[str, Any], timeout: float
+        self, url: str, payload: dict[str, Any] | None = None, timeout: float = 30.0
     ) -> _UrllibHttpResponse:
-        data = json.dumps(payload).encode("utf-8")
+        data = (
+            json.dumps(payload).encode("utf-8")
+            if payload is not None
+            else None
+        )
         request = urllib.request.Request(
             url,
             data=data,

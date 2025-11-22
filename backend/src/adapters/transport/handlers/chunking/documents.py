@@ -9,7 +9,11 @@ from ports.ingestion import SourceType
 from ..common import LOGGER
 from .text import _chunk_text
 
+from telemetry import trace_call
 
+import gzip
+
+@trace_call
 def _generate_documents(
     *,
     alias: str,
@@ -22,7 +26,9 @@ def _generate_documents(
     chunk_id = 0
     for path in _iter_source_files(location, max_files=max_files):
         try:
-            text = path.read_text(encoding="utf-8")
+            # TODO: introduce proper handling of man and info-pages
+            with gzip.open(path, mode='rt') as f:
+                text = f.read()
         except (OSError, UnicodeDecodeError):
             try:
                 text = path.read_text(encoding="utf-8", errors="ignore")
@@ -37,6 +43,7 @@ def _generate_documents(
         for chunk in _chunk_text(text, max_chunk_tokens):
             if not chunk.strip():
                 continue
+            # TODO: add a new field to the document that identifies the file so that we can use it in our span
             yield Document(
                 alias=alias,
                 checksum=checksum,
