@@ -40,7 +40,7 @@ jobs:
         run: make vc-py
 
       - name: Tests (Python)
-        run: make test-py
+        run: make test-unit-py
 
       - name: Build Package (Python)
         run: make pack-py
