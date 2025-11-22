@@ -1,7 +1,5 @@
 """Unit tests for observability telemetry helpers."""
 
-from __future__ import annotations
-
 import logging
 import sys
 from types import SimpleNamespace
@@ -9,7 +7,7 @@ from typing import Any, List
 
 import pytest
 
-from services.rag_backend.adapters.observability import telemetry
+from adapters.observability import telemetry
 
 
 class _StubStructlog:
@@ -94,7 +92,9 @@ def test_configure_structlog_with_structlog(monkeypatch: pytest.MonkeyPatch) -> 
     assert stub.bound_context == {"service": "rag-backend"}
 
 
-def test_configure_structlog_without_structlog(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+def test_configure_structlog_without_structlog(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
     """Ensure configure_structlog degrades gracefully when structlog is missing."""
 
     monkeypatch.delitem(sys.modules, "structlog", raising=False)
@@ -145,7 +145,7 @@ def test_configure_phoenix_invokes_register(monkeypatch: pytest.MonkeyPatch) -> 
 
     assert stub.calls
     call = stub.calls[0]
-    assert call["service_name"] == "rag-backend"
+    assert call["project_name"] == "rag-backend"
     assert call["endpoint"] == "http://localhost:6006"
     assert call["instrumentors"] == ("fastapi",)
     assert call["auto_instrument"] is True
@@ -155,5 +155,15 @@ def test_configure_phoenix_missing_dependency(monkeypatch: pytest.MonkeyPatch) -
     """Ensure configure_phoenix raises when the phoenix package is missing."""
 
     monkeypatch.setitem(sys.modules, "phoenix", None)
+    with pytest.raises(RuntimeError):
+        telemetry.configure_phoenix(service_name="rag-backend")
+
+
+def test_configure_phoenix_missing_otel_attribute(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ensure a phoenix module without otel attribute raises a RuntimeError."""
+
+    monkeypatch.setitem(sys.modules, "phoenix", SimpleNamespace())
     with pytest.raises(RuntimeError):
         telemetry.configure_phoenix(service_name="rag-backend")

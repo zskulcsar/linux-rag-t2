@@ -1,21 +1,25 @@
 """Unit tests for the source quarantine adapter."""
 
-from __future__ import annotations
-
 import datetime as dt
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 import pytest
 
-from services.rag_backend.adapters.storage.catalog import CatalogStorage
-from services.rag_backend.adapters.storage.quarantine import SourceQuarantineManager
-from services.rag_backend.domain import models
-from services.rag_backend.ports.ingestion import SourceCatalog, SourceRecord, SourceStatus, SourceType
+from adapters.storage import quarantine as quarantine_module
+from adapters.storage.catalog import CatalogStorage
+from adapters.storage.quarantine import SourceQuarantineManager
+from ports.ingestion import (
+    SourceCatalog,
+    SourceRecord,
+    SourceStatus,
+    SourceType,
+)
 
 
-def _utc(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> dt.datetime:
+def _utc(
+    year: int, month: int, day: int, hour: int = 0, minute: int = 0
+) -> dt.datetime:
     return dt.datetime(year, month, day, hour, minute, tzinfo=dt.timezone.utc)
 
 
@@ -55,14 +59,17 @@ def _catalog(updated_at: dt.datetime) -> SourceCatalog:
         ),
     ]
 
-    return SourceCatalog(version=5, updated_at=updated_at, sources=sources, snapshots=[])
+    return SourceCatalog(
+        version=5, updated_at=updated_at, sources=sources, snapshots=[]
+    )
 
 
-def test_quarantine_manager_updates_catalog_and_audit_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_quarantine_manager_updates_catalog_and_audit_log(
+    catalog_storage: CatalogStorage,
+) -> None:
     """Ensure manager marks the source as quarantined and records audit metadata."""
 
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
-    storage = CatalogStorage()
+    storage = catalog_storage
     catalog = _catalog(updated_at=_utc(2025, 1, 2, 9, 0))
     storage.save(catalog)
 
@@ -92,11 +99,12 @@ def test_quarantine_manager_updates_catalog_and_audit_log(tmp_path: Path, monkey
     assert audit_entry["target"] == "info-pages"
 
 
-def test_quarantine_manager_rejects_unknown_alias(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_quarantine_manager_rejects_unknown_alias(
+    catalog_storage: CatalogStorage,
+) -> None:
     """Ensure attempting to quarantine a missing alias raises a ValueError."""
 
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
-    storage = CatalogStorage()
+    storage = catalog_storage
     storage.save(_catalog(updated_at=_utc(2025, 1, 2, 9, 0)))
 
     manager = SourceQuarantineManager(
@@ -107,3 +115,34 @@ def test_quarantine_manager_rejects_unknown_alias(tmp_path: Path, monkeypatch: p
 
     with pytest.raises(ValueError):
         manager.quarantine(alias="missing", reason="not found")
+
+
+def test_quarantine_manager_uses_default_clock(
+    catalog_storage: CatalogStorage, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ensure default clock injection supplies timestamps when no override provided."""
+
+    sentinel = _utc(2025, 1, 2, 12, 0)
+    monkeypatch.setattr("adapters.storage.quarantine.utc_now", lambda: sentinel)
+    storage = catalog_storage
+    catalog = _catalog(updated_at=_utc(2025, 1, 2, 9, 0))
+    storage.save(catalog)
+
+    audit = _AuditRecorder()
+    manager = SourceQuarantineManager(
+        catalog_storage=storage,
+        audit_logger=audit,
+    )
+    manager.quarantine(alias="man-pages", reason="Automated remediation")
+
+    updated = storage.load()
+    record = next(entry for entry in updated.sources if entry.alias == "man-pages")
+    assert record.last_updated == sentinel
+    assert audit.entries[0]["timestamp"] == sentinel.isoformat()
+
+
+def test_quarantine_default_clock_returns_aware_timestamp() -> None:
+    """Ensure the fallback clock helper returns a timezone-aware timestamp."""
+
+    timestamp = quarantine_module.utc_now()
+    assert timestamp.tzinfo is not None

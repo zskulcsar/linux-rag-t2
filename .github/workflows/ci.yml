@@ -25,23 +25,25 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install uv
 
-      - name: Sync dependencies
-        run: uv sync --project services/rag_backend
+      - name: Bootstrap virtualenv
+        run: |
+          make venv
+          echo PATH=${GITHUB_WORKSPACE}/backend/.venv/bin:$PATH >> $GITHUB_ENV
 
       - name: Lint (Python)
-        run: make lint-python
+        run: make lint-py
 
       - name: Typecheck (Python)
-        run: make typecheck
+        run: make tc-py
 
       - name: Security Audit (Python)
-        run: make security-python
+        run: make vc-py
 
       - name: Tests (Python)
-        run: make test-python
+        run: make test-unit-py
 
       - name: Build Package (Python)
-        run: make package-python
+        run: make pack-py
 
   go:
     name: Go Pipeline
@@ -53,19 +55,26 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23.x"
+          go-version: "1.25.x"
+          go-version-file: "**/go.sum"
+          cache-dependency-path: "**/go.sum"
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+            sh -s -- -b "$(go env GOPATH)/bin" v1.64.6
 
       - name: Lint (Go)
-        run: make lint-go
+        run: PATH="$(go env GOPATH)/bin:$PATH" make lint-go
 
       - name: Typecheck (Go)
-        run: make typecheck-go
+        run: make tc-go
 
       - name: Security Audit (Go)
-        run: make security-go
+        run: make vc-go
 
       - name: Tests (Go)
         run: make test-go
 
       - name: Build Package (Go)
-        run: make package-go
+        run: make pack-go

@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import pytest
 
-from services.rag_backend.telemetry.sections import TraceSection
+from telemetry.sections import TraceSection, async_trace_section
 
 
 class CaptureLogger:
@@ -26,7 +24,9 @@ class CaptureLogger:
 def test_trace_section_records_lifecycle() -> None:
     logger = CaptureLogger()
 
-    with TraceSection(name="ingest", logger=logger, metadata={"alias": "docs"}) as section:
+    with TraceSection(
+        name="ingest", logger=logger, metadata={"alias": "docs"}
+    ) as section:
         section.debug("chunk_loaded", chunk_id=1)
 
     assert logger.records[0]["message"] == "ingest :: start"
@@ -48,3 +48,17 @@ def test_trace_section_records_errors() -> None:
     assert logger.records[0]["message"] == "ingest :: start"
     assert logger.records[1]["level"] == "error"
     assert logger.records[1]["kwargs"]["error"] == "failure"
+
+
+@pytest.mark.asyncio
+async def test_async_trace_section_records_lifecycle() -> None:
+    """Ensure the async helper mirrors the synchronous logging behavior."""
+
+    logger = CaptureLogger()
+    async with async_trace_section(
+        name="ingest", logger=logger, metadata={"alias": "docs"}
+    ) as section:
+        section.debug("checkpoint", chunk_id=1)
+
+    assert logger.records[0]["message"] == "ingest :: start"
+    assert logger.records[-1]["message"] == "ingest :: complete"

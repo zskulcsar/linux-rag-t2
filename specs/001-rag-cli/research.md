@@ -36,8 +36,8 @@
 - Alternatives considered: No explicit targets (risks slow UX) and stricter sub-second end-to-end goals (unrealistic with local LLM inference).
 
 ## Filesystem & Deployment Layout
-- Decision: Adopt XDG base directories—store configs under `$XDG_CONFIG_HOME/ragcli`, data/index assets under `$XDG_DATA_HOME/ragcli`, runtime sockets under `$XDG_RUNTIME_DIR/ragcli` (falling back to `/tmp/ragcli` when undefined), and keep Go sources under `cli/` with backend under `services/rag_backend/`.
-- Rationale: XDG paths are standard on Linux, preventing clutter in `$HOME`; aligning source layout across `cli/` and `services/` keeps modules independently buildable per Constitution IV.
+- Decision: Adopt XDG base directories—store configs under `$XDG_CONFIG_HOME/ragcli`, data/index assets under `$XDG_DATA_HOME/ragcli`, runtime sockets under `$XDG_RUNTIME_DIR/ragcli` (falling back to `/tmp/ragcli` when undefined), and keep Go sources under `cli/` with backend under `backend/src/`.
+- Rationale: XDG paths are standard on Linux, preventing clutter in `$HOME`; aligning source layout across `cli/` and `backend/` keeps modules independently buildable per Constitution IV.
 - Alternatives considered: Hard-coding paths in the project root (breaks multi-user machines) and mixing Go/Python under one src directory (violates hexagonal separation and build independence).
 
 ## External Dependency Verification

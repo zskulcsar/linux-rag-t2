@@ -77,18 +77,18 @@ func TestRagmanQueryMarkdownOutput(t *testing.T) {
 					"excerpt":      "chmod changes file mode bits.",
 				},
 			},
-			"confidence":            0.82,
-			"trace_id":              "trace-123",
-			"latency_ms":            420,
-			"retrieval_latency_ms":  120,
-			"llm_latency_ms":        260,
-			"index_version":         "catalog/v1",
-			"no_answer":             false,
-			"answer":                "Detailed markdown answer",
-			"semantic_chunk_count":  6,
-			"context_truncated":     false,
-			"confidence_threshold":  0.35,
-			"stale_index_detected":  false,
+			"confidence":             0.82,
+			"trace_id":               "trace-123",
+			"latency_ms":             420,
+			"retrieval_latency_ms":   120,
+			"llm_latency_ms":         260,
+			"index_version":          "catalog/v1",
+			"no_answer":              false,
+			"answer":                 "Detailed markdown answer",
+			"semantic_chunk_count":   6,
+			"context_truncated":      false,
+			"confidence_threshold":   0.35,
+			"stale_index_detected":   false,
 			"backend_correlation_id": "contract-correlation",
 		},
 		outputAssert: func(t *testing.T, output string) {
@@ -250,18 +250,18 @@ func TestRagmanQueryNoAnswerFallback(t *testing.T) {
 			}
 		},
 		responseBody: map[string]any{
-			"summary":   "Answer is below the confidence threshold. Please rephrase your query or refresh sources via ragadmin.",
-			"steps":     []any{},
-			"references": []any{},
-			"citations": []any{},
-			"confidence":            0.14,
-			"trace_id":              "trace-no-answer",
-			"no_answer":             true,
-			"confidence_threshold":  0.35,
-			"latency_ms":            210,
-			"retrieval_latency_ms":  90,
-			"llm_latency_ms":        120,
-			"index_version":         "catalog/v1",
+			"summary":                "Answer is below the confidence threshold. Please rephrase your query or refresh sources via ragadmin.",
+			"steps":                  []any{},
+			"references":             []any{},
+			"citations":              []any{},
+			"confidence":             0.14,
+			"trace_id":               "trace-no-answer",
+			"no_answer":              true,
+			"confidence_threshold":   0.35,
+			"latency_ms":             210,
+			"retrieval_latency_ms":   90,
+			"llm_latency_ms":         120,
+			"index_version":          "catalog/v1",
 			"backend_correlation_id": "no-answer-correlation",
 		},
 		outputAssert: func(t *testing.T, output string) {
@@ -287,7 +287,7 @@ func runRagmanScenario(t *testing.T, scenario ragmanScenario) {
 	}
 	configPath := filepath.Join(configDir, "ragcli", "config.yaml")
 	configContent := "ragman:\n  confidence_threshold: 0.35\n  presenter_default: markdown\nragadmin:\n  output_default: table\n"
-	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o600); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 

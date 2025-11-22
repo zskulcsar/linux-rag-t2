@@ -1,13 +1,13 @@
 # Tasks: Local Linux RAG CLI
 
 ## Milestone 1 – IPC transport scaffold (Plan step 1)
-- [X] Implement backend Unix socket server skeleton (`services/rag_backend/adapters/transport/server.py`) using contract schema.
+- [X] Implement backend Unix socket server skeleton (`backend/src/adapters/transport/server.py`) using contract schema.
 - [X] Implement Go IPC client framing utilities (`cli/shared/ipc/client.go`).
 - [X] Add request/response validation tests referencing `contracts/backend-openapi.yaml`.
 
 ## Milestone 2 – Domain services & ports (Plan step 2)
-- [X] Define query, ingestion, health ports in `services/rag_backend/ports/`.
-- [X] Implement domain services in `services/rag_backend/domain/` covering FR-001–FR-011.
+- [X] Define query, ingestion, health ports in `backend/src/ports/`.
+- [X] Implement domain services in `backend/src/domain/` covering FR-001–FR-011.
 - [X] Author unit tests for domain logic (pytest + mypy strict).
 
 ## Milestone 3 – Infrastructure adapters (Plan step 3)
@@ -19,7 +19,7 @@
 ## Milestone 3A – Offline guarantee (Plan step 4 enforcement)
 - [X] Add backend offline compliance tests (`tests/python/integration/test_offline_guards.py`) covering blocked remote sockets and loopback allowances.
 - [X] Add CLI offline compliance tests (`tests/go/contract/offline_guard_test.go`) asserting outbound HTTP blocking and loopback success.
-- [X] Implement backend offline guard (`services/rag_backend/application/offline_guard.py`) enforcing FR-010.
+- [X] Implement backend offline guard (`backend/src/application/offline_guard.py`) enforcing FR-010.
 - [X] Implement shared Go IPC offline guard (`cli/shared/ipc/client.go`) with structured logging and error propagation.
 - [X] Execute offline guard suites (`uv run pytest tests/python/integration/test_offline_guards.py`, `go test ./tests/go/contract -run OfflineGuard`) confirming all checks pass.
 
@@ -35,9 +35,9 @@
 - [X] Execute shared IPC suites (`GOCACHE=$(pwd)/.gocache go test ./tests/go/unit/ipc ./tests/go/contract`) confirming green results before documenting completion.
 
 ## Milestone 6 – `ragadmin` CLI (Plan step 6)
-- [ ] Scaffold Cobra root and subcommands (init, sources, reindex, health).
-- [ ] Implement presentation formatting (table/json) with structured logs.
-- [ ] Add CLI contract tests invoking fixture backend responses.
+- [X] Scaffold Cobra root and subcommands (init, sources, reindex, health).
+- [X] Implement presentation formatting (table/json) with structured logs.
+- [X] Add CLI contract tests invoking fixture backend responses.
 
 ## Milestone 7 – `ragman` CLI (Plan step 7)
 - [X] Implement query command with confidence + citation rendering.

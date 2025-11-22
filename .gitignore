@@ -6,11 +6,12 @@
 
 # Others
 *.kate-swp
-tmp
+tmp/
 .tmp/
 
 # Python artifacts
 __pycache__/
+.pycache/
 *.py[cod]
 .venv/
 venv/
@@ -22,6 +23,7 @@ build/
 .ruff_cache/
 .uv_cache/
 .uvcache/
+.coverage
 
 # Go build outputs
 bin/
@@ -31,6 +33,7 @@ bin/
 vendor/
 .gocache/
 .gomodcache/
+tmp-home/
 
 # Editor and OS noise
 .DS_Store
@@ -40,3 +43,4 @@ Thumbs.db
 .vscode/
 .idea/
 site/
+docs/specs

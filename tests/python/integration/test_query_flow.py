@@ -1,20 +1,18 @@
 """Contract tests for the ragman query orchestration pipeline."""
 
-from __future__ import annotations
-
 import datetime as dt
 
 import pytest
 
-from services.rag_backend.ports import query as query_ports
+from ports import query as query_ports
 
 
 def _import_query_runner():
     try:
-        from services.rag_backend.application import query_runner  # type: ignore import-not-found
+        from application import query_runner  # type: ignore import-not-found
     except ImportError as exc:
         raise AssertionError(
-            "services.rag_backend.application.query_runner must define a QueryRunner orchestrator "
+            "application.query_runner must define a QueryRunner orchestrator "
             "that coordinates retrieval, generation, and presentation for ragman queries."
         ) from exc
     return query_runner
@@ -44,12 +42,22 @@ def test_query_runner_returns_structured_response() -> None:
             "Re-run ls -l to confirm the change.",
         ],
         references=[
-            query_ports.Reference(label="chmod(1)", url="man:chmod", notes="POSIX manual"),
+            query_ports.Reference(
+                label="chmod(1)", url="man:chmod", notes="POSIX manual"
+            ),
             query_ports.Reference(label="stat(1)"),
         ],
         citations=[
-            query_ports.Citation(alias="man-pages", document_ref="chmod(1)", excerpt="chmod changes file mode bits."),
-            query_ports.Citation(alias="man-pages", document_ref="stat(1)", excerpt="stat inspects file metadata."),
+            query_ports.Citation(
+                alias="man-pages",
+                document_ref="chmod(1)",
+                excerpt="chmod changes file mode bits.",
+            ),
+            query_ports.Citation(
+                alias="man-pages",
+                document_ref="stat(1)",
+                excerpt="stat inspects file metadata.",
+            ),
         ],
         confidence=0.81,
         trace_id="trace-query-runner",

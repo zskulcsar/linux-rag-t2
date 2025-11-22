@@ -1,13 +1,14 @@
 """Domain service contract tests for state transitions."""
 
-from __future__ import annotations
-
 import datetime as dt
+from dataclasses import replace
 import uuid
 
 import pytest
 
-from services.rag_backend.domain import models, query_service, source_service
+from common import clock as common_clock
+from domain import health_service, models, query_service, source_service
+from ports.health import HealthCheck, HealthComponent, HealthStatus
 
 
 def _utc(ts: dt.datetime) -> dt.datetime:
@@ -68,9 +69,9 @@ def test_mark_source_quarantined_records_reason_and_timestamp() -> None:
 
     later = base_time + dt.timedelta(minutes=5)
     reason = "Path missing during validation"
-    quarantine = source_service.SourceService(clock=lambda: later).mark_source_quarantined(
-        source=active_source, reason=reason
-    )
+    quarantine = source_service.SourceService(
+        clock=lambda: later
+    ).mark_source_quarantined(source=active_source, reason=reason)
 
     assert quarantine.status is models.KnowledgeSourceStatus.QUARANTINED
     assert reason in (quarantine.notes or "")
@@ -131,7 +132,9 @@ def test_restore_quarantined_source_promotes_to_active() -> None:
         updated_at=_utc(dt.datetime(2025, 1, 2, 9, 0, 0)),
     )
 
-    restored = source_service.SourceService(clock=lambda: base_time).restore_quarantined_source(
+    restored = source_service.SourceService(
+        clock=lambda: base_time
+    ).restore_quarantined_source(
         source=quarantined,
         checksum="new",
         size_bytes=2048,
@@ -160,7 +163,9 @@ def test_restore_quarantined_source_promotes_to_active() -> None:
     )
 
     with pytest.raises(ValueError):
-        source_service.SourceService(clock=lambda: base_time).restore_quarantined_source(
+        source_service.SourceService(
+            clock=lambda: base_time
+        ).restore_quarantined_source(
             source=active_source,
             checksum="abc",
             size_bytes=1024,
@@ -185,25 +190,25 @@ def test_ingestion_state_machine_enforces_valid_transitions() -> None:
         trigger=models.IngestionTrigger.MANUAL,
     )
 
-    running = source_service.SourceService(clock=lambda: requested_at).mark_ingestion_running(
-        job=job, stage="vectorizing"
-    )
+    running = source_service.SourceService(
+        clock=lambda: requested_at
+    ).mark_ingestion_running(job=job, stage="vectorizing")
     assert running.status is models.IngestionStatus.RUNNING
     assert running.stage == "vectorizing"
     assert running.started_at == requested_at
 
     completed_at = requested_at + dt.timedelta(minutes=15)
-    succeeded = source_service.SourceService(clock=lambda: completed_at).mark_ingestion_succeeded(
-        job=running, documents_processed=128
-    )
+    succeeded = source_service.SourceService(
+        clock=lambda: completed_at
+    ).mark_ingestion_succeeded(job=running, documents_processed=128)
     assert succeeded.status is models.IngestionStatus.SUCCEEDED
     assert succeeded.completed_at == completed_at
     assert succeeded.documents_processed == 128
 
     with pytest.raises(ValueError):
-        source_service.SourceService(clock=lambda: completed_at).mark_ingestion_succeeded(
-            job=job, documents_processed=1
-        )
+        source_service.SourceService(
+            clock=lambda: completed_at
+        ).mark_ingestion_succeeded(job=job, documents_processed=1)
 
 
 def test_index_service_marks_ready_and_detects_staleness() -> None:
@@ -246,3 +251,229 @@ def test_index_service_marks_ready_and_detects_staleness() -> None:
 
     with pytest.raises(ValueError):
         service.mark_index_ready(version=ready, document_count=1, size_bytes=1)
+
+
+def test_health_service_registers_checks_and_aggregates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ensure HealthService uses the default clock and aggregates WARN status."""
+
+    generated_at = _utc(dt.datetime(2025, 1, 5, 12, 0, 0))
+    monkeypatch.setattr(health_service, "utc_now", lambda: generated_at)
+
+    def make_check(status: HealthStatus, component: HealthComponent):
+        def factory() -> HealthCheck:
+            return HealthCheck(
+                component=component,
+                status=status,
+                message=f"{component.value}:{status.value}",
+            )
+
+        return factory
+
+    service = health_service.HealthService(
+        check_factories=[make_check(HealthStatus.PASS, HealthComponent.DISK_CAPACITY)]
+    )
+    service.register(make_check(HealthStatus.WARN, HealthComponent.OLLAMA))
+
+    report = service.evaluate()
+
+    assert report.generated_at == generated_at
+    assert report.status is HealthStatus.WARN
+    assert {check.component for check in report.checks} == {
+        HealthComponent.DISK_CAPACITY,
+        HealthComponent.OLLAMA,
+    }
+
+
+def test_health_service_reports_fail_when_any_check_fails() -> None:
+    """Ensure aggregate status escalates to FAIL whenever one check fails."""
+
+    def failing_factory():
+        return HealthCheck(
+            component=HealthComponent.WEAVIATE,
+            status=HealthStatus.FAIL,
+            message="Weaviate unreachable",
+        )
+
+    service = health_service.HealthService(check_factories=[failing_factory])
+    report = service.evaluate()
+    assert report.status is HealthStatus.FAIL
+
+
+def test_health_service_pass_status_when_all_checks_succeed() -> None:
+    """Ensure aggregate status returns PASS when every check succeeds."""
+
+    def healthy_factory():
+        return HealthCheck(
+            component=HealthComponent.DISK_CAPACITY,
+            status=HealthStatus.PASS,
+            message="All good",
+        )
+
+    report = health_service.HealthService(check_factories=[healthy_factory]).evaluate()
+    assert report.status is HealthStatus.PASS
+
+
+def test_mark_source_validated_rejects_non_pending_source() -> None:
+    """Ensure only pending sources can be validated."""
+
+    source = models.KnowledgeSource(
+        alias="docs",
+        type=models.SourceType.MAN,
+        location="/docs",
+        language="en",
+        size_bytes=0,
+        last_updated=_utc(dt.datetime(2025, 1, 1, 0, 0, 0)),
+        status=models.KnowledgeSourceStatus.ACTIVE,
+        checksum=None,
+        notes=None,
+        created_at=_utc(dt.datetime(2024, 12, 1, 0, 0, 0)),
+        updated_at=_utc(dt.datetime(2025, 1, 1, 0, 0, 0)),
+    )
+
+    with pytest.raises(ValueError):
+        source_service.SourceService().mark_source_validated(
+            source=source, checksum="abc", size_bytes=10
+        )
+
+
+def test_mark_source_quarantined_rejects_pending_source() -> None:
+    """Ensure quarantine only applies to active or errored sources."""
+
+    pending = models.KnowledgeSource(
+        alias="docs",
+        type=models.SourceType.MAN,
+        location="/docs",
+        language="en",
+        size_bytes=0,
+        last_updated=_utc(dt.datetime(2025, 1, 1, 0, 0, 0)),
+        status=models.KnowledgeSourceStatus.PENDING_VALIDATION,
+        checksum=None,
+        notes=None,
+        created_at=_utc(dt.datetime(2024, 12, 1, 0, 0, 0)),
+        updated_at=_utc(dt.datetime(2025, 1, 1, 0, 0, 0)),
+    )
+
+    with pytest.raises(ValueError):
+        source_service.SourceService().mark_source_quarantined(
+            source=pending, reason="still validating"
+        )
+
+
+def test_mark_ingestion_running_requires_queued_job() -> None:
+    """Ensure jobs must be queued before running."""
+
+    running_job = models.IngestionJob(
+        job_id=str(uuid.uuid4()),
+        source_alias="docs",
+        status=models.IngestionStatus.RUNNING,
+        requested_at=_utc(dt.datetime(2025, 1, 3, 8, 0, 0)),
+        started_at=_utc(dt.datetime(2025, 1, 3, 8, 5, 0)),
+        completed_at=None,
+        documents_processed=10,
+        stage="vectorizing",
+        percent_complete=50.0,
+        error_message=None,
+        trigger=models.IngestionTrigger.MANUAL,
+    )
+
+    with pytest.raises(ValueError):
+        source_service.SourceService().mark_ingestion_running(
+            job=running_job, stage="vectorizing"
+        )
+
+
+def test_mark_ingestion_succeeded_rejects_negative_documents() -> None:
+    """Ensure negative document counts raise a ValueError."""
+
+    running_job = models.IngestionJob(
+        job_id=str(uuid.uuid4()),
+        source_alias="docs",
+        status=models.IngestionStatus.RUNNING,
+        requested_at=_utc(dt.datetime(2025, 1, 3, 8, 0, 0)),
+        started_at=_utc(dt.datetime(2025, 1, 3, 8, 5, 0)),
+        completed_at=None,
+        documents_processed=0,
+        stage="vectorizing",
+        percent_complete=50.0,
+        error_message=None,
+        trigger=models.IngestionTrigger.MANUAL,
+    )
+
+    with pytest.raises(ValueError):
+        source_service.SourceService().mark_ingestion_succeeded(
+            job=running_job, documents_processed=-1
+        )
+
+
+def test_query_service_default_clock_and_non_ready_freshness(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ensure default clock path executes and non-ready indexes are returned untouched."""
+
+    sentinel = _utc(dt.datetime(2025, 1, 6, 12, 0, 0))
+    monkeypatch.setattr(query_service, "utc_now", lambda: sentinel)
+    service = query_service.QueryService()
+
+    version = models.ContentIndexVersion(
+        index_id=str(uuid.uuid4()),
+        status=models.IndexStatus.BUILDING,
+        built_at=None,
+        checksum="build-123",
+        source_snapshot=[],
+        size_bytes=0,
+        document_count=0,
+        freshness_expires_at=sentinel + dt.timedelta(days=1),
+        trigger_job_id=str(uuid.uuid4()),
+    )
+    ready = service.mark_index_ready(version=version, document_count=1, size_bytes=1)
+    assert ready.built_at == sentinel
+
+    non_ready_version = replace(ready, status=models.IndexStatus.BUILDING)
+    assert (
+        service.enforce_index_freshness(version=non_ready_version) is non_ready_version
+    )
+
+    ready_without_expiry = replace(ready, freshness_expires_at=None)
+    assert (
+        service.enforce_index_freshness(version=ready_without_expiry)
+        is ready_without_expiry
+    )
+
+    still_fresh = service.enforce_index_freshness(
+        version=ready, reference_time=sentinel + dt.timedelta(days=1)
+    )
+    assert still_fresh is ready
+
+
+def test_query_service_rejects_mark_ready_for_non_building_version() -> None:
+    """Ensure mark_index_ready raises the documented ValueError."""
+
+    version = models.ContentIndexVersion(
+        index_id=str(uuid.uuid4()),
+        status=models.IndexStatus.READY,
+        built_at=_utc(dt.datetime(2025, 1, 4, 12, 0, 0)),
+        checksum="existing",
+        source_snapshot=[],
+        size_bytes=0,
+        document_count=0,
+        freshness_expires_at=None,
+        trigger_job_id=str(uuid.uuid4()),
+    )
+
+    service = query_service.QueryService()
+    with pytest.raises(ValueError):
+        service.mark_index_ready(version=version, document_count=10, size_bytes=10)
+
+
+def test_query_service_default_clock_returns_timezone_aware_timestamp() -> None:
+    """Ensure the default clock helper yields a timezone-aware timestamp."""
+
+    assert common_clock.utc_now().tzinfo is not None
+
+
+def test_source_service_default_clock_returns_timezone_aware_timestamp() -> None:
+    """Ensure the source service default clock provides UTC timestamps."""
+
+    assert common_clock.utc_now().tzinfo is not None

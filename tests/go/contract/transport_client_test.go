@@ -20,8 +20,10 @@ func TestClientHandshakeAndQueryFraming(t *testing.T) {
 	socketPath := filepath.Join(t.TempDir(), "backend.sock")
 
 	ready := make(chan struct{})
-	done := make(chan struct{})
-	go runStubServer(t, socketPath, ready, done)
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- runStubServer(socketPath, ready)
+	}()
 
 	select {
 	case <-ready:
@@ -66,150 +68,157 @@ func TestClientHandshakeAndQueryFraming(t *testing.T) {
 	}
 
 	select {
-	case <-done:
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("stub server error: %v", err)
+		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("stub server did not finish expectations")
 	}
 }
 
-func runStubServer(t *testing.T, socketPath string, ready chan<- struct{}, done chan<- struct{}) {
-	t.Helper()
-
+func runStubServer(socketPath string, ready chan<- struct{}) error {
 	_ = os.Remove(socketPath)
 	listener, err := net.Listen("unix", socketPath)
 	if err != nil {
-		t.Fatalf("failed to bind unix socket: %v", err)
+		return fmt.Errorf("failed to bind unix socket: %w", err)
 	}
+	defer listener.Close()
 
 	close(ready)
 
 	conn, err := listener.Accept()
 	if err != nil {
-		listener.Close()
-		t.Fatalf("failed to accept connection: %v", err)
+		return fmt.Errorf("failed to accept connection: %w", err)
 	}
+	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
 	writer := bufio.NewWriter(conn)
 
-	handshake := mustReadFrame(t, reader)
+	handshake, err := readJSONFrame(reader)
+	if err != nil {
+		return err
+	}
 	if handshakeType, _ := handshake["type"].(string); handshakeType != "handshake" {
-		t.Fatalf("expected handshake frame, got %v", handshake)
+		return fmt.Errorf("expected handshake frame, got %v", handshake)
 	}
 	if protocol, _ := handshake["protocol"].(string); protocol != "rag-cli-ipc" {
-		t.Fatalf("unexpected protocol: %v", protocol)
+		return fmt.Errorf("unexpected protocol: %v", protocol)
 	}
 	if clientID, _ := handshake["client"].(string); clientID != "contract-tests" {
-		t.Fatalf("unexpected client identifier: %v", clientID)
+		return fmt.Errorf("unexpected client identifier: %v", clientID)
 	}
 
-	mustWriteFrame(t, writer, map[string]any{
+	if err := writeJSONFrame(writer, map[string]any{
 		"type":     "handshake_ack",
 		"protocol": "rag-cli-ipc",
 		"version":  1,
 		"server":   "contract-stub",
-	})
+	}); err != nil {
+		return err
+	}
 
-	request := mustReadFrame(t, reader)
+	request, err := readJSONFrame(reader)
+	if err != nil {
+		return err
+	}
 	if frameType, _ := request["type"].(string); frameType != "request" {
-		t.Fatalf("expected request frame, got %v", request)
+		return fmt.Errorf("expected request frame, got %v", request)
 	}
 	path, _ := request["path"].(string)
 	if path != "/v1/query" {
-		t.Fatalf("unexpected request path: %q", path)
+		return fmt.Errorf("unexpected request path: %q", path)
 	}
 
 	correlationID, _ := request["correlation_id"].(string)
 	if correlationID == "" {
-		t.Fatal("expected correlation id to be populated")
+		return fmt.Errorf("expected correlation id to be populated")
 	}
 
 	body, ok := request["body"].(map[string]any)
 	if !ok {
-		t.Fatalf("request body must be an object, got %T", request["body"])
+		return fmt.Errorf("request body must be an object, got %T", request["body"])
 	}
 	if question, _ := body["question"].(string); question != "How do I change file permissions?" {
-		t.Fatalf("unexpected question payload: %v", body)
+		return fmt.Errorf("unexpected question payload: %v", body)
 	}
 	if tokens, _ := body["max_context_tokens"].(float64); int(tokens) != 4096 {
-		t.Fatalf("expected max_context_tokens to be 4096, got %v", body["max_context_tokens"])
+		return fmt.Errorf("expected max_context_tokens to be 4096, got %v", body["max_context_tokens"])
 	}
 	if trace, _ := body["trace_id"].(string); trace != "contract-trace" {
-		t.Fatalf("expected trace_id propagation, got %v", trace)
+		return fmt.Errorf("expected trace_id propagation, got %v", trace)
 	}
 
-	mustWriteFrame(t, writer, map[string]any{
+	if err := writeJSONFrame(writer, map[string]any{
 		"type":           "response",
 		"status":         200,
 		"correlation_id": correlationID,
 		"body": map[string]any{
-			"summary":   "Use chmod to adjust permissions.",
-			"steps":     []any{"Run chmod with desired mode", "Verify permissions with ls -l"},
+			"summary":    "Use chmod to adjust permissions.",
+			"steps":      []any{"Run chmod with desired mode", "Verify permissions with ls -l"},
 			"references": []any{map[string]any{"label": "chmod(1)"}},
 			"confidence": 0.82,
 			"trace_id":   "contract-trace",
 			"latency_ms": 120,
 		},
-	})
-
-	if err := writer.Flush(); err != nil {
-		t.Fatalf("failed to flush response: %v", err)
+	}); err != nil {
+		return err
 	}
 
-	conn.Close()
-	listener.Close()
-	close(done)
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("failed to flush response: %w", err)
+	}
+
+	return nil
 }
 
-func mustReadFrame(t *testing.T, reader *bufio.Reader) map[string]any {
-	t.Helper()
-
+func readJSONFrame(reader *bufio.Reader) (map[string]any, error) {
 	lengthLine, err := reader.ReadString('\n')
 	if err != nil {
-		t.Fatalf("failed to read length prefix: %v", err)
+		return nil, fmt.Errorf("failed to read length prefix: %w", err)
 	}
 
 	var payloadLength int
 	if _, err := fmt.Sscanf(lengthLine, "%d\n", &payloadLength); err != nil {
-		t.Fatalf("invalid length prefix %q: %v", lengthLine, err)
+		return nil, fmt.Errorf("invalid length prefix %q: %w", lengthLine, err)
 	}
 
 	payload := make([]byte, payloadLength)
 	if _, err := reader.Read(payload); err != nil {
-		t.Fatalf("failed to read payload: %v", err)
+		return nil, fmt.Errorf("failed to read payload: %w", err)
 	}
 
 	next, err := reader.ReadByte()
 	if err != nil {
-		t.Fatalf("failed to read frame terminator: %v", err)
+		return nil, fmt.Errorf("failed to read frame terminator: %w", err)
 	}
 	if next != '\n' {
-		t.Fatalf("expected trailing newline terminator, got %q", next)
+		return nil, fmt.Errorf("expected trailing newline terminator, got %q", next)
 	}
 
 	var message map[string]any
 	if err := json.Unmarshal(payload, &message); err != nil {
-		t.Fatalf("failed to decode payload %q: %v", string(payload), err)
+		return nil, fmt.Errorf("failed to decode payload %q: %w", string(payload), err)
 	}
 
-	return message
+	return message, nil
 }
 
-func mustWriteFrame(t *testing.T, writer *bufio.Writer, message map[string]any) {
-	t.Helper()
-
+func writeJSONFrame(writer *bufio.Writer, message map[string]any) error {
 	payload, err := json.Marshal(message)
 	if err != nil {
-		t.Fatalf("failed to marshal response: %v", err)
+		return fmt.Errorf("failed to marshal response: %w", err)
 	}
 
 	if _, err := fmt.Fprintf(writer, "%d\n", len(payload)); err != nil {
-		t.Fatalf("failed to write length prefix: %v", err)
+		return fmt.Errorf("failed to write length prefix: %w", err)
 	}
 	if _, err := writer.Write(payload); err != nil {
-		t.Fatalf("failed to write payload: %v", err)
+		return fmt.Errorf("failed to write payload: %w", err)
 	}
 	if err := writer.WriteByte('\n'); err != nil {
-		t.Fatalf("failed to write frame terminator: %v", err)
+		return fmt.Errorf("failed to write frame terminator: %w", err)
 	}
+	return nil
 }

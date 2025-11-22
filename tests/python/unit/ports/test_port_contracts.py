@@ -6,15 +6,13 @@ tasks must satisfy these contracts without altering the shapes asserted
 below.
 """
 
-from __future__ import annotations
-
 import dataclasses
 import importlib
 import inspect
 import types
 import datetime as dt
 import enum
-from typing import Any, Protocol, Union, get_args, get_origin, get_type_hints
+from typing import Any, Callable, Protocol, Union, get_args, get_origin, get_type_hints
 
 
 def _assert_list_of(annotation: Any, expected_inner: Any) -> None:
@@ -23,7 +21,9 @@ def _assert_list_of(annotation: Any, expected_inner: Any) -> None:
     origin = get_origin(annotation)
     assert origin is list, f"expected list[...] annotation, got {annotation!r}"
     (inner,) = get_args(annotation)
-    assert inner is expected_inner, f"expected inner type {expected_inner!r}, got {inner!r}"
+    assert inner is expected_inner, (
+        f"expected inner type {expected_inner!r}, got {inner!r}"
+    )
 
 
 def _assert_optional(annotation: Any, expected_inner: Any) -> None:
@@ -33,15 +33,19 @@ def _assert_optional(annotation: Any, expected_inner: Any) -> None:
         return
 
     origin = get_origin(annotation)
-    assert origin in {Union, types.UnionType}, f"expected optional {expected_inner!r}, got {annotation!r}"
+    assert origin in {Union, types.UnionType}, (
+        f"expected optional {expected_inner!r}, got {annotation!r}"
+    )
     args = set(get_args(annotation))
-    assert expected_inner in args and type(None) in args, f"expected optional {expected_inner!r}, got {annotation!r}"
+    assert expected_inner in args and type(None) in args, (
+        f"expected optional {expected_inner!r}, got {annotation!r}"
+    )
 
 
 def test_query_port_contract_shapes() -> None:
     """Require the query port types and protocol to match the transport contract."""
 
-    module = importlib.import_module("services.rag_backend.ports.query")
+    module = importlib.import_module("ports.query")
 
     query_request = getattr(module, "QueryRequest", None)
     query_response = getattr(module, "QueryResponse", None)
@@ -61,14 +65,18 @@ def test_query_port_contract_shapes() -> None:
     assert citation_hints["document_ref"] is str
     _assert_optional(citation_hints["excerpt"], str)
 
-    assert dataclasses.is_dataclass(query_request), "QueryRequest dataclass must be defined"
+    assert dataclasses.is_dataclass(query_request), (
+        "QueryRequest dataclass must be defined"
+    )
     request_hints = get_type_hints(query_request)
     assert request_hints["question"] is str
     _assert_optional(request_hints["conversation_id"], str)
     assert request_hints["max_context_tokens"] is int
     _assert_optional(request_hints["trace_id"], str)
 
-    assert dataclasses.is_dataclass(query_response), "QueryResponse dataclass must be defined"
+    assert dataclasses.is_dataclass(query_response), (
+        "QueryResponse dataclass must be defined"
+    )
     response_hints = get_type_hints(query_response)
     assert response_hints["summary"] is str
     _assert_list_of(response_hints["steps"], str)
@@ -89,7 +97,9 @@ def test_query_port_contract_shapes() -> None:
     assert method is not None, "QueryPort.query method must be defined"
     signature = inspect.signature(method)
     params = list(signature.parameters.values())
-    assert len(params) == 2 and params[0].name == "self", "QueryPort.query must accept self and request"
+    assert len(params) == 2 and params[0].name == "self", (
+        "QueryPort.query must accept self and request"
+    )
 
     method_hints = get_type_hints(method, module.__dict__)
     assert method_hints["request"] is query_request
@@ -99,7 +109,7 @@ def test_query_port_contract_shapes() -> None:
 def test_ingestion_port_contract_shapes() -> None:
     """Require the ingestion port types to reflect catalog, job, and adapter contracts."""
 
-    module = importlib.import_module("services.rag_backend.ports.ingestion")
+    module = importlib.import_module("ports.ingestion")
 
     source_type = getattr(module, "SourceType", None)
     source_status = getattr(module, "SourceStatus", None)
@@ -113,6 +123,7 @@ def test_ingestion_port_contract_shapes() -> None:
     ingestion_job = getattr(module, "IngestionJob", None)
     snapshot_entry = getattr(module, "SourceSnapshot", None)
     ingestion_port = getattr(module, "IngestionPort", None)
+    reindex_callbacks = getattr(module, "ReindexCallbacks", None)
 
     assert issubclass(source_type, enum.Enum)
     assert {member.value for member in source_type} == {"man", "kiwix", "info"}
@@ -135,7 +146,11 @@ def test_ingestion_port_contract_shapes() -> None:
     }
 
     assert issubclass(ingestion_trigger, enum.Enum)
-    assert {member.value for member in ingestion_trigger} == {"init", "manual", "scheduled"}
+    assert {member.value for member in ingestion_trigger} == {
+        "init",
+        "manual",
+        "scheduled",
+    }
 
     assert dataclasses.is_dataclass(snapshot_entry)
     snapshot_hints = get_type_hints(snapshot_entry)
@@ -194,6 +209,12 @@ def test_ingestion_port_contract_shapes() -> None:
     assert mutation_hints["source"] is source_record
     _assert_optional(mutation_hints["job"], ingestion_job)
 
+    assert dataclasses.is_dataclass(reindex_callbacks)
+    callback_hints = get_type_hints(reindex_callbacks)
+    job_callback = Callable[[ingestion_job], type(None)]
+    _assert_optional(callback_hints["on_progress"], job_callback)
+    _assert_optional(callback_hints["on_complete"], job_callback)
+
     assert inspect.isclass(ingestion_port)
     assert issubclass(ingestion_port, Protocol)
 
@@ -219,14 +240,19 @@ def test_ingestion_port_contract_shapes() -> None:
 
     reindex_sig = inspect.signature(ingestion_port.start_reindex)
     reindex_params = list(reindex_sig.parameters.values())
-    assert len(reindex_params) == 2 and reindex_params[1].annotation is ingestion_trigger
+    assert len(reindex_params) == 4
+    assert reindex_params[1].annotation is ingestion_trigger
+    force_param = reindex_params[2]
+    assert force_param.annotation is bool
+    assert force_param.default is False
+    _assert_optional(reindex_params[3].annotation, reindex_callbacks)
     assert reindex_sig.return_annotation is ingestion_job
 
 
 def test_health_port_contract_shapes() -> None:
     """Require the health port types to expose consistent telemetry and status enums."""
 
-    module = importlib.import_module("services.rag_backend.ports.health")
+    module = importlib.import_module("ports.health")
 
     health_status = getattr(module, "HealthStatus", None)
     health_component = getattr(module, "HealthComponent", None)
@@ -244,6 +270,7 @@ def test_health_port_contract_shapes() -> None:
         "disk_capacity",
         "ollama",
         "weaviate",
+        "phoenix",
     }
 
     assert dataclasses.is_dataclass(health_check)
@@ -257,7 +284,8 @@ def test_health_port_contract_shapes() -> None:
     assert get_origin(metrics_hint) is dict
     key_type, value_type = get_args(metrics_hint)
     assert key_type is str
-    if get_origin(value_type) is Union:
+    value_origin = get_origin(value_type)
+    if value_origin in {Union, types.UnionType}:
         assert set(get_args(value_type)) == {int, float}
     else:
         assert value_type in {int, float}

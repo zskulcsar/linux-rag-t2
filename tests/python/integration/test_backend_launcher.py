@@ -1,16 +1,14 @@
 """Integration contract for the backend launcher entrypoint."""
 
-from __future__ import annotations
-
 import asyncio
-import json
 import os
 from pathlib import Path
 import sys
 import textwrap
-from typing import Any
 
 import pytest
+
+from tests.python.helpers.ipc import close_writer, connect_and_handshake
 
 HANDSHAKE_REQUEST = {
     "type": "handshake",
@@ -27,37 +25,10 @@ EXPECTED_HANDSHAKE_RESPONSE = {
 }
 
 READ_TIMEOUT = 3.0
+SOCKET_TIMEOUT = 15.0
 
 
-async def _write_frame(writer: asyncio.StreamWriter, message: dict[str, Any]) -> None:
-    """Send a framed JSON message using <len>\\n<payload>\\n semantics."""
-
-    payload = json.dumps(message, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    header = f"{len(payload)}\n".encode("ascii")
-    writer.write(header)
-    writer.write(payload)
-    writer.write(b"\n")
-    await writer.drain()
-
-
-async def _read_frame(reader: asyncio.StreamReader) -> dict[str, Any]:
-    """Read a framed JSON message using <len>\\n<payload>\\n semantics."""
-
-    length_line = await reader.readline()
-    if not length_line:
-        raise AssertionError("expected a length-prefixed frame, received EOF instead")
-    try:
-        payload_length = int(length_line.decode("ascii").strip())
-    except ValueError as exc:  # pragma: no cover - defensive guard
-        raise AssertionError(f"invalid frame length prefix: {length_line!r}") from exc
-
-    payload = await reader.readexactly(payload_length)
-    newline = await reader.readexactly(1)
-    assert newline == b"\n", "launcher transport must terminate frames with a newline sentinel"
-    return json.loads(payload.decode("utf-8"))
-
-
-async def _wait_for_socket(path: Path, timeout: float = 5.0) -> None:
+async def _wait_for_socket(path: Path, timeout: float = SOCKET_TIMEOUT) -> None:
     """Poll until the launcher creates the Unix socket file or time out."""
 
     deadline = asyncio.get_running_loop().time() + timeout
@@ -81,7 +52,9 @@ def _launch_env(project_root: Path) -> dict[str, str]:
 
 
 @pytest.mark.asyncio
-async def test_backend_launcher_requires_config_and_loads_defaults(tmp_path: Path) -> None:
+async def test_backend_launcher_requires_config_and_loads_defaults(
+    tmp_path: Path,
+) -> None:
     """Launcher must read settings from config file and require --config."""
 
     config_path = tmp_path / "ragcli-config.yaml"
@@ -105,7 +78,7 @@ async def test_backend_launcher_requires_config_and_loads_defaults(tmp_path: Pat
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "services.rag_backend.main",
+        "main",
         "--config",
         str(config_path),
         stdout=asyncio.subprocess.PIPE,
@@ -114,15 +87,15 @@ async def test_backend_launcher_requires_config_and_loads_defaults(tmp_path: Pat
     )
 
     try:
-        await _wait_for_socket(socket_path, timeout=5.0)
-        reader, writer = await asyncio.open_unix_connection(path=str(socket_path))
-        try:
-            await _write_frame(writer, HANDSHAKE_REQUEST)
-            handshake = await asyncio.wait_for(_read_frame(reader), timeout=READ_TIMEOUT)
-        finally:
-            writer.close()
-            await writer.wait_closed()
-        assert handshake == EXPECTED_HANDSHAKE_RESPONSE
+        await _wait_for_socket(socket_path)
+        reader, writer = await connect_and_handshake(
+            socket_path,
+            request=HANDSHAKE_REQUEST,
+            expected_response=EXPECTED_HANDSHAKE_RESPONSE,
+            timeout=READ_TIMEOUT,
+            newline_error="launcher transport must terminate frames with a newline sentinel",
+        )
+        await close_writer(writer)
     finally:
         process.terminate()
         stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5)
@@ -131,7 +104,9 @@ async def test_backend_launcher_requires_config_and_loads_defaults(tmp_path: Pat
     assert "http://127.0.0.1:11434" in combined_output
     assert "http://127.0.0.1:8080" in combined_output
     assert "http://127.0.0.1:6006" in combined_output
-    assert "offline_mode" in combined_output or "offline guard" in combined_output.lower()
+    assert (
+        "offline_mode" in combined_output or "offline guard" in combined_output.lower()
+    )
 
 
 @pytest.mark.asyncio
@@ -159,7 +134,7 @@ async def test_backend_launcher_allows_cli_overrides(tmp_path: Path) -> None:
     command = [
         sys.executable,
         "-m",
-        "services.rag_backend.main",
+        "main",
         "--config",
         str(config_path),
         "--weaviate-url",
@@ -179,15 +154,15 @@ async def test_backend_launcher_allows_cli_overrides(tmp_path: Path) -> None:
     )
 
     try:
-        await _wait_for_socket(socket_path, timeout=5.0)
-        reader, writer = await asyncio.open_unix_connection(path=str(socket_path))
-        try:
-            await _write_frame(writer, HANDSHAKE_REQUEST)
-            handshake = await asyncio.wait_for(_read_frame(reader), timeout=READ_TIMEOUT)
-        finally:
-            writer.close()
-            await writer.wait_closed()
-        assert handshake == EXPECTED_HANDSHAKE_RESPONSE
+        await _wait_for_socket(socket_path)
+        reader, writer = await connect_and_handshake(
+            socket_path,
+            request=HANDSHAKE_REQUEST,
+            expected_response=EXPECTED_HANDSHAKE_RESPONSE,
+            timeout=READ_TIMEOUT,
+            newline_error="launcher transport must terminate frames with a newline sentinel",
+        )
+        await close_writer(writer)
     finally:
         process.terminate()
         stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5)
@@ -224,7 +199,7 @@ async def test_backend_launcher_trace_flag_enables_controller(tmp_path: Path) ->
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "services.rag_backend.main",
+        "main",
         "--config",
         str(config_path),
         "--trace",
@@ -234,15 +209,15 @@ async def test_backend_launcher_trace_flag_enables_controller(tmp_path: Path) ->
     )
 
     try:
-        await _wait_for_socket(socket_path, timeout=5.0)
-        reader, writer = await asyncio.open_unix_connection(path=str(socket_path))
-        try:
-            await _write_frame(writer, HANDSHAKE_REQUEST)
-            handshake = await asyncio.wait_for(_read_frame(reader), timeout=READ_TIMEOUT)
-        finally:
-            writer.close()
-            await writer.wait_closed()
-        assert handshake == EXPECTED_HANDSHAKE_RESPONSE
+        await _wait_for_socket(socket_path)
+        reader, writer = await connect_and_handshake(
+            socket_path,
+            request=HANDSHAKE_REQUEST,
+            expected_response=EXPECTED_HANDSHAKE_RESPONSE,
+            timeout=READ_TIMEOUT,
+            newline_error="launcher transport must terminate frames with a newline sentinel",
+        )
+        await close_writer(writer)
     finally:
         process.terminate()
         stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5)
@@ -259,7 +234,7 @@ async def test_backend_launcher_requires_config_flag(tmp_path: Path) -> None:
     process = await asyncio.create_subprocess_exec(
         sys.executable,
         "-m",
-        "services.rag_backend.main",
+        "main",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         env=_launch_env(project_root),

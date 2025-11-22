@@ -1,6 +1,6 @@
 # Backend Service Overview
 
-The Python backend (`services/rag_backend`) exposes the Unix-socket transport
+The Python backend (`backend/src`) exposes the Unix-socket transport
 consumed by the Go CLIs and orchestrates retrieval, ingestion, and health
 evaluation workflows. It adheres to the hexagonal architecture decisions
 captured in `specs/001-rag-cli/plan.md` and the data contracts codified in
@@ -17,6 +17,7 @@ captured in `specs/001-rag-cli/plan.md` and the data contracts codified in
 | Package |
 |---------|
 | `arize-phoenix` |
+| `pyyaml>=6.0` |
 | `structlog` |
 | `weaviate-client` |
 
@@ -24,8 +25,16 @@ captured in `specs/001-rag-cli/plan.md` and the data contracts codified in
 
 | Package |
 |---------|
+| `build>=1.2.2` |
+| `mkdocs-autoapi>=0.4.1` |
+| `mkdocs-material>=9.6.23` |
+| `mkdocs>=1.6.1` |
+| `mkdocstrings-python>=1.19.0` |
+| `mypy>=1.18.2` |
 | `pytest-asyncio>=0.23` |
 | `pytest>=8.0` |
+| `ruff>=0.14.4` |
+| `types-pyyaml>=6.0.12.20250915` |
 
 ## Key Documents
 
@@ -37,7 +46,7 @@ captured in `specs/001-rag-cli/plan.md` and the data contracts codified in
 ## Planned Module Layout
 
 ```text
-services/rag_backend/
+backend/src/
 ├── domain/              # Core business logic
 ├── ports/               # Request/response interfaces
 ├── adapters/
@@ -52,10 +61,13 @@ services/rag_backend/
 
 ## Testing Strategy
 
-- `uv run pytest tests/python/unit` for domain and port validation.
-- `uv run pytest tests/python/integration` for adapter behaviour with mocks.
-- `uv run pytest tests/python/contract` to ensure transport compliance.
-- `uv run mypy services/rag_backend` under strict settings (Constitution I).
+Use the Make targets defined in the repo to exercise each layer:
+
+- `make test-unit-py` – Python unit suite (domain, ports, telemetry, launcher helpers) with coverage.
+- `make test-contr-py` – Python contract tests validating the Unix-socket transport handlers.
+- `make test-int-py` – Python integration suite for adapters/offline guard workflows (requires local Weaviate/Ollama mocks).
+- `make test-perf-py` – Python performance harness for ingestion/query SLAs (optional; heavier dependencies).
+- `make lint-py` / `make tc-py` – Ruff formatting/linting and strict mypy (`PYTHONPATH=backend/src`) per Constitution I.
 
 ## Observability
 
@@ -67,7 +79,7 @@ log entries and Phoenix traces.
 ## Configuration
 
 - XDG-compliant directories determine config/data/runtime socket paths.
-- Launch the backend with `python -m services.rag_backend.main` (or `make run-backend`)
+- Launch the backend with `PYTHONPATH=backend/src uv run --directory backend python -m main` (or `make run-be`)
   and provide the required flags:
   - `--socket` (Unix socket path, usually `${XDG_RUNTIME_DIR:-/tmp}/ragcli/backend.sock`)
   - `--weaviate-url` (HTTP endpoint for the local Weaviate instance)

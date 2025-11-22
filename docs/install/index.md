@@ -160,16 +160,19 @@ ragadmin:
 backend:
   socket: /run/ragcli/backend.sock
   weaviate_url: http://localhost:8080
+  weaviate_grpc_port: 50051
   ollama_url: http://localhost:11434
-  phoenix_url: http://localhost:6006
+  phoenix_url: localhost:4317  # gRPC OTLP endpoint (UI remains on 6006)
   log_level: INFO
   trace: false
 ```
 
 Set `log_level` to `DEBUG` when you need verbose diagnostics or leave it at
-`INFO` for quieter logs. Toggle `trace: true` only when you need deep tracing;
-otherwise keep it `false` to minimize overhead. The `ragman`/`ragadmin` blocks
-remain available for CLI defaults (confidence threshold, presenters, etc.).
+`INFO` for quieter logs. `weaviate_grpc_port` must match the port exposed by
+your Weaviate deployment (the default systemd unit binds gRPC on `50051`).
+Toggle `trace: true` only when you need deep tracing; otherwise keep it `false`
+to minimize overhead. The `ragman`/`ragadmin` blocks remain available for CLI
+defaults (confidence threshold, presenters, etc.).
 
 ## 8. Install Systemd Units
 
@@ -185,7 +188,7 @@ Confirm the dependency unit files (`ollama.service`, `weaviate.service`,
 `phoenix.service`) exist in `/etc/systemd/system`; copy them from
 `docs/install/systemd/` if necessary.
 
-The `ragbackend.service` unit invokes `python -m services.rag_backend.main --config /etc/ragcli/config.yaml`;
+The `ragbackend.service` unit invokes `PYTHONPATH=backend/src uv run --directory backend python -m main --config /etc/ragcli/config.yaml`;
 update the `RAGCLI_CONFIG` environment variable inside the unit file if you relocate the config.
 
 ## 9. Enable and Start Services
