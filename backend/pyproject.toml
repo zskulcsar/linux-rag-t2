@@ -12,6 +12,8 @@ dependencies = [
     "openinference-instrumentation>=0.1.41",
     "opentelemetry-api>=1.38.0",
     "opentelemetry-sdk>=1.38.0",
+	# urllib CVE-2025-66418 & CVE-2025-66471 fix
+	"urllib3>=2.6.0",
 ]
 
 

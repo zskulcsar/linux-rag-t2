@@ -115,6 +115,9 @@ vc-go: ## Run `pip-audit` over Python dependencies
 vc-py: venv ## Run `govulncheck` over Go dependencies
 	@uv run --project backend --with pip-audit pip-audit
 
+uv-pip-tree: ## Display the dependcy tree as seen by uv
+	@uv --directory backend pip tree
+
 ## Tests
 test: test-unit test-contr test-int test-perf ## Run all test suites (unit, contract, integration, performance)
 
